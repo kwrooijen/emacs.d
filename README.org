@@ -1,6 +1,6 @@
 * Kwrooijen Emacs Configuration
 
-My personal Emacs configuration. This README is compiled using the [Wisdom Emacs configuration framework](https://github.com/kwrooijen/wisdom). You can find all the separate org files in the org/ directory.
+My personal Emacs configuration. This README is compiled using the [[https://github.com/kwrooijen/wisdom][Wisdom Emacs configuration framework]]. You can find all the separate org files in the org/ directory.
 
 
 #+STARTUP: showeverything
