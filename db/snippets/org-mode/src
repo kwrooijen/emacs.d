@@ -1,6 +1,5 @@
 # -*- mode: snippet -*-
 # name: src
-# key: src
 # key: sr
 # --
 #+BEGIN_SRC ${1:$$(yas-choose-value '("emacs-lisp" "jupyter-python" "ruby" "solidity"))}

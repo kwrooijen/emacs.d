@@ -17,10 +17,7 @@
 
 #+BEGIN_SRC emacs-lisp
 (evil-mode 1)
-;; What is this?
-;; (define-key evil-motion-state-map "'" nil)
 #+END_SRC
-
 
 Recenter screen when searching forward / backwards
 #+BEGIN_SRC emacs-lisp

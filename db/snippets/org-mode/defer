@@ -1,5 +1,5 @@
 # -*- mode: snippet -*-
 # name: defer
-# expand-env: ((yas-trigger-keys '("defer" "def")))
+# key: defer
 # --
 :DEFER: $0

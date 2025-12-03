@@ -195,3 +195,10 @@ Add separate describe key hotkey (useful when C-h is rebound, or in minibuffer)
 (general-define-key
  "M-9" 'describe-key)
 #+END_SRC
+
+Navigation
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "f d" '(dired-jump :which-key "Open current directory"))
+#+END_SRC
