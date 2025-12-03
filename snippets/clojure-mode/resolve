@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/resolve-key
-# key: resolve
-# --
-(defmethod ig/resolve-key :$1 [_ opts]
-  $0)

@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: stim
+# key: stim
+# --
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  static values = {}
+  static classes = [];
+  static targets = [];
+
+  connect() {
+    $0
+  }
+
+  disconnect() {
+  }
+}

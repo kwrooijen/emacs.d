@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: github
+# key: github
+# key: gh
+# --
+($1 :type git :host github :repo "$2")$0

@@ -1,8 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: event
-# key: event
-# --
-(re-frame/reg-event-db
- $1
- (fn [db [_ $2]]
-   $0))

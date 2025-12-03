@@ -1,0 +1,345 @@
+* Restclient
+:PROPERTIES:
+:PACKAGE: restclient
+:STRAIGHT: t
+:END:
+
+* Ellama
+:PROPERTIES:
+:PACKAGE: ellama
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'llm-ollama)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setopt ellama-provider
+        (make-llm-ollama
+         :chat-model "mistral:7b-instruct-v0.2-q6_K"
+         :embedding-model "mistral:7b-instruct-v0.2-q6_K"))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(setopt ellama-providers
+        '(("zephyr" . (make-llm-ollama
+                       :chat-model "zephyr:7b-beta-q6_K"
+                       :embedding-model "zephyr:7b-beta-q6_K"))
+          ("mistral" . (make-llm-ollama
+                        :chat-model "mistral:7b-instruct-v0.2-q6_K"
+                        :embedding-model "mistral:7b-instruct-v0.2-q6_K"))))
+#+END_SRC
+
+*** Ellama chatbox
+
+Some functions to interact with the ellama chatbox.
+
+The chatbox is a special buffer that is used to send text to the
+ellama chatbot. This is more user friendly than using the minibuffer.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-send-buffer ()
+  "Send the buffer to the ellama chatbox"
+  (interactive)
+  (when (equal (buffer-name) "*ellama-chatbox*")
+    (let ((text (buffer-substring-no-properties (point-min) (point-max))))
+      (erase-buffer)
+      (ellama-chat text))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-toggle-chatbox ()
+  "Toggle the ellama chatbox"
+  (interactive)
+  (if (equal (current-buffer) (get-buffer "*ellama-chatbox*"))
+      (popwin:close-popup-window)
+    (progn
+      (popwin:special-display-popup-window "*ellama-chatbox*" :height 0.2 :position 'bottom)
+      (with-current-buffer "*ellama-chatbox*"
+        (prog-mode)
+        (local-set-key (kbd "M-RET") 'kwrooijen/ellama-send-buffer)))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-send-buffer-context ()
+  (interactive)
+  (let ((buffer-string (buffer-substring-no-properties (point-min) (point-max))))
+    (ellama-chat (format "=== CONTEXT START === %s === CONTEXT END ===" buffer-string))))
+#+END_SRC
+
+** Keybindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"e l" 'kwrooijen/ellama-toggle-chatbox
+"e b" 'kwrooijen/ellama-send-buffer-context)
+#+END_SRC
+
+
+* Dictionary
+:PROPERTIES:
+:PACKAGE: dictionary
+:END:
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "sd" 'dictionary-search)
+#+END_SRC
+
+
+* GPTel
+:PROPERTIES:
+:PACKAGE: gptel
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'gptel)
+;; -*- lexical-binding: t -*-
+
+(defun kwrooijen/gptel-apply-changes ()
+  "Apply changes to the current buffer. Simply replace current buffer with *gptel-temp* buffer."
+  (interactive)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer)))
+    (if temp-buffer
+        (progn
+          (replace-buffer-contents temp-buffer)
+          (save-buffer)
+          (kill-buffer temp-buffer))
+      (message "No temp buffer found"))))
+
+(defun kwrooijen/gptel-send-buffer-with ()
+  "Send the current buffer with `gptel-request' as well as user input."
+  (interactive)
+  ;; TODO Keep a log of diffs for context
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer))
+         (string "")
+         (string (concat string "=== ORIGINAL CODE START ===\n"))
+         (string (concat string (buffer-string)))
+         (string (concat string "=== ORIGINAL CODE END ===\n"))
+         (string (concat string "=== CODE START ===\n"))
+         (string (concat string (if temp-buffer
+                                    (with-current-buffer temp-buffer
+                                      (buffer-string))
+                                  (buffer-string))))
+         (string (concat string "=== CODE STOP ===\n"))
+         (string (concat string "=== CONTEXT START ===\n"))
+         (string (concat string "ONLY RESPONSE WITH THE MODIFIED VERSION IF THE CONTENTS OF `CODE`\n"))
+         (string (concat string "DO NOT REMOVE ANY CODE THAT WASN'T ASKED TO BE REMOVED\n"))
+         (string (concat string "DO NOT REMOVE ANY COMMENTS\n"))
+         (string (concat string "DO NOT REMOVE ANY # COMMENTS\n"))
+         (string (concat string "DO NOT INCLUDE THE `CODE` SECTION\n"))
+         (string (concat string "DO NOT INCLUDE THE `CONTEXT` SECTION\n"))
+         (string (concat string "DO NOT INCLUDE YOUR OWN COMMENTS\n"))
+         (string (concat string "DO NOT WRAP THE CODE IN BACKTICKS"))
+         (string (concat string "=== CONTEXT STOP ===\n"))
+         (string (concat string
+                         (read-string "Prompt: " nil nil nil nil))))
+    (gptel-request string :callback (lambda (response something)
+                                      (let ((temp-buffer (get-buffer-create "*gptel-temp*")))
+                                        (with-current-buffer temp-buffer
+                                          (erase-buffer)
+                                          (insert response "\n")
+                                          (diff-buffers current-buffer temp-buffer)))))))
+
+
+(defun kwrooijen/gptel-copy-write-paragraph ()
+  "Send the current buffer with `gptel-request' as well as user input."
+  (interactive)
+  (setq lexical-binding t)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer))
+         (paragraph
+          (progn
+            (backward-paragraph)
+            (forward-char 1)
+            (set-mark (point))
+            (forward-paragraph)
+            (forward-char -2)
+            (buffer-substring-no-properties (region-beginning) (region-end))))
+         (string "")
+         (string (concat string "=== PARAGRAPH START ===\n"))
+         (string (concat string paragraph))
+         (string (concat string "=== PARAGRAPH STOP ===\n"))
+         (string (concat string "=== CONTEXT START ===\n"))
+         (string (concat string "YOU ARE A COPY WRITER\n"))
+         (string (concat string "YOU WRITE CLEAR AND DIRECT CONTENT. NOT SUGARCOATED\n"))
+         (string (concat string "YOU WRITE HELPFUL, CORRECT, AND POLITE CONTENT\n"))
+         (string (concat string "MAKE A SUGGESTION FOR THE FOLLOWING PARAGRAPH\n"))
+         (string (concat string "YOU ONLY RESPOND WITH THE MODIFIED VERSION OF THE `PARAGRAPH`\n"))
+         (string (concat string "INCLUDE ALL FORMATTING SUCH AS NEWLINES\n"))
+         (string (concat string "DO NOT START YOUR RESPONSE WITH THINGS LIKE: 'Here is a suggested rephrasing:'\n"))
+         (string (concat string "DO NOT END YOUR RESPONSE WITH THINGS LIKE: 'Let me know if you'd like me to suggest any further changes!'"))
+         (string (concat string "DO NOT START OR END YOUR RESPONSE WITH BACKTICKS\n"))
+         (string (concat string "DO NOT START OR END YOUR RESPONSE WITH === PARAGRAPH START / END === \n"))
+         (string (concat string "=== CONTEXT STOP ===\n")))
+    (gptel-request string :callback (lambda (response something)
+                                      (let ((temp-buffer (get-buffer-create "*gptel-temp*")))
+                                        (with-current-buffer temp-buffer
+                                          (erase-buffer)
+                                          (kill-new response)
+                                          (insert response "\n")
+                                          (display-buffer temp-buffer t)))))))
+
+
+(defun kwrooijen/gptel-cancel ()
+  "Cancel the current operation."
+  (interactive)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (diff-buffer (get-buffer "*Diff*")))
+    (when temp-buffer (kill-buffer temp-buffer))
+    (when diff-buffer (kill-buffer diff-buffer))
+    (message "Operation cancelled")))
+#+END_SRC
+
+#+RESULTS:
+: kwrooijen/gptel-cancel
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(gptel-model "llama3-70b-8192")
+(gptel-backend (gptel-make-openai
+                "Groq"
+                :host "api.groq.com"
+                :endpoint "/openai/v1/chat/completions"
+                :stream t
+                :key #'read-groq-key
+                :models '("llama3-70b-8192"))))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defvar gptel--known-backends '())
+
+(defvar read-groq-key-cache nil)
+
+(defun read-groq-key ()
+  "Read $HOME .gptel.api.gpg file and return string."
+  (if read-groq-key-cache
+      read-groq-key-cache
+    (setq read-groq-key-cache
+          (with-temp-buffer
+            (insert-file-contents (expand-file-name "~/.gptel.api.gpg"))
+            (buffer-string)))))
+#+END_SRC
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'gptel-mode-map
+"M-RET" 'gptel-send)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "ja" 'kwrooijen/gptel-apply-changes
+ "ji" 'kwrooijen/gptel-send-buffer-with
+ "jp" 'kwrooijen/gptel-copy-write-paragraph
+ "jc" 'kwrooijen/gptel-cancel)
+#+END_SRC
+
+
+* GLSL
+:PROPERTIES:
+:PACKAGE: glsl-mode
+:STRAIGHT: (:host github :repo "jimhourihan/glsl-mode" :files ("dist" "*.el"))
+:END:
+
+* Dired
+:PROPERTIES:
+:PACKAGE: dired
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dired-listing-switches "-laoh")
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((dired-mode . hl-line-mode))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states 'normal
+ :keymaps 'dired-mode-map
+ ";" #'helm-find-files)
+#+END_SRC
+
+* Diredfl
+:PROPERTIES:
+:PACKAGE: diredfl
+:STRAIGHT: t
+:DEFER: t
+:END:
+
+** Init :init:
+
+Enable diredfl mode globally
+#+BEGIN_SRC emacs-lisp
+(diredfl-global-mode 1)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-owner
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the file owner field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-owner 'kwrooijen/diredfl-owner)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-size
+  '((((background dark)) (:inherit kwrooijen/popout-fg-face))
+    (t                   (:inherit kwrooijen/popout-fg-face)))
+  "Face for the file group field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-size 'kwrooijen/diredfl-size)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-acl-flag
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the ACL '+' flag in Dired permission strings."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-acl-flag 'kwrooijen/diredfl-acl-flag)
+#+END_SRC
+
+Add custom faces to diredfl-font-lock-keywords-1
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\([-bcdlps]\\([r-][w-][x-]\\)\\{3\\}\\)\\([+@]\\)"
+   (3 kwrooijen/diredfl-acl-flag)))
+
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\S-+ +[0-9]+ +\\([^ ]+\\) +\\([^ ]+\\) +"
+   (1 kwrooijen/diredfl-owner)
+   (2 kwrooijen/diredfl-size)))
+#+END_SRC
+
+Remove diredfl-match-ignored-extensions
+#+BEGIN_SRC emacs-lisp
+(setq diredfl-font-lock-keywords-1
+        (cl-remove-if
+         (lambda (entry)
+           (and (listp entry)
+                (eq (car entry) 'diredfl-match-ignored-extensions)))
+         diredfl-font-lock-keywords-1))
+#+END_SRC

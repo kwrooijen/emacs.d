@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: mcp
+# key: mcp
+# --
+mcp = FastMCP("$1", port=${2:8080})$0

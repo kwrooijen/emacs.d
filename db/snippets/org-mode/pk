@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: full-package
+# key: pk
+# --
+* ${1:$(capitalize (replace-regexp-in-string "-" " " yas-text))}
+:PROPERTIES:
+:PACKAGE: ${1:my-package}
+:STRAIGHT: ${2:t}
+:END:
+$0

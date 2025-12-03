@@ -1,5 +1,0 @@
-# name: deps
-# key: deps
-# --
-{:deps {:kwrooijen/stdlib {:mvn/version "0.0.1-SNAPSHOT"}}
- :paths ["src"]}

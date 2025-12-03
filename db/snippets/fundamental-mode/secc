@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: secc
+# key: secc
+# --
+SECRETS=$(kamal secrets fetch --adapter bitwarden --account kwrooijen@pm.me $0)

@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/init-key
-# key: init
-# --
-(defmethod ig/init-key :$1 [_ opts]
-  $0)

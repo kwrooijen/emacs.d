@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: after
+# key: after
+# key: aft
+# --
+:AFTER: $0

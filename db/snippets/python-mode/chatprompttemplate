@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: chatprompttemplate
+# key: chatprompttemplate
+# --
+ChatPromptTemplate([
+    ("system", "You are a helpful AI bot. Your name is {name}."),
+    ("human", "Hello, how are you doing?"),
+    ("ai", "I'm doing well, thanks!"),
+])

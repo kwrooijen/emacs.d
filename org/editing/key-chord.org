@@ -1,0 +1,67 @@
+#+STARTUP: showeverything
+#+PRIORITY: 3
+
+* Package: key-chord
+:PROPERTIES:
+:PACKAGE: key-chord
+:AFTER: evil
+:END:
+
+*** Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/key-chord-save-and-evil-normal-key "xs"
+  "Key combination for keychord to save buffer and switch to Evil
+normal state."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/key-chord-evil t
+  "Whether to use key-chord with Evil. If t, key-chord will be
+configured for Evil mode"
+  :type 'boolean
+  :group 'kwrooijen)
+#+END_SRC
+
+** Straight :straight:
+
+[[https://github.com/emacsorphanage/key-chord/issues/6][Because of an issue]] in key-chord, we specify the git hash.
+
+#+BEGIN_SRC emacs-lisp
+(key-chord
+ :host github
+ :repo "emacsorphanage/key-chord"
+ :commit "68264d09593e69c1d4773859ac570bd9feb008d9")
+#+END_SRC
+
+** Hooks :hook:
+
++ Add `key-chord-mode` to all programming modes.
++ Add `key-chord-mode` to `isearch` to allow breaking out of search using key-chord.
+
+#+BEGIN_SRC emacs-lisp
+((prog-mode . key-chord-mode)
+ (text-mode . key-chord-mode)
+ (isearch-mode . key-chord-mode))
+#+END_SRC
+
+** Config :config:
+
+kwrooijen/key-chord provides a function to return to normal mode and
+save the buffer. Therefore, instead of `Esc + :w + RET` you simply
+type (by default) `xs`. Configurable through
+`kwrooijen/key-chord-save-and-evil-normal-key`.
+
+#+BEGIN_SRC emacs-lisp
+(when (and kwrooijen/key-chord-evil
+           kwrooijen/key-chord-save-and-evil-normal-key)
+  (defun kwrooijen/key-chord-evil-normal-state-and-save ( )
+    "Switch to Evil normal state and save buffer."
+    (interactive)
+    (evil-normal-state)
+    (save-buffer))
+
+  (key-chord-define-global
+   kwrooijen/key-chord-save-and-evil-normal-key
+  'kwrooijen/key-chord-evil-normal-state-and-save))
+#+END_SRC

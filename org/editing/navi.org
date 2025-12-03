@@ -1,0 +1,580 @@
+#+BEGIN_SRC emacs-lisp
+;; -*- lexical-binding: t; -*-
+
+(require 'cl-lib)
+
+(defvar navi-visual-overlay nil
+  "")
+
+(defvar navi-node nil
+  "")
+
+(defvar navi-position 'start
+  "")
+
+(defface navi-highlight
+  '((((class color) (background light))
+     :background "#393c4c" :foreground "white")
+    (((class color) (background dark))
+     :background "#393c4c" :foreground "white"))
+  ""
+  :group 'navi-faces)
+
+(defcustom navi-use-hl-line t
+  "Disable hl-line-mode in navi state."
+  :type 'boolean
+  :group 'navi)
+
+(defcustom navi-hl-mode nil
+  "hl-line-mode or global-hl-line-mode."
+  :type 'symbol
+  :group 'navi)
+
+(defun navi-get-major-mode ()
+  (interactive)
+  (if (and (eq major-mode 'org-mode)
+           (equal 'src-block (car (org-element-context))))
+      (intern (format "%s-mode" (org-element-property :language (org-element-context))))
+    major-mode))
+
+(defun navi-node-length-of? (length)
+  (let ((length length))
+    (lambda (node)
+      (= length (treesit--node-length node)))))
+
+(defun navi-node-has-only-one-child? (node)
+  (= 1 (length (treesit-node-children node))))
+
+(defun navi-rules ()
+  (let ((rules (intern (format "navi-rules:%s" (navi-get-major-mode)))))
+    (when (boundp rules)
+      (symbol-value rules))))
+
+(defcustom navi-rules:ruby-ts-mode
+  `(:navigation
+    (("program"        . (:ignore t))
+     ("."              . (:action navi-next-node :pred identity))
+     (":"              . (:action navi-next-node :pred identity))
+     ("::"             . (:action navi-next-node :pred identity))
+     ("="              . (:action navi-next-node :pred identity))
+     (","              . (:action navi-next-node :pred identity))
+     ("def"            . (:action navi-next-shift-node :pred identity))
+     ("end"            . (:action navi-next-shift-node :pred identity))
+     ("{"              . (:action navi-next-shift-node :pred identity))
+     ("}"              . (:action navi-next-shift-node :pred identity))
+     ("("              . (:action navi-next-shift-node :pred identity))
+     (")"              . (:action navi-next-shift-node :pred identity))
+     ("\""             . (:action navi-next-shift-node :pred identity))
+     ("\""             . (:action navi-next-shift-node :pred identity))
+     ;; ("class"          . (:action navi-next-shift-node :pred ,(navi-node-length-of? 5)))
+     ;; ("module"         . (:action navi-next-shift-node :pred ,(navi-node-length-of? 6)))
+     ("body_statement" . (:action navi-next-shift-node :pred navi-node-has-only-one-child?)))
+    :avy
+    (("program"        . (:ignore t))
+     ("."              . (:ignore t))
+     (":"              . (:ignore t))
+     ("::"             . (:ignore t))
+     ("="              . (:ignore t))
+     (","              . (:ignore t))
+     ("def"            . (:ignore t))
+     ("end"            . (:ignore t))
+     ("{"              . (:ignore t))
+     ("}"              . (:ignore t))
+     ("("              . (:ignore t))
+     (")"              . (:ignore t))
+     ("\""             . (:ignore t))
+     ("\""             . (:ignore t))
+     ;; ("class"          . (:ignore t :pred ,(navi-node-length-of? 5)))
+     ;; ("module"         . (:ignore t :pred ,(navi-node-length-of? 6)))
+     ("body_statement" . (:ignore t))))
+  ""
+  :type '()
+  :group 'navi)
+
+(defun navi-outdated-p ()
+  (if navi-node
+      (treesit-node-check navi-node 'outdated)
+    t))
+
+(defun navi-node-hash (node)
+  (list (- (treesit-node-start node)
+           (treesit-node-end node))
+        (treesit-node-type node)))
+
+(defun navi-node-hash-get (hash nodes &optional default)
+  (let ((found nil)
+        (node))
+    (while (and (setq node (pop nodes))
+                (not found))
+      (when (equal hash (navi-node-hash node))
+        (setq found node)))
+    (or found default)))
+
+(defun navi-node-hash-at (hash point)
+  (navi-node-hash-get hash (navi-nodes-at point)))
+
+(defun navi-kill-node ()
+  (interactive)
+  ;; TODO
+  (let ((node navi-node))
+    (if (treesit-node-prev-sibling node)
+        (navi-navigate-backward)
+      (navi-navigate-forward))
+    (kill-region (treesit-node-start node)
+                 (treesit-node-end node))
+    (navi-set-node-top)))
+
+(defun navi-node-stringify ()
+  (interactive)
+  (let* ((start (treesit-node-start navi-node))
+         (end (treesit-node-end navi-node))
+         (region-content (buffer-substring-no-properties start end)))
+    (replace-region-contents start end (lambda () (prin1-to-string region-content)))
+    (navi-set-node-top)))
+
+(defun navi-set-node (node)
+  (interactive)
+  (setq navi-node node)
+  (goto-char (treesit-node-start node))
+  (navi-set-position)
+  (navi-visual-mark-node)
+  node)
+
+(defun navi-set-node-top ()
+  (interactive)
+  (navi-set-node (car (last (navi-nodes-at (point))))))
+
+(defun navi-navigate-flow ()
+  (interactive)
+  (when-let ((node (or (navi-node-travel navi-node 'down)
+                       (navi-node-travel navi-node 'forward)
+                       (navi-node-travel navi-node 'up 'forward))))
+    (navi-set-node node)))
+
+
+(defun navi-navigate-flow-up ()
+  (interactive)
+  (when-let ((node (or (navi-node-travel navi-node 'backward)
+                       (navi-node-travel navi-node 'up))))
+    (navi-set-node node)))
+
+(defun navi-navigate-forward ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'forward)))
+    (navi-set-node node)))
+
+(defun navi-navigate-backward ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'backward)))
+    (navi-set-node node)))
+
+(defun navi-navigate-up ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'up)))
+    (navi-set-node node)))
+
+(defun navi-navigate-down ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'down)))
+    (navi-set-node node)))
+
+(defun navi-different ()
+  (interactive)
+  (if (= (point) (treesit-node-start navi-node))
+      (setq navi-position 'end)
+    (setq navi-position 'start))
+  (navi-set-position))
+
+(defun navi-set-position ()
+  (if (equal navi-position 'start)
+      (goto-char (treesit-node-start navi-node))
+    (goto-char (treesit-node-end navi-node))))
+
+(defun navi-eval ()
+  (interactive)
+  (let ((eval-func (intern (format "navi-eval:%s" (navi-get-major-mode)))))
+    (if (fboundp eval-func)
+        (funcall eval-func
+                 (buffer-substring-no-properties
+                  (treesit-node-start navi-node)
+                  (treesit-node-end navi-node)))
+      (message "No eval function for %s" (navi-get-major-mode)))))
+
+(defun navi-back-to-indentation ()
+  (interactive)
+  (back-to-indentation)
+  (evil-navi-state))
+
+(defun navi-eval-top ()
+  (interactive)
+  (save-mark-and-excursion
+    (navi-navigate-up)
+    (navi-eval)))
+
+(defun navi-start-visual (start end)
+  (when navi-visual-overlay
+    (delete-overlay navi-visual-overlay))
+  (setq navi-visual-overlay (make-overlay start end))
+  (overlay-put navi-visual-overlay 'face 'navi-highlight))
+
+(defun navi-node-descendants (node)
+  "Collect all children of NODE and their children without using recursion."
+  (let ((stack (list node))
+        (descendants '()))
+    (while stack
+      (let ((current-node (pop stack)))
+        (setq descendants (append descendants (treesit-node-children current-node)))
+        (setq stack (append stack (treesit-node-children current-node)))))
+    descendants))
+
+
+(defun navi-avy ()
+  (interactive)
+  (let* ((nodes (navi-node-descendants navi-node))
+         (nodes (cl-remove-if (lambda (node)
+                                (when-let ((entry (alist-get (treesit-node-type node) (plist-get (navi-rules) :avy) nil nil 'string=)))
+                                  (or (and (plist-get entry :pred)
+                                           (plist-get entry :ignore)
+                                           (funcall (plist-get entry :pred) node))
+                                      (and (plist-get entry :ignore)
+                                           (not (plist-get entry :pred)))))) nodes))
+         (avy-result
+          (avy-with navi-avy
+            (avy-process
+             (cl-remove-duplicates
+              (mapcar 'treesit-node-start nodes)))))
+         (node (cl-find-if (lambda (node) (= (treesit-node-start node) avy-result)) nodes)))
+    (navi-set-node node)
+    node))
+
+(defun navi-node-space-between (node1 node2)
+  (let ((node1-start (treesit-node-start node1))
+        (node1-end (treesit-node-end node1))
+        (node2-start (treesit-node-start node2))
+        (node2-end (treesit-node-end node2)))
+    (if (< (treesit-node-start node1)
+           (treesit-node-start node2))
+        (- node2-start node1-end)
+      (- node1-start node2-end))))
+
+(defun navi-avy-delete ()
+  (interactive)
+  (if (navi-node-descendants navi-node)
+      (when (navi-avy)
+        (kill-region (treesit-node-start navi-node)
+                     (treesit-node-end navi-node))
+        (evil-insert-state))
+    (progn
+      (kill-region (treesit-node-start navi-node)
+                   (treesit-node-end navi-node))
+      (evil-insert-state))))
+
+(defun navi-visual-mark-node ()
+  (interactive)
+  (when (not (navi-outdated-p))
+    (navi-start-visual
+     (treesit-node-start navi-node)
+     (treesit-node-end navi-node))))
+
+(defun navi-yank-node ()
+  (interactive)
+  (let ((node navi-node))
+    (when node
+      (copy-region-as-kill
+       (treesit-node-start node)
+       (treesit-node-end node)))))
+
+(defun navi-paste-down ()
+  (interactive)
+  ;; TODO
+  )
+
+(defun navi-paste-up ()
+  (interactive)
+  ;; TODO
+  )
+
+(defun navi-comment-node ()
+  (interactive)
+  (let* ((start (treesit-node-start navi-node))
+         (end (treesit-node-end navi-node))
+         (_ (or (navi-navigate-backward)
+                (navi-navigate-forward)
+                (navi-navigate-up)))
+         (hash (navi-node-hash navi-node)))
+    (comment-region start end)
+    (navi-set-node
+     (navi-node-hash-at hash (point)))))
+
+(defun navi-next-node (node direction)
+  (cl-case direction
+    (forward (treesit-node-next-sibling node))
+    (backward (treesit-node-prev-sibling node))
+    (up (treesit-node-parent node))
+    (down (treesit-node-child node 0))))
+
+
+(defun navi-next-shift-node (node direction)
+  (cl-case direction
+    (forward (treesit-node-child node 0))
+    (backward (treesit-node-parent node))
+    (up (treesit-node-prev-sibling node))
+    (down (treesit-node-next-sibling node))))
+
+(defun navi-node-travel-1 (current-node direction)
+  (let* ((next-node (navi-next-node current-node direction))
+         (node-type (treesit-node-type next-node))
+         (current-mode-key-list (plist-get (navi-rules) :navigation))
+         (current-mode-key-node-f (alist-get node-type current-mode-key-list nil nil 'string=))
+         (pred (or (plist-get current-mode-key-node-f :pred) 'ignore))
+         (action (plist-get current-mode-key-node-f :action))
+         (ignore (plist-get current-mode-key-node-f :ignore)))
+    (when (not ignore)
+     (if (funcall pred next-node)
+         (funcall action next-node direction)
+       next-node))))
+
+(defun navi-node-travel (current-node &rest directions)
+  (interactive)
+  (cl-reduce
+   (lambda (node direction)
+     (navi-node-travel-1 node direction))
+   directions
+   :initial-value current-node))
+
+(defun navi-nodes-at (point)
+  (let* ((node (treesit-node-at point))
+         (nodes (list node))
+         (done nil))
+    (while (not done)
+      (let* ((node (car (last nodes)))
+             (parent (treesit-node-parent node))
+             (parent-start (treesit-node-start parent))
+             (node-start (treesit-node-start node)))
+        (if (equal parent-start node-start)
+            (setq nodes (append nodes (list parent)))
+          (setq done t))))
+    nodes))
+
+(defun navi-node-swap (node1 node2)
+  (interactive)
+  ;; TODO use marks
+  (let* ((reversed (> (treesit-node-start node1) (treesit-node-start node2)))
+         (upper-node (if reversed node2 node1))
+         (lower-node (if reversed node1 node2))
+         (temp-buffer (generate-new-buffer " *navi-temp*"))
+         (c (current-buffer)))
+    (let ((result
+           (with-current-buffer temp-buffer
+             (insert-buffer-substring c)
+             (let* ((upper-node-start (treesit-node-start upper-node))
+                    (upper-node-end (treesit-node-end upper-node))
+                    (lower-node-start (treesit-node-start lower-node))
+                    (lower-node-end (treesit-node-end lower-node))
+	            (upper-node-substring (buffer-substring upper-node-start upper-node-end))
+                    (lower-node-substring (buffer-substring lower-node-start lower-node-end)))
+               (delete-region lower-node-start lower-node-end)
+               (goto-char lower-node-start)
+               (insert upper-node-substring)
+               (delete-region upper-node-start upper-node-end)
+               (goto-char upper-node-start)
+               (insert lower-node-substring)
+               (let ((new-node1-point
+                      (- lower-node-start
+                         (- (length upper-node-substring)
+                            (length lower-node-substring))))
+                     (new-node2-point upper-node-start))
+                 (if reversed
+                     (reverse (list new-node1-point new-node2-point))
+                   (list new-node1-point new-node2-point)))))))
+      (replace-buffer-contents temp-buffer)
+      result)))
+
+(defun navi-drag-up ()
+  (interactive)
+  (let ((next-node
+         (navi-node-travel navi-node 'backward)))
+    (when (and (navi-p)
+               next-node
+               (not (navi-node-descendant? next-node navi-node))
+               (not (navi-node-descendant? navi-node next-node)))
+      (let* ((hash (navi-node-hash navi-node))
+             (new-points (navi-node-swap navi-node next-node)))
+        (navi-set-node
+         (navi-node-hash-get hash (navi-nodes-at (car new-points))
+                             (treesit-node-at (car new-points))))))))
+
+(defun navi-drag-down ()
+  (interactive)
+  (let ((next-node
+         (navi-node-travel navi-node 'forward)))
+    (when (and (navi-p)
+               next-node
+               (not (navi-node-descendant? next-node navi-node))
+               (not (navi-node-descendant? navi-node next-node)))
+      (let* ((hash (navi-node-hash navi-node))
+             (new-points (navi-node-swap navi-node next-node)))
+        (navi-set-node
+         (navi-node-hash-get hash
+                             (navi-nodes-at (car new-points))
+                             (treesit-node-at (car new-points))))))))
+
+(defun navi-node-descendant? (node1 node2)
+  (member node2 (navi-node-descendants node1)))
+
+(defcustom navi-children-wip:ruby-ts-mode
+  '(("class" . (:action foo ))
+    ("module" . (:action foo)))
+  ""
+  :type '()
+  :group 'navi)
+
+(evil-define-key nil evil-navi-state-map
+  (kbd "<escape>") 'evil-normal-state
+  (kbd "]") 'navi-yoink-forward
+  (kbd "[") 'navi-yeet-forward
+  (kbd "@") nil
+  (kbd "q") nil
+  (kbd "Q") nil
+  (kbd "w") 'navi-drag-up
+  (kbd "e") 'navi-eval
+  (kbd "E") nil
+  (kbd "r") nil ;; special-lispy-raise
+  (kbd "R") nil ;; special-lispy-raise-some
+  (kbd "t") nil ;; Teleport one day
+  (kbd "T") nil ;; Teleport transfer one day
+  (kbd "y") 'navi-yank-node
+  (kbd "Y") nil ;; Free
+  (kbd "u") 'undo-tree-undo
+  (kbd "U") 'undo-tree-redo
+  (kbd "i") 'evil-insert-state
+  (kbd "I") 'evil-insert-line
+  (kbd "o") 'evil-open-below
+  (kbd "O") 'evil-open-above
+  (kbd "p") 'navi-paste-down
+  (kbd "P") 'navi-paste-up
+  (kbd "a") 'navi-avy
+  (kbd "A") 'navi-avy-delete
+  (kbd "s") 'navi-drag-down
+  (kbd "S") 'navi-node-stringify
+  (kbd "d") 'navi-different
+  (kbd "D") nil ;; idk
+  (kbd "f") nil
+  (kbd "F") nil
+  (kbd "g") 'pop-global-mark
+  (kbd "G") nil
+  (kbd "h") 'navi-navigate-up
+  (kbd "H") 'navi-navigate-parent
+  (kbd "j") 'navi-navigate-forward
+  (kbd "J") nil ;; Free
+  (kbd "k") 'navi-navigate-backward
+  (kbd "K") nil ;; Free
+  (kbd "l") 'navi-navigate-down
+  (kbd "L") 'navi-navigate-child
+  (kbd ";") 'navi-comment-node
+  (kbd ":") nil  ;; Free
+  (kbd "'") nil  ;; Free
+  (kbd "\"") nil ;; Free
+  (kbd "/") nil  ;; Free
+  (kbd "z") nil  ;; Free
+  (kbd "Z") nil  ;; Free
+  (kbd "x") 'navi-kill-node
+  (kbd "X") nil ;; Free
+  (kbd "c") nil ;; Clone
+  (kbd "C") nil ;; Convolute, but how?
+  (kbd "v") 'elpy-goto-definition
+  (kbd "V") 'elpy-goto-definition-other-window
+  (kbd "b") 'evil-backward-word-begin
+  (kbd "B") 'evil-backward-WORD-begin
+  (kbd "n") 'navi-navigate-flow
+  (kbd "N") 'navi-navigate-flow-up
+  (kbd "m") 'navi-format-block
+  (kbd "M") nil
+  (kbd ",") nil ;; Free
+  (kbd "<") nil ;; Slurp back?
+  (kbd ".") 'evil-repeat
+  (kbd ">") nil ;; barf back?
+  (kbd "/") nil ;; Occur
+  (kbd "?") nil ;; Free
+  )
+
+;; Modes
+
+(evil-define-state navi
+  "Navi state."
+  :tag " <*> "
+  :message "Entering Navi mode..."
+  :entry-hook (evil-navi-enter)
+  :exit-hook (evil-navi-exit))
+
+(defun evil-navi-enter ()
+  (when (and (boundp 'hl-line-mode)
+             hl-line-mode)
+    (setq navi-hl-mode 'hl-line-mode)
+    (hl-line-mode -1))
+  (when (and (boundp 'global-hl-line-mode)
+             global-hl-line-mode)
+    (setq navi-hl-mode 'global-hl-line-mode)
+    (global-hl-line-mode -1))
+  (navi-set-node-top)
+  (set-cursor-color "#2571ff"))
+
+(defun evil-navi-exit ()
+  (when (eq navi-hl-mode 'hl-line-mode)
+    (hl-line-mode 1))
+  (when (eq navi-hl-mode 'global-hl-line-mode)
+    (global-hl-line-mode 1))
+  (delete-overlay navi-visual-overlay)
+  (set-cursor-color "#e95678"))
+
+(defun navi-p ()
+  (equal evil-state 'navi))
+
+(defcustom navi-navigate-functions
+  '(undo-tree-undo
+    undo-tree-redo
+    pop-global-mark
+    elpy-goto-definition
+    navi-navigate-next
+    navi-navigate-previous
+    navi-drag-up
+    navi-drag-down
+    navi-format-block
+    navi-yoink-forward
+    navi-yeet-forward
+    navi-navigate-up
+    navi-navigate-down
+    navi-navigate-parent
+    navi-navigate-child
+    navi-avy
+    navi-avy-delete
+    navi-avy-mark
+    navi-paste-down
+    navi-paste-up)
+  ""
+  :type '()
+  :group 'navi)
+
+(defun navi-update-node-advice (&rest _)
+  (when (and (navi-p)
+             (navi-outdated-p))
+    (navi-set-node-top)))
+
+(defun navi-mark-if-visual-advice (&rest _)
+  (when (navi-p)
+    (navi-visual-mark-node)))
+
+(dolist (func navi-navigate-functions)
+  (advice-add func :after  'navi-mark-if-visual-advice)
+  (advice-add func :before 'navi-update-node-advice))
+
+(advice-add 'undo-tree-undo :after 'navi-update-node-advice)
+(advice-add 'undo-tree-redo :after 'navi-update-node-advice)
+
+(defun navi-node-name ()
+  (interactive)
+  (let ((node navi-node))
+    (when node
+      (message (treesit-node-type node)))))
+
+#+END_SRC

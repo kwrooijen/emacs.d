@@ -1,0 +1,261 @@
+* Solidity
+:PROPERTIES:
+:PACKAGE: solidity-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+
+# TODO
+Add "jump to definition" for solidity
+
+
+# TODO
+;; Ensure the custom face is defined
+
+** Forge Init :init:
+
+Configuration variables for forge. These are used to interact with the
+forge cli. Forge has 10 default user accounts that never change.
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/foundry-selected-rpc-url "http://127.0.0.1:8545")
+(defvar kwrooijen/foundry-account-key-list
+  '(("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" . "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+    ("0x70997970C51812dc3A010C7d01b50e0d17dc79C8" . "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
+    ("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" . "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")
+    ("0x90F79bf6EB2c4f870365E785982E1f101E93b906" . "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6")
+    ("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" . "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a")
+    ("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc" . "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba")
+    ("0x976EA74026E726554dB657fA54763abd0C3a0aa9" . "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e")
+    ("0x14dC79964da2C08b23698B3D3cc7Ca32193d9955" . "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356")
+    ("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" . "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97")
+    ("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720" . "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")))
+(defvar kwrooijen/foundry-selected-account (car kwrooijen/foundry-account-key-list))
+(defvar kwrooijen/foundry-selected-contract-address nil)
+(defvar kwrooijen/foundry-contracts nil)
+#+END_SRC
+
+Functions to select a user and a contract.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-select-user ()
+  (interactive)
+  (let ((user (completing-read "Select user: "
+                               (mapcar 'car kwrooijen/foundry-account-key-list)
+                               nil t nil nil nil nil)))
+    (setq kwrooijen/foundry-selected-account (assoc user kwrooijen/foundry-account-key-list))))
+
+(defun kwrooijen/foundry-register-contract (contract-name contract-address)
+  (interactive "sContract name: \nsContract address: ")
+  (add-to-list 'kwrooijen/foundry-contracts (cons contract-name contract-address)))
+
+(defun kwrooijen/foundry-select-contract ()
+  (interactive)
+  (let ((contract (completing-read "Select contract: "
+                                   (mapcar 'car kwrooijen/foundry-contracts)
+                                   nil t nil nil nil nil)))
+    (setq kwrooijen/foundry-selected-contract-address (assoc contract kwrooijen/foundry-contracts))))
+#+END_SRC
+
+# TODO
+forge inspect <CONTRACT> <FIELD>
+
+  <FIELD>: [abi, bytecode, deployedBytecode, assembly, assemblyOptimized, methodIdentifiers, gasEstimates, storageLayout, devdoc, ir, irOptimized, metadata, userdoc, ewasm, errors, events]
+
+** Forge :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/forge-test ()
+  (interactive)
+  ;; save window excursion
+ (async-shell-command "forge test -vvv"))
+
+(defun kwrooijen/forge-test-file ()
+  (interactive)
+  (let ((file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name))))
+    (async-shell-command (format "forge test -vvv --match-path %s" file))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/foundry-get-contract-name ()
+  (save-excursion
+    (re-search-backward "contract \\(.*\\) {" nil t)
+    (forward-word 2)
+    (word-at-point t)))
+
+(defun kwrooijen/foundry-forge-create-contract ()
+  (interactive)
+  (when (equal major-mode 'solidity-mode)
+    (let* ((contract-name (kwrooijen/foundry-get-contract-name))
+           (file (buffer-file-name))
+           (command (format "forge create --rpc-url %s --private-key %s %s:%s"
+                            kwrooijen/foundry-selected-rpc-url
+                            (cdr kwrooijen/foundry-selected-account)
+                            file
+                            contract-name))
+           (result (shell-command-to-string command)))
+      (string-match "Deployed to: \\(.*\\)" result)
+      (match-string 1 result))))
+
+(defun kwrooijen/foundry-forge-script-broadcast ()
+  (interactive)
+  (when (equal major-mode 'solidity-mode)
+    (let* (;; (contract-name (kwrooijen/foundry-get-contract-name ))
+              (default-directory (or (projectile-project-root) default-directory))
+              (file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name)))
+              (command (format "forge script --broadcast --rpc-url %s --private-key %s %s"
+                               kwrooijen/foundry-selected-rpc-url
+                               (cdr kwrooijen/foundry-selected-account)
+                               file)))
+              (message "#%s" command)
+              (async-shell-command command))))
+#+END_SRC
+
+Forge fmt
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-forge-fmt-buffer ()
+  (interactive)
+;; (let ((file (buffer-file-name)))
+;;     (when (and file (equal major-mode 'solidity-mode))
+;;       (save-excursion
+;;         (call-process "forge" nil nil nil "fmt" file)
+;;         (revert-buffer t t t))))
+  )
+#+END_SRC
+
+
+# ** Hook :hook:
+# #+BEGIN_SRC emacs-lisp
+# ;; ((solidity-mode . (lambda ()
+# ;;                    (remove-hook 'after-save-hook 'kwrooijen/foundry-forge-fmt-buffer nil t))))
+# #+END_SRC
+
+** Cast :init:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-cast-generic (command args)
+  (when (not kwrooijen/foundry-selected-rpc-url)
+    (error "No rpc url selected"))
+  (when (not kwrooijen/foundry-selected-account)
+    (error "No user selected"))
+  (when (not kwrooijen/foundry-selected-contract-address)
+    (error "No contract selected"))
+  (let ((window (selected-window))
+        (default-directory (or (projectile-project-root) default-directory))
+        (command (format "cast %s --rpc-url=%s" command kwrooijen/foundry-selected-rpc-url)))
+    (when (member command '("send" "call"))
+      (setq command
+            (format "%s --private-key=%s" command (cdr kwrooijen/foundry-selected-account)))
+      (setq command
+            (format "%s %s" command (cdr kwrooijen/foundry-selected-contract-address))))
+    (async-shell-command (format "%s %s" command args))))
+
+(defun kwrooijen/foundry-cast-send (args)
+  (interactive "scast send ")
+  (kwrooijen/foundry-cast-generic "send" args))
+
+
+(defun kwrooijen/foundry-cast-call (args)
+  (interactive "scast call ")
+  (kwrooijen/foundry-cast-generic "call" args))
+
+(defun kwrooijen/foundry-cast-balance (args)
+  (interactive (list (read-string "cast balance: " (car kwrooijen/foundry-selected-account))))
+  (kwrooijen/foundry-cast-generic "balance" args))
+
+#+END_SRC
+
+
+
+** Anvil :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-anvil-start ()
+  (interactive)
+  (let ((buffer (get-buffer "*anvil*"))
+        (default-directory (or (projectile-project-root) default-directory)))
+    (if buffer
+        (switch-to-buffer-other-window buffer)
+      (async-shell-command "anvil" "*anvil*"))))
+#+END_SRC
+
+
+** Chisel :config:
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-chisel-show-buffer ()
+  (interactive)
+  (when (not (get-buffer "*chisel*"))
+    (error "No chisel buffer found"))
+  (when (not (get-buffer-window "*chisel*"))
+    (let ((window (selected-window)))
+      (switch-to-buffer-other-window "*chisel*")
+      (select-window window))))
+
+(defun kwrooijen/foundry-chisel-start ()
+  (interactive)
+  (switch-to-buffer-other-window "*chisel*")
+  (with-current-buffer "*chisel*"
+    (setq default-directory (or (projectile-project-root) default-directory))
+    (comint-run "chisel" (when kwrooijen/foundry-selected-rpc-url  (list "--fork-url" kwrooijen/foundry-selected-rpc-url)))))
+
+(defun kwrooijen/foundry-chisel-send-string (string)
+  (interactive "sChisel command: ")
+  (kwrooijen/foundry-chisel-show-buffer)
+  (comint-send-string "*chisel*" (format "%s\n" string)))
+
+(defun kwrooijen/foundry-chisel-send-region (start end)
+  (interactive "r")
+  (kwrooijen/foundry-chisel-show-buffer)
+  (comint-send-region "*chisel*" start end)
+  (comint-send-string "*chisel*" "\n"))
+
+(defun kwrooijen/foundry-chisel-send-line ()
+  (interactive)
+  (kwrooijen/foundry-chisel-show-buffer)
+  (let ((start (line-beginning-position))
+        (end (line-end-position)))
+    (kwrooijen/foundry-chisel-send-region start end)))
+#+END_SRC
+
+** Keybindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'solidity-mode-map
+  "t a" 'kwrooijen/forge-test
+  "t t" 'kwrooijen/forge-test-file
+  "c u" 'kwrooijen/foundry-select-user
+  "c c" 'kwrooijen/foundry-select-contract
+  "c r" 'kwrooijen/foundry-register-contract
+  "'" 'kwrooijen/foundry-chisel-start
+  ";" 'kwrooijen/foundry-anvil-start)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps 'solidity-mode-map
+ "C-x C-e" 'kwrooijen/foundry-chisel-send-line
+ "C-c C-e" 'kwrooijen/foundry-chisel-send-region)
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(solidity-comment-style 'slash)
+;; (setq solidity-solc-path "/home/lefteris/ew/cpp-ethereum/build/solc/solc")
+#+END_SRC
+
+* Solidity Flycheck
+:PROPERTIES:
+:PACKAGE: solidity-flycheck
+:AFTER: solidity-mode
+:STRAIGHT: t
+:END:
+
+* Solidity Company
+:PROPERTIES:
+:PACKAGE: company-solidity
+:AFTER: solidity-mode
+:STRAIGHT: t
+:END:

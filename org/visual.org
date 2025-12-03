@@ -1,0 +1,43 @@
+* Highlight TODO
+:PROPERTIES:
+:PACKAGE: hl-todo
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(hl-todo-keyword-faces
+ '(("TODO"   . "#FF0000")
+   ("FIXME"  . "#FF0000")
+   ("DEBUG"  . "#A020F0")
+   ("GOTCHA" . "#FF4500")
+   ("STUB"   . "#1E90FF")))
+#+END_SRC
+
+
+** hook :hook:
+#+BEGIN_SRC emacs-lisp
+(prog-mode . hl-todo-mode)
+#+END_SRC
+
+* Visual line mode
+:PROPERTIES:
+:PACKAGE: simple
+:END:
+
+** Init
+
+#+BEGIN_SRC emacs-lisp
+(global-visual-line-mode 1)
+#+END_SRC
+
+* Highlight numbers
+:PROPERTIES:
+:PACKAGE: highlight-numbers
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . highlight-numbers-mode)
+ (org-mode . highlight-numbers-mode))
+#+END_SRC

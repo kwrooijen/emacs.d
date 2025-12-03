@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: humanmessageprompttemplate
+# key: humanmessageprompttemplate
+# --
+HumanMessagePromptTemplate.from_template(
+    "Can you help me with {task}?"
+)

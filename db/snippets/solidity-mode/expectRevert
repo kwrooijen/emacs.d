@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: expectRevert
+# key: erev
+# --
+vm.expectRevert($1);$0

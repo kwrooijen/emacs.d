@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: basechatprompttemplate
+# key: basechatprompttemplate
+# --
+BaseChatPromptTemplate.from_messages([
+    ("system", "You are an expert assistant."),
+    ("human", "Explain {concept} in simple terms.")
+])

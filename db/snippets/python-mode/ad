@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: ad
+# key: ad
+# --
+${1:graph_builder}.add_node("$2", ${3:$2})

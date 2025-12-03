@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: accept
-# key: accept
-# --
-(${1:server}.accept)$0

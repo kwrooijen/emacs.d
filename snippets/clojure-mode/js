@@ -1,4 +1,0 @@
-# name: js
-# key: js
-# --
-$0[:script {:src "$1"}]

@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: basemessageprompttemplate
+# key: basemessageprompttemplate
+# --
+BaseMessagePromptTemplate.from_template(
+    "This is a message: {content}"
+)

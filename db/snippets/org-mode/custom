@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: custom
+# key: custom
+# key: cus
+# --
+** Custom :custom:
+$0

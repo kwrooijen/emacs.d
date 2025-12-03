@@ -1,0 +1,92 @@
+* Eshell
+:PROPERTIES:
+:PACKAGE: eshell
+:END:
+
+** Config :config:
+
+Use dired colors
+
+#+BEGIN_SRC emacs-lisp
+(require 'em-ls)
+(require 'em-prompt)
+(set-face-attribute 'eshell-ls-directory nil :inherit 'dired-directory)
+(set-face-attribute 'eshell-prompt nil :foreground 'unspecified :inherit 'minibuffer-prompt)
+#+END_SRC
+
+*** Functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/eshell-toggle ()
+  "Toggles between eshell and the previous buffer."
+  (interactive)
+  (if (string= (buffer-name) "*eshell*")
+      (bury-buffer "*eshell*")
+    (progn (eshell)
+           (evil-insert-state))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/project-eshell-toggle ()
+  "Opens an eshell buffer in the root of the current project."
+  (interactive)
+  (if (string= (buffer-name) "*eshell*")
+      (bury-buffer "*eshell*")
+    (progn (project-eshell)
+           (evil-insert-state))))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "e e" 'kwrooijen/eshell-toggle
+  "e p" 'kwrooijen/project-eshell-toggle)
+#+END_SRC
+
+* Vterm
+:PROPERTIES:
+:PACKAGE: vterm
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-key vterm-mode-map (kbd "M-1") 'winum-select-window-1)
+(define-key vterm-mode-map (kbd "M-2") 'winum-select-window-2)
+(define-key vterm-mode-map (kbd "M-3") 'winum-select-window-3)
+(define-key vterm-mode-map (kbd "M-4") 'winum-select-window-4)
+(define-key vterm-mode-map (kbd "M-5") 'winum-select-window-5)
+(define-key vterm-mode-map (kbd "M-6") 'winum-select-window-6)
+(define-key vterm-mode-map (kbd "M-7") 'winum-select-window-7)
+(define-key vterm-mode-map (kbd "M-8") 'winum-select-window-8)
+(define-key vterm-mode-map (kbd "M-<backspace>")
+            (lambda()
+              (interactive)
+              (let ((p (point))
+                    (_ (evil-backward-word-begin))
+                    (e (point)))
+                (evil-collection-vterm-delete p e))))
+
+(defun kwrooijen/toggle-vterm ()
+  (interactive)
+  (if (eq major-mode 'vterm-mode)
+      (delete-window)
+    (vterm)))
+
+(defun kwrooijen/projectile-vterm ()
+  (interactive)
+  (let ((default-directory (projectile-project-root))
+        (vterm-buffer-name (concat "*vterm " (projectile-project-name) "*")))
+    (if (eq major-mode 'vterm-mode)
+        (delete-window)
+      (if (get-buffer vterm-buffer-name)
+          (popwin:special-display-popup-window vterm-buffer-name)
+        (vterm vterm-buffer-name)))))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "e E" 'kwrooijen/toggle-vterm
+  "e P" 'kwrooijen/projectile-vterm)
+#+END_SRC

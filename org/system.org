@@ -1,0 +1,197 @@
+#+STARTUP: showeverything
+#+PRIORITY: 1
+
+* System
+
+** Options
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/system-leader-key "SPC"
+  "The leader key for system commands."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/system-local-leader-key "'"
+  "The local leader key for system commands."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/system-leader-keymaps '(override)
+  "The keymaps in which the leader key is active."
+  :type 'list
+  :group 'kwrooijen)
+#+END_SRC
+
+* Exec Path from Shell
+:PROPERTIES:
+:PACKAGE: exec-path-from-shell
+:STRAIGHT: t
+:END:
+
+A GNU Emacs library to ensure environment variables inside Emacs look
+the same as in the user's shell.
+
+** Config :config:
+
+Initialize environment from the user’s shell.
+
+#+BEGIN_SRC emacs-lisp
+(exec-path-from-shell-initialize)
+#+END_SRC
+
+Set the environment variable $NAME from the user’s shell.
+
+#+BEGIN_SRC emacs-lisp
+(exec-path-from-shell-copy-env "SSH_AUTH_SOCK")
+#+END_SRC
+
+* Which Key
+:PROPERTIES:
+:PACKAGE: which-key
+:STRAIGHT: t
+:END:
+
+Show previews of keybindings when pressing the leader key or other prefix keys.
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(which-key-mode 1)
+#+END_SRC
+
+* All the icons
+:PROPERTIES:
+:PACKAGE: all-the-icons
+:STRAIGHT: t
+:END:
+
+Run M-x `all-the-icons-install-fonts` manually
+
+* Dash
+:PROPERTIES:
+:PACKAGE: dash
+:STRAIGHT: t
+:END:
+
+* General
+:PROPERTIES:
+:PACKAGE: general
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+Advise ‘define-key’ to automatically unbind keys when necessary.
+This will prevent errors when a sub-sequence of a key is already bound.
+
+#+BEGIN_SRC emacs-lisp
+(general-auto-unbind-keys)
+#+END_SRC
+
+Set up some basic equivalents for vim mapping functions.
+
+#+BEGIN_SRC emacs-lisp
+(general-evil-setup t)
+#+END_SRC
+
+Define Leader and Local Leader keymaps. The Leader keymap is active in
+all modes, the Local Leader keymap is only active in specific
+modes. These keys are configurable through the variables
+‘kwrooijen/system-leader-key’ and ‘kwrooijen/system-local-leader-key’.
+
+#+BEGIN_SRC emacs-lisp
+
+(general-create-definer kwrooijen/leader
+  :keymaps kwrooijen/system-leader-keymaps
+  :states '(normal visual emacs)
+  :prefix kwrooijen/system-leader-key
+
+  "c" '(:ignore t :which-key "Compile")
+  "g" '(:ignore t :which-key "Git")
+  "s" '(:ignore t :which-key "Search")
+  "b" '(:ignore t :which-key "Buffers")
+  "f" '(:ignore t :which-key "Files")
+  "p" '(:ignore t :which-key "Project")
+  "w" '(:ignore t :which-key "Window")
+  "r" '(:ignore t :which-key "Resume"))
+
+(general-create-definer kwrooijen/local-leader
+  :keymaps kwrooijen/system-leader-keymaps
+  :states '(normal visual)
+  :prefix kwrooijen/system-local-leader-key)
+#+END_SRC
+
+** Bindings :config:
+
+Global keybindings. These are not defined using the `:general` keyword
+because General hasn't been loaded yet.
+
+#+BEGIN_SRC emacs-lisp
+(defun unpop-to-mark-command ()
+  "Unpop off mark ring. Does nothing if mark ring is empty."
+  (interactive)
+      (when mark-ring
+        (setq mark-ring (cons (copy-marker (mark-marker)) mark-ring))
+        (set-marker (mark-marker) (car (last mark-ring)) (current-buffer))
+        (when (null (mark t)) (ding))
+        (setq mark-ring (nbutlast mark-ring))
+        (goto-char (marker-position (car (last mark-ring))))))
+
+(let ((frame (framep (selected-frame))))
+  (or (eq  t  frame)
+      (eq 'pc frame)
+      (define-key input-decode-map
+                  (kbd "C-[")
+                  [control-bracketleft])))
+
+(general-define-key
+ :states '(insert normal visual)
+ "M-C" 'kwrooijen/capitalize-previous-word
+ "M-c" 'clipboard-kill-ring-save
+ "M-v" 'clipboard-yank
+ "M-q" 'fill-paragraph
+ "M-+" 'align-regexp
+ [control-bracketleft] 'pop-to-mark-command
+ "C-]" 'unpop-to-mark-command)
+
+(general-define-key
+ :states '(insert)
+ :keymaps 'prog-mode-map
+ "M-RET" 'evil-open-below)
+#+END_SRC
+
+Window keys
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "w q" '(kill-current-buffer :which-key "Kill buffer")
+  "w j" 'windmove-down
+  "w k" 'windmove-up
+  "w h" 'windmove-left
+  "w l" 'windmove-right)
+#+END_SRC
+
+Resume keys
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/select-minibuffer ()
+  "Make the active minibuffer the selected window."
+  (interactive)
+  (when-let ((minibuffer-window (active-minibuffer-window)))
+    (select-window minibuffer-window)))
+
+(kwrooijen/leader
+  "r b" '(kwrooijen/select-minibuffer :which-key "Select minibuffer"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps 'minibuffer-mode-map
+ "M-v" 'clipboard-yank
+ "M-k" 'previous-line-or-history-element
+ "M-j" 'next-line-or-history-element)
+#+END_SRC
+
+Add separate describe key hotkey (useful when C-h is rebound, or in minibuffer)
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ "M-9" 'describe-key)
+#+END_SRC

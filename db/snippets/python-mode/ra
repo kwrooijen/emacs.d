@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: ra
+# key: ra
+# --
+create_react_agent(${1:model}, ${2:tools}, checkpointer=${3:memory})

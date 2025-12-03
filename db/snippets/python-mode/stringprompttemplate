@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: stringprompttemplate
+# key: stringprompttemplate
+# --
+StringPromptTemplate(
+    input_variables=["item"],
+    template="The item is {item}."
+)

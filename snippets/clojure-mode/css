@@ -1,4 +1,0 @@
-# name: css
-# key: css
-# --
-$0[:link {:href "$1" :rel "stylesheet"}]

@@ -1,0 +1,95 @@
+* Winum
+:PROPERTIES:
+:PACKAGE: winum
+:STRAIGHT: t
+:END:
+
+Number your open windows and switch between them.
+
+** Custom :custom:
+
+Don't add window number to modeline
+
+#+BEGIN_SRC emacs-lisp
+(winum-auto-setup-mode-line nil)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(winum-mode)
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-1" 'winum-select-window-1)
+("M-2" 'winum-select-window-2)
+("M-3" 'winum-select-window-3)
+("M-4" 'winum-select-window-4)
+("M-5" 'winum-select-window-5)
+("M-6" 'winum-select-window-6)
+("M-7" 'winum-select-window-7)
+("M-8" 'winum-select-window-8)
+("M-9" 'winum-select-window-9)
+#+END_SRC
+
+* Winner
+:PROPERTIES:
+:PACKAGE: winner
+:STRAIGHT: t
+:END:
+
+Undo or redo changes in your window layout.
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(winner-mode 1)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "w u" '(winner-undo :which-key "Undo window layout")
+  "w U" '(winner-redo :which-key "Redo window layout"))
+#+END_SRC
+
+* Popwin
+:PROPERTIES:
+:PACKAGE: popwin
+:STRAIGHT: t
+:END:
+
+Manage windows that pop up on your screen.
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(popwin-mode 1)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(push '("*eval*" :height 10 :dedicated t) popwin:special-display-config)
+(push '("*shell*" :height 20 :position bottom :stick t) popwin:special-display-config)
+(push '("*eshell*" :height 30 :position bottom :stick t) popwin:special-display-config)
+(push '("\\*vterm.*\\*" :height 30 :position bottom :stick t :regexp t) popwin:special-display-config)
+(push '("*Bebop Interceptor*" :height 40 :dedicated t) popwin:special-display-config)
+(push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
+(push '("^.*\\-eshell\\*.*$" :regexp t) popwin:special-display-config)
+#+END_SRC
+
+
+* Shackle :config:
+:PROPERTIES:
+:PACKAGE: shackle
+:STRAIGHT: t
+:END:
+
+Package for managing window positions. Similar to popwin.
+
+#+BEGIN_SRC emacs-lisp
+(shackle-mode 1)
+#+END_SRC

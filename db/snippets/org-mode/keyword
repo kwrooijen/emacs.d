@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: keyword
+# key: keyword
+# key: key
+# --
+:KEYWORD: $0

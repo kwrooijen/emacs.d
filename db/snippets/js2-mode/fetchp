@@ -1,0 +1,23 @@
+# -*- mode: snippet -*-
+# name: fetchp
+# key: fetchp
+# --
+fetch("/$1", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name="csrf-token"]").content
+      },
+      body: JSON.stringify({
+        $2
+      })
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`)
+        }
+        $0return response.json()
+      })
+      .catch(error => {
+        console.error("Error sending request:", error)
+      })

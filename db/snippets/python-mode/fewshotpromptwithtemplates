@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: fewshotpromptwithtemplates
+# key: fewshotpromptwithtemplates
+# --
+FewShotPromptWithTemplates(
+    examples=[
+        {"input": "happy", "output": "joyful"},
+        {"input": "sad", "output": "sorrowful"}
+    ],
+    example_prompt=PromptTemplate(
+        input_variables=["input", "output"],
+        template="Input: {input}
+Output: {output}"
+    ),
+    prefix="Provide synonyms for the following words:",
+    suffix="Input: {word}
+Output:"
+)

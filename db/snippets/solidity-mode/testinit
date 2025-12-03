@@ -1,0 +1,23 @@
+# -*- mode: snippet -*-
+# name: testinit
+# key: testinit
+# --
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+import {Test, console} from "forge-std/Test.sol";
+import {$1} from "../src/${1:MyClass}.sol";
+
+contract ${1}Test is Test {
+    ${1} public ${1:$(downcase yas-text)};
+    address user = address(1);
+
+    function setUp() public {
+        ${1:$(downcase yas-text)} = new ${1}();
+        vm.deal(user, 10 ether);
+        vm.startPrank(user, user);
+    }
+
+    function test_Something() public {
+    }
+}

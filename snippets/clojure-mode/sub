@@ -1,8 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: sub
-# key: sub
-# --
-(re-frame/reg-sub
- $1
- (fn [db]
-   $0))

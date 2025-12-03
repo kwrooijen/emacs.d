@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: asana
+# key: as
+# --
+:ASANA: $0

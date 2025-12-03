@@ -1,0 +1,19 @@
+* Emacs lisp
+:PROPERTIES:
+:PACKAGE: emacs-lisp
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(emacs-lisp-mode . lispy-mode)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'emacs-lisp-mode-map
+  :states 'normal
+  "e b" 'eval-buffer
+  "r t f" 'cljr-thread-first-all
+  "r t l" 'cljr-thread-last-all)
+#+END_SRC

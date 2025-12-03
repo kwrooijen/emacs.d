@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: imageprompttemplate
+# key: imageprompttemplate
+# --
+ImagePromptTemplate(
+    template="Describe the contents of this image: {image_url}"
+)

@@ -1,0 +1,558 @@
+#+STARTUP: showeverything
+
+* Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/snippet-directory
+  (file-name-concat kwrooijen/emacs-directory "db/snippets")
+  "Directory where snippets are stored."
+  :type 'string
+  :group 'kwrooijen)
+#+END_SRC
+
+* Yasnippet
+:PROPERTIES:
+:PACKAGE: yasnippet
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path kwrooijen/snippet-directory)
+(add-to-list 'yas-snippet-dirs kwrooijen/snippet-directory)
+(let ((yas-snippets-dir (expand-file-name "straight/repos/yasnippet-snippets/snippets" user-emacs-directory)))
+  (add-to-list 'load-path kwrooijen/snippet-directory)
+  (add-to-list 'yas-snippet-dirs kwrooijen/snippet-directory))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/yas-completing-read (templates)
+  "Prompt the user to select a template from TEMPLATES and insert its yasnippet.
+TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
+  (interactive)
+  (let* ((template-names (mapcar #'car templates))
+         (selected (completing-read "Select template: " template-names nil t)))
+    (when selected
+      (let ((snippet-key (cdr (assoc selected templates))))
+        (if (and (featurep 'yasnippet) (yas-lookup-snippet snippet-key))
+            (yas-expand-snippet (yas-lookup-snippet snippet-key))
+          (error "Yasnippet not available or snippet '%s' not found" snippet-key))))))
+#+END_SRC
+
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . yas-minor-mode)
+ (org-mode . yas-minor-mode))
+#+END_SRC
+
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "i s" 'yas-insert-snippet)
+#+END_SRC
+
+* Yasnippet snippets
+:PROPERTIES:
+:PACKAGE: yasnippet-snippets
+:STRAIGHT: t
+:AFTER: yasnippet
+:END:
+
+** Jinx (spell checker)
+:PROPERTIES:
+:PACKAGE: jinx
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/jinx-add-word-at-point ()
+  "Add the word at point to Jinx personal dictionary."
+  (interactive)
+  (let ((word (thing-at-point 'word t)))
+    (if (not word)
+        (user-error "No word at point")
+      ;; Call the same save logic that jinx uses for @word
+      (jinx--save-personal 'save ?@ word)
+      (jinx--recheck-overlays)
+      (message "Added '%s' to Jinx personal dictionary" word))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(jinx-languages "en_US,nl")
+;(defun jinx--read-languages ()
+;; '("en_US" "nl")
+;"en_US,nl"
+;(jinx--table-with-metadata '("en_US" "nl") `((group-function . ,#'jinx--group)))
+;)
+
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+("M-$" 'jinx-correct)
+("C-M-$" 'jinx-languages)
+
+(kwrooijen/leader
+ "jj" 'kwrooijen/jinx-add-word-at-point)
+#+END_SRC
+
+* Flycheck
+:PROPERTIES:
+:PACKAGE: flycheck
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
+(global-flycheck-mode 0)
+#+END_SRC
+* Copilot
+:PROPERTIES:
+:PACKAGE: copilot
+:STRAIGHT: (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
+:END:
+
+** Hooks :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . copilot-mode))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'copilot-completion-map
+          "M-TAB" 'copilot-accept-completion-by-word
+          "M-<tab>" 'copilot-accept-completion-by-word
+          "<tab>" 'kwrooijen/tab
+          "TAB" 'kwrooijen/tab
+          "C-<tab>" 'copilot-next-completion
+          "C-TAB" 'copilot-next-completion)
+
+(:states 'insert
+  "C-o" 'copilot-next-completion)
+
+("M-O" 'copilot-mode)
+#+END_SRC
+
+* Company
+:PROPERTIES:
+:PACKAGE: company
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'company-active-map
+          "C-j" 'company-select-next-or-abort
+          "C-k" 'company-select-previous-or-abort
+          "C-f" 'company-next-page
+          "C-b" 'company-previous-page
+          "C-;" 'helm-company
+          "<escape>" 'company-abort)
+
+("M-;" 'company-complete)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((after-init . global-company-mode))
+#+END_SRC
+
+
+* Company Box
+:PROPERTIES:
+:PACKAGE: company-box
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(company-mode . company-box-mode)
+#+END_SRC
+
+* Lsp
+:PROPERTIES:
+:PACKAGE: lsp-mode
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(lsp-headerline-breadcrumb-enable nil)
+#+END_SRC
+
+
+* Aider.el
+:PROPERTIES:
+:PACKAGE: aider
+:STRAIGHT: (:host github :repo "tninja/aider.el")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(aider-args '("--model" "openrouter/anthropic/claude-3.7-sonnet" "--no-auto-accept-architect" "--no-auto-commits"))
+(kwrooijen/aider-models '(("gemini 2.5-flash" . "openrouter/google/gemini-2.5-flash-preview")
+                          ("gpt-5-nano" . "openrouter/openai/gpt-5-nano")
+                          ("Claude 4.0" . "openrouter/anthropic/claude-3.7-sonnet")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/aider-run-aider ()
+  (interactive)
+  (let ((default-directory (or (projectile-project-root)
+                               default-directory)))
+    (aider-run-aider)))
+
+(defun kwrooijen/aider-switch-model ()
+  (interactive)
+  (let* ((model (completing-read "Select model: " (mapcar 'car kwrooijen/aider-models)))
+         (model-args (cdr (assoc model kwrooijen/aider-models))))
+    (setq aider-args `("--model" ,model-args "--no-auto-accept-architect"))
+    (message "Aider model set to: %s" model)))
+
+(defun kwrooijen/aider-switch-mode (mode)
+  "Either switch to Code Mode, Ask Mode, Architect Mode, or Help Mode"
+  (interactive
+   (list (completing-read "Select mode: " '("Code" "Ask" "Architect" "Help"))))
+  (cond
+   ((string= mode "Code")
+    (aider--send-command "/code")
+    (message "Switched to Code Mode"))
+   ((string= mode "Ask")
+    (aider--send-command "/ask")
+    (message "Switched to Ask Mode"))
+   ((string= mode "Architect")
+    (aider--send-command "/architect")
+    (message "Switched to Architect Mode"))
+   ((string= mode "Help")
+    (aider--send-command "/help")
+    (message "Switched to Help Mode"))))
+
+(defun kwrooijen/aider-clear-prompt ()
+  "Clear the user input at the current prompt in the Aider buffer."
+  (interactive)
+  (when (eq major-mode 'aider-comint-mode)
+    (let ((inhibit-read-only t))
+      (delete-region comint-last-input-start (point-max)))))
+
+(defun kwrooijen/aider-explain-error-at-point ()
+  "Explain the eglot error at point."
+  (interactive)
+  (let ((error-message (kwrooijen/eglot-error-at-point))
+        (line-number (line-number-at-pos))
+        (line (thing-at-point 'line t))
+        (file-name (buffer-file-name)))
+    (if error-message
+        (progn
+          (aider-switch-to-buffer)
+          (kwrooijen/aider-clear-prompt)
+          (aider--send-command "/ask")
+          (aider-add-current-file)
+          (aider--send-command (format "Explain the following error in %s:%s\nLine:%s\nError:%s" file-name line-number line error-message)))
+      (error "No error message at point"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; Defcustom kwrooijen/aider-style-guides, List of style guides to use based on key
+;; (defcustom kwrooijen/aider-style-guides
+;;   '(("LangChain" . "You hare a coding assistent writing Python, LangChain code.
+;; Every node should have their own class, with the following format:
+
+;; ```python
+;; class State(BaseModel):
+;;     items: List[Any] = []
+
+;; class NodeFoobar:
+;;     def __init__(self, *args, **kwargs):
+;;         # Any initialization code goes here
+;;     def invoke(self, state):
+;;         # Any code to run the node goes here
+;;         return state
+
+;; class NodeBarbaz:
+;;     def __init__(self, *args, **kwargs):
+;;         # Any initialization code goes here
+;;     def invoke(self, state):
+;;         # Any code to run the node goes here
+;;         return state
+
+;; class GraphMyProject:
+;;     def add_sequence(self, sequence):
+;;         for i in range(len(sequence) - 1):
+;;             self.graph_builder.add_edge(sequence[i], sequence[i + 1])
+
+;;     def __init__(self):
+;;         self.graph_builder = StateGraph(state_schema=State, config_schema=RunnableConfig)
+;;         self.graph_builder.add_node(\"Foobar\" , NodeFoobar())
+;;         self.graph_builder.add_node(\"Barbaz\" , NodeBarBaz())
+
+
+;;         self.add_sequence([START, \"Foobar\", \"Barbaz\"])
+;;         self.graph = self.graph_builder.compile()
+
+;;     def invoke(self):
+;;         return self.graph.invoke(State(), {})
+
+;;     def ainvoke(self):
+;;         return self.graph.ainvoke(State(), {})
+
+;; ```
+;; ")))
+#+END_SRC
+
+
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "aa" 'kwrooijen/aider-run-aider
+  "af" 'aider-add-current-file
+  "ag" 'aider-go-ahead
+  "aq" 'aider-exit
+  "ac" 'aider-clear-buffer
+  "ak" 'aider-ask-question
+  "ao" 'aider-open-history
+  "au" 'aider-write-unit-test
+  "aK" 'aider-general-question
+  "al" 'aider-send-block-by-line
+  "as" 'aider-send-line-or-region
+  "aM" 'kwrooijen/aider-switch-model
+  "am" 'kwrooijen/aider-switch-mode
+  "ae" 'kwrooijen/aider-explain-error-at-point)
+#+END_SRC
+
+
+* Combobulate
+:PROPERTIES:
+:PACKAGE: combobulate
+:STRAIGHT: (:host github :repo "mickeynp/combobulate" :branch "master")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(combobulate-flash-node nil)
+#+END_SRC
+
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+;; (require 'evil)
+
+(evil-define-state combobulate
+  "My custom Evil mode, inheriting from normal mode."
+  :tag " <C> "
+  :enable (normal)
+  :cursor (bar . 2))
+
+(define-key evil-combobulate-state-map (kbd "h") 'combobulate-navigate-up)
+(define-key evil-combobulate-state-map (kbd "n") 'combobulate-navigate-down)
+(define-key evil-combobulate-state-map (kbd "j") 'combobulate-navigate-next)
+(define-key evil-combobulate-state-map (kbd "k") 'combobulate-navigate-previous)
+(define-key evil-combobulate-state-map (kbd "f") 'combobulate-navigate-forward)
+(define-key evil-combobulate-state-map (kbd "l") 'combobulate-navigate-logical-next)
+(define-key evil-combobulate-state-map (kbd "a") 'kwrooijen/treesit-jump)
+(define-key evil-combobulate-state-map (kbd "R") 'combobulate-splice-up)
+(define-key evil-combobulate-state-map (kbd "r") 'combobulate-splice-self)
+(define-key evil-combobulate-state-map (kbd "w") 'combobulate-drag-up)
+(define-key evil-combobulate-state-map (kbd "s") 'combobulate-drag-down)
+(define-key evil-combobulate-state-map (kbd "c") 'combobulate-clone-node-dwim)
+(define-key evil-combobulate-state-map (kbd "x") 'kwrooijen/combobulate-kill-node-dwim)
+(define-key evil-combobulate-state-map (kbd "d") 'kwrooijen/combobulate-different)
+(define-key evil-combobulate-state-map (kbd "RET") 'kwrooijen/combobulate-move-one-down)
+(define-key evil-combobulate-state-map (kbd "<backspace>") 'kwrooijen/combobulate-move-one-up)
+;; Python specific
+(define-key evil-combobulate-state-map (kbd "e") 'kwrooijen/python-combobulate-shell-send-block)
+(define-key evil-combobulate-state-map (kbd "TAB") 'combobulate-python-indent-for-tab-command)
+(define-key python-base-mode-map (kbd "M-a") 'kwrooijen/combobulate-left-state)
+(define-key python-base-mode-map (kbd "M-r") 'kwrooijen/combobulate-rise)
+
+(defun kwrooijen/combobulate-left-state ()
+  (interactive)
+  (while (looking-at-p "^[[:space:]]*$")
+    (forward-line -1)
+    (back-to-indentation))
+  (back-to-indentation)
+  (evil-combobulate-state))
+
+(defun kwrooijen/treesit-get-descendants (node &optional named)
+  "Return a list of all descendant nodes of NODE.
+If NAMED is t, only include named nodes."
+  (let (descendants)
+    (dolist (child (treesit-node-children node named))
+      (push child descendants)
+      (setq descendants (append descendants (kwrooijen/treesit-get-descendants child named))))
+    descendants))
+
+(defun kwrooijen/treesit-jump ()
+  "Jump to one of the descendant nodes' positions using avy."
+  (interactive)
+  (let* ((avy-keys '(?a ?b ?c ?d ?e ?f ?g ?h ?i ?j ?k ?l ?m ?n ?o ?p ?q ?r ?s ?t ?u ?v ?w ?x ?y ?z))
+         (parent (treesit-node-parent (treesit-node-at (point))))
+         (allowed-types '("false"
+                          "integer"
+                          "call"
+                          "identifier"
+                          "dictionary"
+                          "string_start"
+                          "string_content"))
+         (descendants (kwrooijen/treesit-get-descendants parent t))
+         ;; Debugging purposes
+         ;; (_ (message "DESC %s" (-distinct (mapcar 'treesit-node-type descendants)) ))
+         (descendants (-filter (lambda (node)
+                                 (member (treesit-node-type node) allowed-types))
+                               descendants))
+         (positions (mapcar 'treesit-node-start descendants))
+         (positions (sort (-remove (lambda (pos) (equal pos (point))) positions))))
+    (avy-with my-avy-jump
+      (avy-process positions))))
+
+(defun kwrooijen/combobulate-kill-node-dwim ()
+  (interactive)
+  (let ((at-indentation?
+         (save-excursion
+           (let ((p (point)))
+             (back-to-indentation)
+             (= p (point))))))
+    (combobulate-kill-node-dwim)
+    (when at-indentation?
+      (evil-delete-line
+       (save-excursion (beginning-of-line) (point))
+       (save-excursion (end-of-line) (1+ (point))))
+      (back-to-indentation))))
+
+(defun kwrooijen/combobulate-move-one-down ()
+  (interactive)
+  (save-excursion
+    (evil-open-above 0)
+    (evil-combobulate-state))
+  (if (bolp)
+      (forward-line 1)))
+
+(defun kwrooijen/combobulate-move-one-up ()
+  (interactive)
+  (save-excursion
+    (next-line -1)
+    (when (looking-at-p "^[[:space:]]*$")
+      (evil-delete-line
+       (save-excursion (beginning-of-line) (point))
+       (save-excursion (end-of-line) (1+ (point)))))))
+
+(defun kwrooijen/combobulate-rise ()
+  (interactive)
+  (combobulate-navigate-up)
+  (kwrooijen/combobulate-different))
+
+(defun kwrooijen/combobulate-different ()
+  (interactive)
+  (when kwrooijen/combobulate-current-node
+    (if (= (treesit-node-start kwrooijen/combobulate-current-node) (point))
+        (goto-char (treesit-node-end kwrooijen/combobulate-current-node))
+      (goto-char (treesit-node-start kwrooijen/combobulate-current-node)))))
+
+(defvar kwrooijen/combobulate-current-node nil
+  "The current node in the combobulate buffer.")
+
+(defvar kwrooijen/combobulate-visual-overlay nil
+  "")
+
+(defun kwrooijen/combobulate-start-visual (start end)
+  (when kwrooijen/combobulate-visual-overlay
+    (delete-overlay kwrooijen/combobulate-visual-overlay))
+  (setq kwrooijen/combobulate-visual-overlay (make-overlay start end))
+  (overlay-put kwrooijen/combobulate-visual-overlay 'face 'kwrooijen/combobulate-highlight))
+
+(defface kwrooijen/combobulate-highlight
+  '((((class color) (background light))
+     :background "#393c4c" :foreground unspecified)
+    (((class color) (background dark))
+     :background "#393c4c" :foreground unspecified))
+  ""
+  :group 'kwrooijen/combobulate-faces)
+
+(defun kwrooijen/combobulate-node-at-point ()
+  (let* ((nodes (combobulate-all-nodes-at-point)))
+    (if (= (length nodes) 1)
+        (car nodes)
+      (or (car (last (--remove (string= (combobulate-node-type it) "block") nodes)))
+          (car (last nodes))))))
+
+(defun kwrooijen/combobulate-highlight-current-node (&optional node)
+  (interactive)
+  (if (treesit-node-p node)
+      (setq kwrooijen/combobulate-current-node node)
+    (setq kwrooijen/combobulate-current-node (kwrooijen/combobulate-node-at-point)))
+  (kwrooijen/combobulate-start-visual
+   (treesit-node-start kwrooijen/combobulate-current-node)
+   (treesit-node-end kwrooijen/combobulate-current-node)))
+
+(defcustom kwrooijen/combobulate-navigate-functions
+  '(undo-tree-undo
+    undo-tree-redo
+    pop-global-mark
+    elpy-goto-definition
+    combobulate-navigate-next
+    combobulate-navigate-up
+    combobulate-navigate-down
+    combobulate-navigate-next
+    combobulate-navigate-previous
+    combobulate-navigate-forward
+    combobulate-navigate-logical-next
+    kwrooijen/treesit-jump
+    combobulate-splice-up
+    combobulate-splice-self
+    combobulate-drag-up
+    combobulate-drag-down
+    kwrooijen/combobulate-left-state
+    kwrooijen/combobulate-move-one-down
+    kwrooijen/combobulate-move-one-up)
+
+  ""
+  :type '()
+  :group 'kwrooijen/combobulate)
+
+(defun kwrooijen/combobulate-clear-highlight ()
+  (when kwrooijen/combobulate-visual-overlay
+    (delete-overlay kwrooijen/combobulate-visual-overlay)
+    (setq kwrooijen/combobulate-visual-overlay nil)))
+
+(add-hook 'evil-combobulate-state-exit-hook #'kwrooijen/combobulate-clear-highlight)
+
+(dolist (func kwrooijen/combobulate-navigate-functions)
+  (advice-add func :filter-return  'kwrooijen/combobulate-highlight-current-node))
+#+END_SRC
+
+
+* Aidermacs
+:PROPERTIES:
+:PACKAGE: aidermacs
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(aidermacs-show-diff-after-change nil)
+(aidermacs-auto-commits nil)
+(aidermacs-extra-args '("--no-auto-commits"))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-advice aidermacs-run (:around (orig-fun &rest args) set-project-root)
+  "Run aidermacs-run with default-directory set to project root."
+  (let ((default-directory (projectile-project-root)))
+    (apply orig-fun args)))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"a" 'aidermacs-transient-menu)
+#+END_SRC

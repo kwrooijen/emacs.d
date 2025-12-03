@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: sum
+# key: sum
+# --
+#+TBLFM: @>>\$1=vsum(@2..@-1)

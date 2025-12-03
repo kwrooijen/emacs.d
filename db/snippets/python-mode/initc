@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: initc
+# key: initc
+# --
+init_chat_model("${1:gpt-4o-mini}", model_provider="${2:openai}")$0

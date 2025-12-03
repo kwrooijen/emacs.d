@@ -1,0 +1,64 @@
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/paperspace-set-notebook-session (url)
+  "Update the Jupyter session and token based on the provided URL."
+  (interactive "sEnter the Paperspace Jupyter Kernel URL: ")
+  (let* ((url-components (url-generic-parse-url url))
+         (host (url-host url-components))
+         (token (url-filename url-components))
+         (token-value (replace-regexp-in-string "^\\?token=" "" token))
+         (session (concat host "#0:jupyter")))
+    (setq jupyter-rest-api-default-token token-value)
+    (save-excursion
+      (goto-char (point-min))
+      (if (re-search-forward "^#\\+PROPERTY: header-args:python" nil t)
+          (progn
+            (beginning-of-line)
+            (kill-line)
+            (insert (concat "#+PROPERTY: header-args:python :session /jpys:" session " :pandoc t")))
+        ;; If the property doesn't exist, insert it at the beginning of the buffer
+        (goto-char (point-min))
+        (insert (concat "#+PROPERTY: header-args:python :session /jpys:" session " :pandoc t\n"))))
+    (org-mode-restart)
+    (message "Session set to: %s and token set to: %s" session token-value)))
+
+(use-package ox-ipynb
+  :straight (:host github :repo "jkitchin/ox-ipynb" :files ("dist" "*.el")))
+
+(use-package jupyter
+  :straight t
+  :general
+  (kwrooijen/local-leader
+    :keymaps 'org-mode-map
+    :states 'normal
+    ";" 'kwrooijen/jupyter-color-fix)
+
+  :hook (org-mode . kwrooijen/jupyter-setup)
+  :config
+
+  (defun kwrooijen/jupyter-setup ()
+    (interactive)
+    (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+    (add-hook 'org-babel-after-execute-hook 'kwrooijen/jupyter-color-fix))
+
+  (defun kwrooijen/jupyter-color-fix (&rest _)
+    (interactive)
+    (org-babel-jupyter-override-src-block "python")
+    (jupyter-ansi-color-apply-on-region (point-min) (point-max)))
+
+  (require 'ob-jupyter)
+  (require 'ob-shell)
+  (setq-local org-image-actual-width 1024))
+
+(use-package org
+  :init
+  (add-to-list 'org-babel-load-languages '(python . t))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((python . t)
+     (jupyter . t)))
+  (add-to-list 'org-src-lang-modes '("python" . python-ts))
+  (when (not (boundp 'org-babel-default-header-args:python))
+    (setq org-babel-default-header-args:python nil))
+  (add-to-list 'org-babel-default-header-args:python '(:session . "*Python*")))
+#+END_SRC

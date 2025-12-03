@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: hook
+# key: hook
+# key: hook
+# --
+** Hook :hook:
+$0

@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/halt-key
-# key: halt
-# --
-(defmethod ig/halt-key! :$1 [_ opts]
-  $0)

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: asset_path
+# key: ass
+# --
+<%= asset_path("$0") %>

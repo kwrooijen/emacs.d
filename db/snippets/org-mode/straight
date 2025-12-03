@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: straight
+# key: straight
+# key: str
+# --
+:STRAIGHT: $0

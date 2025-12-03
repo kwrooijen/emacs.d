@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/stop
-# key: stop
-# --
-(defmethod ig/stop :$1 [_ opts]
-  $0)

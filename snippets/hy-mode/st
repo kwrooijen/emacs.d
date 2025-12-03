@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: st
-# key: st
-# --
-(${1:client}.sendto (.encode ${2:"$3"}) (, ${4:host} ${5:port}))$0

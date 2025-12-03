@@ -1,9 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: middleware
-# key: middleware
-# --
-(defmethod ig/init-key :$1 [_ opts]
-  (fn middleware-${1:$(replace-regexp-in-string "\\\\/" "--"
-                    (replace-regexp-in-string "\\\\." "-" yas-text))}
-    [context event state]
-    event$0))

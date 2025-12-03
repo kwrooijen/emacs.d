@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: check-output
-# key: co
-# --
-(subprocess.check-output ${1:command} :stderr subprocess.STDOUT :shell True)$0

@@ -1,0 +1,21 @@
+* Rust
+:PROPERTIES:
+:PACKAGE: rust-mode
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'rust-mode-map
+  :states 'normal
+  "r" 'rust-run
+  "t" 'rust-test
+  "b" 'rust-compile)
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(rust-format-on-save t)
+#+END_SRC

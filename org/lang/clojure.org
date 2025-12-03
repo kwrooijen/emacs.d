@@ -1,0 +1,99 @@
+#+STARTUP: showeverthing
+
+* Clojure
+:PROPERTIES:
+:PACKAGE: clojure-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+
+#+BEGIN_SRC emacs-lisp
+((clojure-mode . cider-mode)
+ (clojure-mode . lispy-mode)
+ (clojure-mode . clj-refactor-mode)
+ (clojure-mode . flycheck-mode))
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(clojure-indent-style 'always-align)
+(clojure-align-forms-automatically t)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps '(clojure-mode-map clojurescript-mode-map)
+          "M-e" 'cider-pprint-eval-sexp)
+#+END_SRC
+
+* Clojure refactor
+:PROPERTIES:
+:PACKAGE: clj-refactor
+:STRAIGHT: t
+:AFTER: clojure
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(cljr-warn-on-eval nil)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+ :keymaps '(clojure-mode-map clojurescript-mode-map)
+            :states 'normal
+            "r t f" 'cljr-thread-first-all
+            "r t l" 'cljr-thread-last-all)
+#+END_SRC
+
+
+* Cider
+:PROPERTIES:
+:PACKAGE: cider
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+
+This setting enables dynamic cljs completions.
+That is, expressions at point are evaluated and the properties of the
+resulting value are used to compute completions.
+
+#+BEGIN_SRC emacs-lisp
+(cider-enhanced-cljs-completion-p nil)
+#+END_SRC
+
+When non-nil a bit of help text will be displayed on REPL start.
+
+#+BEGIN_SRC emacs-lisp
+(cider-repl-display-help-banner nil)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(cider-repl-display-help-banner nil)
+(cider-figwheel-main-default-options "dev")
+(cider-default-cljs-repl 'figwheel-main)
+(cider-preferred-build-tool 'clojure-cli)
+(cider-shadow-default-options "app")
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'safe-local-variable-values '(cider-default-cljs-repl . shadow))
+(add-to-list 'safe-local-variable-values '(cider-shadow-default-options . "app"))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps '(clojure-mode-map clojurescript-mode-map)
+            :states 'normal
+            "r j" 'cider-jack-in-clj
+            "r c" 'cider-connect-clj
+            "s j n" 'cider-jack-in-clj&cljs
+            "b b" 'cider-switch-to-repl-buffer
+            "e b" 'cider-eval-buffer)
+#+END_SRC

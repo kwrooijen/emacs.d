@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: baseprompttemplate
+# key: baseprompttemplate
+# --
+BasePromptTemplate(
+    input_variables=["topic"],
+    template="Tell me about {topic}."
+)

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: sg
+# key: sg
+# --
+StateGraph(state_schema=${1:MessagesState}, config_schema=${2:RunnableConfig})$0

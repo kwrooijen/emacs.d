@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: org-package
+# key: pp
+# key: pp
+# --
+* $1
+:PROPERTIES:
+:PACKAGE:  $0
+:STRAIGHT: t
+:END:

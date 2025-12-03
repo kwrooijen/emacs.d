@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/suspend-key
-# key: suspend
-# --
-(defmethod ig/suspend-key! :$1 [_ opts]
-  $0)

@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: tool
+# key: tool
+# --
+@mcp.tool()
+def $1($2) -> $3:
+    """$4"""
+    $0

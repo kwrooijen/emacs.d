@@ -1,0 +1,488 @@
+* Functions
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-table-current-line-columns ()
+  "Return the columns of the current line in an Org table as a list of plain strings."
+  (when (org-at-table-p)
+    (mapcar (lambda (s) (substring-no-properties (string-trim s)))
+            (org-split-string (buffer-substring-no-properties
+                               (line-beginning-position)
+                               (line-end-position))
+                              "|"))))
+
+(defun orgtbl-to-semicol (table params)
+  "Convert the `orgtbl-mode' TABLE to TAB separated material."
+  (orgtbl-to-generic table (org-combine-plists '(:sep ";") params)))
+
+(defun kwrooijen/org-table-export ()
+  (interactive)
+  (let* ((export-file (kwrooijen/org-table-get-export-file)))
+    (org-table-export (when export-file (expand-file-name export-file)) "orgtbl-to-semicol")))
+
+(defun kwrooijen/org-table-get-export-file ()
+  "Return the value of the #+EXPORT: keyword associated with the current table."
+  (interactive)
+  (unless (org-at-table-p) (user-error "Not in a table"))
+  (save-excursion
+    (let (export-file)
+      ;; Move to the line before the table
+      (goto-char (org-table-begin))
+      (forward-line -1)
+      (end-of-line)
+      ;; Search backward for #+EXPORT: within a reasonable range
+      (when (re-search-backward "^#\\+EXPORT:[ \t]*\\(.*\\)$" nil t)
+        (setq export-file (match-string 1)))
+      (if export-file
+          (string-trim export-file)  ; Remove leading/trailing whitespace
+        (user-error "No #+EXPORT: keyword found above the table")))))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-mode-setup ()
+    (interactive)
+    (setq-local evil-auto-indent nil)
+    (auto-fill-mode 0)
+    (electric-indent-mode -1))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-toggle-inline-image-at-point ()
+  (org-toggle-inline-images
+   nil
+   (org-element-begin (org-element-context))
+   (org-element-end (org-element-context))))
+
+(defun kwrooijen/file-path-from-URI (file-string)
+  (when (and file-string (string-match "file:\\(?://\\)?\\(.*\\)" file-string))
+    (string-trim (match-string 1 file-string))))
+
+(defun kwrooijen/org-code-open-link-file ()
+  (let ((link (org-element-context))
+        (value (plist-get (plist-get (org-element-context) 'fixed-width) :value)))
+    (when-let (file (kwrooijen/file-path-from-URI value))
+      (when (file-exists-p file)
+        (next-line)
+        (beginning-of-line)
+        (newline)
+        (previous-line)
+        (insert (format "[[%s]]" file))
+        (kwrooijen/org-toggle-inline-image-at-point)
+        (beginning-of-line)))))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun +org--toggle-inline-images-in-subtree (&optional beg end refresh)
+  "Refresh inline image previews in the current heading/tree."
+  (let* ((beg (or beg
+                  (if (org-before-first-heading-p)
+                      (save-excursion (point-min))
+                    (save-excursion (org-back-to-heading) (point)))))
+         (end (or end
+                  (if (org-before-first-heading-p)
+                      (save-excursion (org-next-visible-heading 1) (point))
+                    (save-excursion (org-end-of-subtree) (point)))))
+         (overlays (cl-remove-if-not (lambda (ov) (overlay-get ov 'org-image-overlay))
+                                     (ignore-errors (overlays-in beg end)))))
+    (dolist (ov overlays nil)
+      (delete-overlay ov)
+      (setq org-inline-image-overlays (delete ov org-inline-image-overlays)))
+    (when (or refresh (not overlays))
+      (org-display-inline-images t t beg end)
+      t)))
+
+(defun +org-get-todo-keywords-for (&optional keyword)
+  "Returns the list of todo keywords that KEYWORD belongs to."
+  (when keyword
+    (cl-loop for (type . keyword-spec)
+             in (cl-remove-if-not #'listp org-todo-keywords)
+             for keywords =
+             (mapcar (lambda (x) (if (string-match "^\\([^(]+\\)(" x)
+                                     (match-string 1 x)
+                                   x))
+                     keyword-spec)
+             if (eq type 'sequence)
+             if (member keyword keywords)
+             return keywords)))
+
+(defun +org/dwim-at-point (&optional arg)
+  "Do-what-I-mean at point.
+
+If on a:
+- checkbox list item or todo heading: toggle it.
+- citation: follow it
+- headline: cycle ARCHIVE subtrees, toggle latex fragments and inline images in
+  subtree; update statistics cookies/checkboxes and ToCs.
+- clock: update its time.
+- footnote reference: jump to the footnote's definition
+- footnote definition: jump to the first reference of this footnote
+- timestamp: open an agenda view for the time-stamp date/range at point.
+- table-row or a TBLFM: recalculate the table's formulas
+- table-cell: clear it and go into insert mode. If this is a formula cell,
+  recaluclate it instead.
+- babel-call: execute the source block
+- statistics-cookie: update it.
+- src block: execute it
+- latex fragment: toggle it.
+- link: follow it
+- otherwise, refresh all inline images in current tree."
+  (interactive "P")
+  (if (button-at (point))
+      (call-interactively #'push-button)
+    (let* ((context (org-element-context))
+           (type (org-element-type context)))
+      ;; skip over unimportant contexts
+      (while (and context (memq type '(verbatim code bold italic underline strike-through subscript superscript)))
+        (setq context (org-element-property :parent context)
+              type (org-element-type context)))
+      (pcase type
+        ((or `citation `citation-reference)
+         (org-cite-follow context arg))
+        (`fixed-width (kwrooijen/org-code-open-link-file))
+
+        (`headline
+         (cond ((memq (bound-and-true-p org-goto-map)
+                      (current-active-maps))
+                (org-goto-ret))
+               ((and (fboundp 'toc-org-insert-toc)
+                     (member "TOC" (org-get-tags)))
+                (toc-org-insert-toc)
+                (message "Updating table of contents"))
+               ((string= "ARCHIVE" (car-safe (org-get-tags)))
+                (org-force-cycle-archived))
+               ((or (org-element-property :todo-type context)
+                    (org-element-property :scheduled context))
+                (org-todo
+                 (if (eq (org-element-property :todo-type context) 'done)
+                     (or (car (+org-get-todo-keywords-for (org-element-property :todo-keyword context)))
+                         'todo)
+                   'done))))
+         ;; Update any metadata or inline previews in this subtree
+         (org-update-checkbox-count)
+         (org-update-parent-todo-statistics)
+         (when (and (fboundp 'toc-org-insert-toc)
+                    (member "TOC" (org-get-tags)))
+           (toc-org-insert-toc)
+           (message "Updating table of contents"))
+         (let* ((beg (if (org-before-first-heading-p)
+                         (line-beginning-position)
+                       (save-excursion (org-back-to-heading) (point))))
+                (end (if (org-before-first-heading-p)
+                         (line-end-position)
+                       (save-excursion (org-end-of-subtree) (point))))
+                (overlays (ignore-errors (overlays-in beg end)))
+                (latex-overlays
+                 (cl-find-if (lambda (o) (eq (overlay-get o 'org-overlay-type) 'org-latex-overlay))
+                             overlays))
+                (image-overlays
+                 (cl-find-if (lambda (o) (overlay-get o 'org-image-overlay))
+                             overlays)))
+           (+org--toggle-inline-images-in-subtree beg end)
+           (if (or image-overlays latex-overlays)
+               (org-clear-latex-preview beg end)
+             (org--latex-preview-region beg end))))
+
+        (`clock (org-clock-update-time-maybe))
+
+        (`footnote-reference
+         (org-footnote-goto-definition (org-element-property :label context)))
+
+        (`footnote-definition
+         (org-footnote-goto-previous-reference (org-element-property :label context)))
+
+        ((or `planning `timestamp)
+         (org-follow-timestamp-link))
+
+        ((or `table `table-row)
+         (if (org-at-TBLFM-p)
+             (org-table-calc-current-TBLFM)
+           (ignore-errors
+             (save-excursion
+               (goto-char (org-element-property :contents-begin context))
+               (org-call-with-arg 'org-table-recalculate (or arg t))))))
+
+        (`table-cell
+         (org-table-blank-field)
+         (org-table-recalculate arg)
+         (when (and (string-empty-p (string-trim (org-table-get-field)))
+                    (bound-and-true-p evil-local-mode))
+           (evil-change-state 'insert)))
+
+        (`babel-call
+         (org-babel-lob-execute-maybe))
+
+        (`statistics-cookie
+         (save-excursion (org-update-statistics-cookies arg)))
+
+        ((or `src-block `inline-src-block)
+         (org-babel-execute-src-block arg))
+
+        ((or `latex-fragment `latex-environment)
+         (org-latex-preview arg))
+
+        (`link
+         (let* ((lineage (org-element-lineage context '(link) t))
+                (path (org-element-property :path lineage)))
+           (if (or (equal (org-element-property :type lineage) "img")
+                   (and path (image-type-from-file-name path)))
+               (+org--toggle-inline-images-in-subtree
+                (org-element-property :begin lineage)
+                (org-element-property :end lineage))
+             (org-open-at-point arg))))
+
+        (`paragraph
+         (+org--toggle-inline-images-in-subtree))
+
+        ((guard (org-element-property :checkbox (org-element-lineage context '(item) t)))
+         (let ((match (and (org-at-item-checkbox-p) (match-string 1))))
+           (org-toggle-checkbox (if (equal match "[ ]") '(16)))))
+
+        (_
+         (if (or (org-in-regexp org-ts-regexp-both nil t)
+                 (org-in-regexp org-tsr-regexp-both nil  t)
+                 (org-in-regexp org-link-any-re nil t))
+             (call-interactively #'org-open-at-point)
+           (+org--toggle-inline-images-in-subtree
+            (org-element-property :begin context)
+            (org-element-property :end context))))))))
+#+END_SRC
+
+* Org Ox gfm
+:PROPERTIES:
+:PACKAGE: ox-gfm
+:STRAIGHT: t
+:END:
+
+** Init :init:
+
+Override org-gfm-inner-template so that it doesn't generate a ToC.
+
+#+BEGIN_SRC emacs-lisp
+(defun org-gfm-inner-template (contents info)
+  "Return body of document after converting it to Markdown syntax.
+CONTENTS is the transcoded contents string.  INFO is a plist
+holding export options."
+    (org-trim (concat contents "\n" (org-gfm-footnote-section info))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setq org-confirm-elisp-link-function nil)
+#+END_SRC
+
+* Wisdom
+:PROPERTIES:
+:PACKAGE: wisdom
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+   :keymaps 'org-mode-map
+   "c c" 'wisdom-reload-current-buffer
+   "c a" 'wisdom-reload)
+#+END_SRC
+
+* Org
+:PROPERTIES:
+:PACKAGE: org
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-confirm-babel-evaluate nil)
+
+(org-pretty-entities nil)
+
+  ;; Don't add space between heading and tags
+(org-tags-column 0)
+
+  ;; Fold (hide) blocks on startup
+(org-startup-folded t)
+(org-hide-emphasis-markers t)
+(org-image-actual-width nil)
+(org-src-fontify-natively t)
+(org-edit-src-persistent-message nil)
+(org-fontify-quote-and-verse-blocks nil)
+(org-src-tab-acts-natively t)
+(org-src-preserve-indentation t)
+(org-edit-src-content-indentation 2)
+(org-hide-block-startup nil)
+(org-cycle-separator-lines 2)
+(org-log-into-drawer t)
+(org-duration-format (quote h:mm))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'org-clock)
+(defun org-clock-get-clock-string ()
+  "Form a clock-string, that will be shown in the mode line.
+If an effort estimate was defined for the current item, use
+01:30/01:50 format (clocked/estimated).
+If not, show simply the clocked time like 01:50."
+  (let ((clocked-time (org-clock-get-clocked-time)))
+    (if org-clock-effort
+	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
+	       (work-done-str
+		(propertize (org-duration-from-minutes clocked-time)
+			    'face
+			    (if (and org-clock-task-overrun
+				     (not org-clock-task-overrun-text))
+				'org-mode-line-clock-overrun
+			      'org-mode-line-clock)))
+	       (effort-str (org-duration-from-minutes effort-in-minutes)))
+	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
+		  work-done-str effort-str))
+      (format (propertize "[%s]" 'face 'org-mode-line-clock)
+	      (org-duration-from-minutes clocked-time)))))
+
+(font-lock-add-keywords
+ 'org-mode
+ '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
+ 'append)
+
+(add-to-list 'org-emphasis-alist '("`" (:inherit font-lock-keyword-face )))
+
+  ;; Add backticks to font-lock-keyword-face
+(font-lock-add-keywords
+ 'org-mode
+ '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
+ 'append)
+
+(custom-set-faces
+ '(bold ((t (:foreground "#ffffff" :weight bold)))))
+
+(plist-put org-format-latex-options :scale 2.5)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'org-meta-line nil :italic t :inherit 'fixed-pitch)
+;; Get rid of the background on column views
+(set-face-attribute 'org-column nil :background 'unspecified)
+(set-face-attribute 'org-column-title nil :background 'unspecified)
+(set-face-attribute 'org-level-1 nil :bold t)
+(set-face-attribute 'org-level-2 nil :bold t)
+(set-face-attribute 'org-level-3 nil :bold t)
+(set-face-attribute 'org-level-4 nil :bold t)
+(set-face-attribute 'org-level-5 nil :bold t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(define-key org-mode-map (kbd "M-p") 'org-previous-block)
+(define-key org-mode-map (kbd "M-n") 'org-next-block)
+(evil-define-key 'normal org-mode-map (kbd "RET") #'+org/dwim-at-point)
+#+END_SRC
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . kwrooijen/org-mode-setup)
+ (org-mode . org-margin-mode)
+ (org-mode . prettify-symbols-mode)
+ (org-babel-after-execute . org-redisplay-inline-images)
+ (org-babel-after-execute . kwrooijen/jupyter-color-fix)
+ (org-src-mode . evil-normal-state))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'org-src-mode-map
+  "'" 'org-edit-src-exit
+  "a" 'org-edit-src-abort)
+
+(kwrooijen/local-leader
+  :keymaps 'org-mode-map
+  "'" 'org-edit-special
+  "i i" 'kwrooijen/org-images-increase
+  "i j" 'kwrooijen/org-images-decrease
+  "f b"  'org/toggle-bold
+  "f u"  'org/toggle-underline
+  "f i"  'org/toggle-italic
+  "t a"  'kwrooijen/org-focus-this-heading
+  "t i"  'org-toggle-inline-images
+  "t e" 'kwrooijen/org-table-export
+  "c t"  'org-clock-update-time-maybe
+  "c i"  'org-clock-in
+  "c o"  'org-clock-out
+  "c r"  'org-clock-report
+  "c c"  'org-clock-goto)
+#+END_SRC
+
+* Org Margin
+:PROPERTIES:
+:PACKAGE: org-margin
+:STRAIGHT: (org-margin :host github :repo "rougier/org-margin")
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'face-remap)
+#+END_SRC
+
+* Org Roam
+:PROPERTIES:
+:PACKAGE: org-roam
+:STRAIGHT: t
+:AFTER: org
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(org-roam-db-autosync-mode)
+(require 'org-roam-protocol)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/org-roam-projects
+  '(("General" . "~/Documents/org/notes")
+    ("AI" . "~/Documents/org/ai"))
+  "List of org-roam projects.")
+
+(defun kwrooijen/org-roam-switch-project (project)
+  ;; Interactivelt select a project from list
+  (interactive
+   (list
+    (completing-read "Project: " kwrooijen/org-roam-projects)))
+  (setq org-roam-directory
+        (file-truename
+         (cdr (assoc project kwrooijen/org-roam-projects))))
+  (org-roam-db-sync)
+  (message "Switched to project: %s" project))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-roam-directory (file-truename "~/Documents/org/notes"))
+(org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+(org-roam-completion-everywhere t)
+(org-roam-completion-system 'helm)
+(org-roam-capture-templates '(("d" "default" plain "%?"
+                                      :target (file+head "${slug}.org" "#+title: ${title} ")
+                                      :unnarrowed t)
+                                     ("e" "encrypt" plain "%?"
+                                      :target (file+head "${slug}.org.gpg" "#+title: ${title} ")
+                                      :unnarrowed t)))
+#+END_SRC
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+    "f n" 'org-roam-node-find
+    "p o" 'kwrooijen/org-roam-switch-project)
+#+END_SRC
+
+* Prog Mode
+:PROPERTIES:
+:PACKAGE: prog-mode
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
+                          ("#+END_SRC" . "«")
+                          ("#+begin_src" . "»")
+                          ("#+end_src" . "«")
+                          ("#+begin_quote" . "“")
+                          ("#+end_quote" . "”")
+                          ("#+BEGIN_QUOTE" . "“")
+                          ("#+END_QUOTE" . "”")))
+#+END_SRC

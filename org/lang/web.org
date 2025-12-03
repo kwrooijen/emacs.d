@@ -1,0 +1,130 @@
+* Web mode
+:PROPERTIES:
+:PACKAGE:  web-mode
+:STRAIGHT: t
+:END:
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.css\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.scss\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.sass\\'" . web-mode))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/web-wrap-erb-output ()
+  "Wrap the current region (highlighted text) in <%= %>."
+  (interactive)
+  (if (use-region-p)
+      (let ((beg (region-beginning))
+            (end (region-end)))
+        (save-excursion
+          (goto-char end)
+          (insert " %>")
+          (goto-char beg)
+          (insert "<%= ")
+          (call-interactively 'evil-insert)))
+    (progn
+      (insert "<%=  %>")
+      (backward-char 3)
+      (call-interactively 'evil-insert))))
+
+(defun kwrooijen/web-wrap-erb ()
+  "Wrap the current region (highlighted text) in <% %>."
+  (interactive)
+  (if (use-region-p)
+      (let ((beg (region-beginning))
+            (end (region-end)))
+        (save-excursion
+          (goto-char end)
+          (insert " %>")
+          (goto-char beg)
+          (insert "<% ")
+          (call-interactively 'evil-insert)))
+    (progn
+      (insert "<%  %>")
+      (backward-char 3)
+      (call-interactively 'evil-insert))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/web-mode-before-save-hook ()
+  (interactive)
+  (when (eq major-mode 'web-mode)
+    ;(web-mode-buffer-indent)
+))
+
+#+END_SRC
+
+
+
+** Custom :custom:
+
+Basic indentation rules
+
+#+BEGIN_SRC emacs-lisp
+(web-mode-markup-indent-offset 2)
+(web-mode-css-indent-offset 2)
+(web-mode-code-indent-offset 2)
+(web-mode-part-padding 2)
+(web-mode-style-padding 2)
+(web-mode-block-padding 2)
+(web-mode-script-padding 2)
+#+END_SRC
+
+
+
+Highlight the tags of the current element.
+
+#+BEGIN_SRC emacs-lisp
+(web-mode-enable-current-element-highlight t)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((web-mode . electric-indent-mode)
+ (web-mode . paredit-mode)
+ (before-save . kwrooijen/web-mode-before-save-hook))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+ :keymaps '(web-mode-map)
+            :states '(normal visual)
+            "r r" 'kwrooijen/web-wrap-erb-output
+            "r e" 'kwrooijen/web-wrap-erb)
+#+END_SRC
+
+* Emmet mode
+:PROPERTIES:
+:PACKAGE:  emmet-mode
+:STRAIGHT: t
+:END:
+
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:states 'insert
+         "C-j" 'emmet-expand-line)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((sgml-mode-hook . emmet-mode)
+ (css-mode-hook . emmet-mode))
+#+END_SRC
+
+* Tailwind
+:PROPERTIES:
+:PACKAGE:  lsp-tailwindcss
+:STRAIGHT: (:host github :repo "merrickluo/lsp-tailwindcss" :files ("dist" "*.el"))
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(lsp-tailwindcss-add-on-mode t)
+#+END_SRC

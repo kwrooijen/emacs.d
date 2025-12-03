@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: gaswrap
+# key: gaswrap
+# --
+vm.txGasPrice(1);
+uint256 ${1:gas}Start = Gasleft();
+$0
+console.log("$1 used: ", ($1Start - Gasleft()) * tx.gasprice);

@@ -1,0 +1,5 @@
+* Json
+:PROPERTIES:
+:PACKAGE: json-mode
+:STRAIGHT: t
+:END:

@@ -1,0 +1,118 @@
+* Projectile
+:PROPERTIES:
+:PACKAGE: projectile
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "pi" 'projectile-invalidate-cache
+  "pr" 'projectile-replace)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(projectile-mode 1)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; --- Audio files ---
+(dolist (ext '("mp3" "wav" "flac" "aac" "ogg" "m4a" "aiff"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Video files ---
+(dolist (ext '("mp4" "mkv" "mov" "avi" "wmv" "flv" "mpeg" "mpg" "webm"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Images ---
+(dolist (ext '("jpg" "jpeg" "png" "gif" "bmp" "tiff" "svg" "heic" "webp"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- RAW / high-resolution photos ---
+(dolist (ext '("raw" "cr2" "nef" "arw" "dng"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- 3D / CAD ---
+(dolist (ext '("obj" "fbx" "stl" "blend" "dae"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Archives / compressed ---
+(dolist (ext '("zip" "tar" "gz" "7z" "rar" "xz" "bz2"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Disk images / installers ---
+(dolist (ext '("iso" "dmg" "img" "exe" "msi"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Misc large binaries ---
+(dolist (ext '("bin" "dat" "pak" "db" "sqlite" "db3"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Project ---
+(dolist (ext '("output.css"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+#+END_SRC
+
+
+** Custom :custom:
+
+Don't use fd, use git-ls instead
+
+#+BEGIN_SRC emacs-lisp
+(projectile-git-use-fd nil)
+#+END_SRC
+
+Set indexing method to `hybrid`.
+If set to `alien`, indexing won't use `projectile-globally-ignored-file-suffixes`.
+If set to `native`, indexing will be very slow
+
+#+BEGIN_SRC emacs-lisp
+(projectile-indexing-method 'hybrid)
+#+END_SRC
+
+Ignore all images
+
+#+BEGIN_SRC emacs-lisp
+(setq projectile-globally-ignored-file-suffixes
+ '(".gif" ".jpeg" ".jpg" ".png" ".svg" "eot" "ttf" "woff" "woff2" "min.js" "min.css"))
+#+END_SRC
+
+
+
+** Config :config:
+
+There doesn't seem to be an option in projectile to exclude submodules
+in `projectile-find-file`. To "fix" this for now, we force
+`projectile-get-sub-projects-files` to always return nil.
+
+#+BEGIN_SRC emacs-lisp
+(defun projectile-get-sub-projects-files (_ _) nil)
+#+END_SRC
+
+
+In order for ~grep-find-ignored-files~ to property ignore files in
+~helm-projectile-rg~, we need to override the ~glob-quote~ function. For
+some reason it messes up the askerisk.
+
+TODO: Create an issue
+https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L994-L997
+
+#+BEGIN_SRC emacs-lisp
+(defun glob-quote (string)
+  "Quote the special glob characters: *, ?, [, and ].
+STRING the string in which to escape special characters."
+  ;; (replace-regexp-in-string "[]*?[]" "\\\\\\&" string)
+  string)
+#+END_SRC
+
+
+Add any `projectile-globally-ignored-file-suffixes` to `grep-find-ignored-files`.
+This should work for `helm-projectile-rg`.
+(see: helm-projectile.el:helm-projectile-rg:ignored-files)
+
+#+BEGIN_SRC emacs-lisp
+(dolist (file projectile-globally-ignored-file-suffixes)
+  (add-to-list 'grep-find-ignored-files (concat "*" file)))
+#+END_SRC

@@ -1,0 +1,85 @@
+#+STARTUP: showeverything
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/insert-euro-symbol ()
+  "Inserts the € symbol at the cursor's position."
+  (interactive)
+  (insert "€"))
+#+END_SRC
+
+* Evil
+:PROPERTIES:
+:PACKAGE: evil
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-mode 1)
+;; What is this?
+;; (define-key evil-motion-state-map "'" nil)
+#+END_SRC
+
+
+Recenter screen when searching forward / backwards
+#+BEGIN_SRC emacs-lisp
+(advice-add 'evil-search-next :after #'kwrooijen/recenter)
+(advice-add 'evil-search-previous :after #'kwrooijen/recenter)
+#+END_SRC
+
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(:states 'insert
+         "C-$" 'kwrooijen/insert-euro-symbol)
+#+END_SRC
+
+* Evil Collection
+:PROPERTIES:
+:PACKAGE: evil-collection
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-collection-init)
+#+END_SRC
+
+* Evil Nerd commenter
+:PROPERTIES:
+:PACKAGE: evil-nerd-commenter
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-/" 'evilnc-comment-or-uncomment-lines)
+#+END_SRC
+
+
+# (use-package evil-snipe
+#   :straight t
+#   :after evil
+#   :config
+#   (evil-define-key 'visual evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
+#   (evil-define-key 'normal evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
+#   (evil-snipe-mode +1))
+# #+END_SRC
+
+* Evil Highlight Persist
+:PROPERTIES:
+:PACKAGE: evil-search-highlight-persist
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(global-evil-search-highlight-persist t)
+(advice-add 'keyboard-quit :before #'evil-search-highlight-persist-remove-all)
+#+END_SRC

@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: not-in
-# key: nin
-# --
-(not (in $1))$0

@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: graph
+# key: graph
+# --
+${1:graph_builder} = StateGraph(state_schema=State, config_schema=RunnableConfig)${2:.add_sequence([$3])}
+
+$1.add_edge(START, "$4")
+graph = $1.compile()$0

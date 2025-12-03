@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/pre-init-spec
-# key: inits
-# --
-(defmethod ig/pre-init-spec :$1 [_]
-  (s/keys :req [$0]))

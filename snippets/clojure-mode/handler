@@ -1,9 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: handler
-# key: handler
-# --
-(defmethod ig/init-key :$1 [_ opts]
-  (fn handler-${1:$(replace-regexp-in-string "\\\\/" "--"
-                    (replace-regexp-in-string "\\\\." "-" yas-text))}
-    [time event state]
-    state$0))

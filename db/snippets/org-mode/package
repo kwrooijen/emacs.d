@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: package
+# expand-env: ((yas-trigger-keys '("package" "pac")))
+# --
+:PACKAGE: $0

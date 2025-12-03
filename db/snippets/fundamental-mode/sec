@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: sec
+# key: sec
+# --
+$1=$(kamal secrets extract $1 $2$SECRETS)

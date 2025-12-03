@@ -1,7 +1,0 @@
-# -*- mode: snippet -*-
-# name: prep
-# key: prep
-# condition: t
-# --
-(defmethod ig/prep-key :$1 [_ opts]
-  $0)

@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: prompttemplate
+# key: prompttemplate
+# --
+PromptTemplate(
+    input_variables=["subject"],
+    template="Write a short paragraph about {subject}."
+)

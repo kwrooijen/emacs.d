@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: thread
-# key: thread
-# --
-(threading.Thread :target $1 :args (, $2))$0

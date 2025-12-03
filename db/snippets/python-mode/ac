@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: ac
+# key: ac
+# --
+${1:graph_builder}.add_conditional_edges("$2", $3)

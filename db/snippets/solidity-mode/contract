@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: contract
+# key: cont
+# --
+contract $1 {
+    constructor($3) {
+        $4
+    }
+    $0
+}

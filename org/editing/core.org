@@ -1,0 +1,113 @@
+* Iedit
+:PROPERTIES:
+:PACKAGE: iedit
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-i" 'iedit-mode)
+#+END_SRC
+
+* Expand region
+:PROPERTIES:
+:PACKAGE: expand-region
+:STRAIGHT: t
+:END:
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+("M-]" 'er/expand-region)
+("M-[" 'er/contract-region)
+#+END_SRC
+
+* Multiple Cursors
+:PROPERTIES:
+:PACKAGE: multiple-cursors
+:END:
+
+** Straight :straight:
+
+Use a custom version of multiple cursors which works with Evil.
+
+#+BEGIN_SRC emacs-lisp
+(multiple-cursors
+             :host github
+             :repo "kwrooijen/mc"
+             :files (:defaults (:exclude "*.el.in")))
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-P" 'mc/mark-previous-like-this)
+("M-N" 'mc/mark-next-like-this)
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(mc/list-file (file-name-concat kwrooijen/emacs-directory "db/mc-lists.el"))
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(multiple-cursors-mode t)
+#+END_SRC
+
+* Undo Tree
+:PROPERTIES:
+:PACKAGE: undo-tree
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(undo-tree-auto-save-history t)
+(undo-tree-history-directory-alist `((".*" . "~/.emacs.d/undo-tree-history/")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(global-undo-tree-mode 1)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:states  'normal
+"U" 'undo-tree-redo
+"u" 'undo-tree-undo)
+
+("M-u" 'undo-tree-redo)
+#+END_SRC
+
+* Smart Parens
+:PROPERTIES:
+:PACKAGE: smartparens
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'smartparens-config)
+#+END_SRC
+
+** Hook :hook:
+
+Enable for all programming modes. Would this be ok for lisp modes?
+
+#+BEGIN_SRC emacs-lisp
+((prog-mode . smartparens-mode))
+#+END_SRC
+
+* Hl line mode
+:PROPERTIES:
+:PACKAGE: hl-line
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . hl-line-mode)
+ (text-mode . hl-line-mode))
+#+END_SRC

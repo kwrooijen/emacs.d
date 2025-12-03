@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: st
+# key: st
+# --
+${1:graph_builder}.add_edge(START, "$2")

@@ -1,6 +1,0 @@
-# name: defrecord
-# key: defr
-# --
-(defrecord
-    $1
-    [$0])

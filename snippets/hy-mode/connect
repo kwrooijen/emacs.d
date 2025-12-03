@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: connect
-# key: connect
-# --
-(${1:client}.connect (, ${2:target} ${3:port}))$0

@@ -1,0 +1,10 @@
+* Go
+:PROPERTIES:
+:PACKAGE: go-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((before-save . gofmt-before-save))
+#+END_SRC

@@ -1,0 +1,181 @@
+#+PRIORITY: 4
+
+* Paredit
+:PROPERTIES:
+:PACKAGE: paredit
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-key paredit-mode-map (kbd "M-(") 'paredit-wrap-sexp)
+(define-key paredit-mode-map (kbd "M-{") 'paredit-wrap-curly)
+(define-key paredit-mode-map (kbd "M-[") 'paredit-wrap-square)
+(define-key paredit-mode-map (kbd "M-C-p") nil)
+(define-key paredit-mode-map (kbd "M-C-n") nil)
+#+END_SRC
+
+* Lispyville
+:PROPERTIES:
+:PACKAGE: lispyville
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(lispyville--define-key 'normal (kbd "M-J") #'mc/mark-next-like-this)
+(lispyville--define-key 'normal (kbd "M-K") #'mc/mark-previous-like-this)
+#+END_SRC
+
+* Lispy
+:PROPERTIES:
+:PACKAGE: lispy
+:STRAIGHT: t
+:AFTER: evil-collection
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun lispy--clojure-middleware-load ())
+(defun sexp-at-point ()
+  (interactive)
+  (let ((current (point))
+        (end (save-excursion (lispy-different) (point))))
+    (buffer-substring current end)))
+
+(defun cider-tap-sexp ()
+  (interactive)
+  (cider-interactive-eval (format "(tap> %s)" (cider-eval-sexp-at-point))))
+
+(defun lispy--mode-p ()
+  (or (lispy-left-p)
+      (lispy-right-p)))
+
+(defun lispy-brackets-or-barf (arg)
+  (interactive "P")
+  (if (lispy--mode-p)
+      (lispy-barf 1)
+    (lispy-brackets arg)))
+
+(defun lispy-left-insert ()
+  (interactive)
+  (when (not (lispy--mode-p))
+    (lispy-left 1))
+  (when (not (lispy--mode-p))
+    (beginning-of-defun))
+  (when (lispy--mode-p)
+    (evil-insert-state 1)))
+
+(defun lispy-right-insert ()
+  (interactive)
+  (when (not (lispy--mode-p))
+    (lispy-right 1))
+  (when (not (lispy--mode-p))
+    (end-of-defun))
+  (when (lispy--mode-p)
+    (evil-insert-state 1)))
+
+(defun lispy-o ()
+  (interactive)
+  (when (lispy-left-p)
+    (lispy-different))
+  (lispy-newline-and-indent-plain))
+
+(defun kwrooijen/lispy-delete-line ()
+  (interactive)
+  (let ((left? (lispy-left-p))
+        (current (point)))
+    (when (lispy-right-p)
+      (lispy-different))
+    (kill-sexp)
+    (save-excursion
+      (lispy-left-insert))
+    (when (not (lispy--mode-p))
+      (evil-join (save-excursion (beginning-of-line) (point))
+                 (save-excursion (end-of-line) (point))))
+    (indent-for-tab-command)
+    (when (not (eq left? (lispy-left-p)))
+      (lispy-different))))
+
+(defun lispy-global-teleport (arg)
+  (interactive "p")
+  (let ((lispy-teleport-global t))
+    (lispy-teleport arg)))
+
+(add-hook 'lispy-mode-hook
+          (lambda ()
+            ;; This breaks company mode if not set to nil
+            (define-key lispy-mode-map (kbd "C-k") nil)
+
+            (define-key lispy-mode-map (kbd "M-[") #'lispy-wrap-brackets)
+            (define-key lispy-mode-map (kbd "M-{") #'lispy-wrap-braces)
+            (define-key lispy-mode-map (kbd "M-(") #'lispy-wrap-round)
+            (define-key lispy-mode-map (kbd "C-k") nil)
+            (define-key lispy-mode-map (kbd "M-o") #'pop-to-mark-command)
+            (define-key lispyville-mode-map (kbd "M-o") #'pop-to-mark-command)
+
+            (evil-define-key 'insert lispy-mode-map "]" #'lispy-slurp)
+            (evil-define-key 'insert lispy-mode-map "[" #'lispy-brackets-or-barf)
+            (evil-define-key 'insert lispy-mode-map "{" #'lispy-braces)
+            (evil-define-key 'insert lispy-mode-map (kbd "C-d") #'lispy-describe-inline)
+            (evil-define-key 'insert lispy-mode-map (kbd "C-e") #'lispy-arglist-inline)
+            (evil-define-key 'normal lispy-mode-map (kbd "M-a") #'lispy-left-insert)
+            (evil-define-key 'normal lispyville-mode-map (kbd "M-a") #'lispy-left-insert)
+            (evil-define-key 'normal lispyville-mode-map (kbd "M-o") #'pop-to-mark-command)
+            (evil-collection-define-key 'normal 'lispy-mode-map (kbd "M-d") #'lispy-kill-word)
+            (evil-collection-define-key 'normal 'lispy-mode-map (kbd "D") #'paredit-kill)
+            (lispy-define-key lispy-mode-map "v" #'er/expand-region)
+            (lispy-define-key lispy-mode-map "o" 'lispy-o)
+            (lispy-define-key lispy-mode-map "M-o" 'pop-to-mark-command)
+            (lispy-define-key lispy-mode-map "x" 'kwrooijen/lispy-delete-line)
+            (lispy-define-key lispy-mode-map "d" 'lispy-different)
+            (lispy-define-key lispy-mode-map "i" 'indent-sexp)
+            (lispy-define-key lispy-mode-map "x" 'lispyville-delete)
+            (lispy-define-key lispy-mode-map "A" 'lispy-ace-symbol-replace)
+            (lispy-define-key lispy-mode-map "H" 'special-lispy-move-left)
+            (lispy-define-key lispy-mode-map "J" 'special-lispy-down-slurp)
+            (lispy-define-key lispy-mode-map "K" 'special-lispy-up-slurp)
+            (lispy-define-key lispy-mode-map "L" 'special-lispy-move-right)
+            (lispy-define-key lispy-mode-map "I" 'evil-insert-state)
+            (lispy-define-key lispy-mode-map "T" 'lispy-global-teleport)
+            (define-key lispy-mode-map (kbd "M-a") 'lispy-left-insert)
+            (define-key lispy-mode-map (kbd "M-e") 'lispy-right-insert)
+            ;; Fix for copilot
+            (lispy-define-key lispy-mode-map "j" 'kwrooijen/special-lispy-down)
+            (lispy-define-key lispy-mode-map "k" 'kwrooijen/special-lispy-up)))
+
+
+(defface ignore-paren-face
+  `((t (:inherit kwrooijen/subtle-fg-face))) "")
+
+(add-hook 'lispy-mode-hook
+          (lambda ()
+            (font-lock-add-keywords nil '((")" . 'ignore-paren-face)))
+            (font-lock-add-keywords nil '(("}" . 'ignore-paren-face)))
+            (font-lock-add-keywords nil '(("]" . 'ignore-paren-face)))))
+
+
+(defun kwrooijen/special-lispy-down ()
+  "lispy down is broken with copilot, so we need to override it."
+  (interactive)
+  (if (copilot--overlay-visible)
+      (insert "j")
+    (special-lispy-down)))
+
+(defun kwrooijen/special-lispy-up ()
+  "lispy up is broken with copilot, so we need to override it."
+  (interactive)
+  (if (copilot--overlay-visible)
+      (insert "k")
+    (special-lispy-up)))
+
+(defun kwrooijen/recenter (&rest x)
+  (evil-scroll-line-to-center (line-number-at-pos)))
+
+
+(advice-add 'special-lispy-down :after #'kwrooijen/recenter)
+(advice-add 'special-lispy-up :after #'kwrooijen/recenter)
+(add-hook 'lispy-mode-hook #'show-paren-mode)
+(add-hook 'lispy-mode-hook #'paredit-mode)
+(add-hook 'lispy-mode-hook #'lispyville-mode)
+#+END_SRC

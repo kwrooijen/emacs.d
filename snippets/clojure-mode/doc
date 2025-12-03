@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: runes/doc
-# key: doc
-# --
-(defmethod runes/doc :$1 [_ opts]
-  $0)

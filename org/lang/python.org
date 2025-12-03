@@ -1,0 +1,536 @@
+Install Poetry + Pyright
+
+#+BEGIN_SRC shell
+brew install poetry pyright
+#+END_SRC
+
+Add in-project to your global poetry config. This will make it easier
+for pyright to find your dependencies
+
+#+BEGIN_QUOTE ~/Library/Application\ Support/pypoetry/config.toml
+[virtualenvs]
+in-project = true
+#+END_QUOTE
+
+#+BEGIN_SRC emacs-lisp
+(when (and (fboundp 'python-ts-mode)
+           (treesit-available-p))
+  (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode)))
+#+END_SRC
+
+
+* Python
+:PROPERTIES:
+:PACKAGE: python
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'eglot)
+(setenv "PYTHONIOENCODING" "utf8")
+(define-key python-base-mode-map (kbd "M-n") 'evil-collection-unimpaired-next-error)
+(define-key python-base-mode-map (kbd "M-p") 'evil-collection-unimpaired-previous-error)
+#+END_SRC
+
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'eglot-server-programs
+             `(python-base-mode . ("pyright-langserver" "--stdio")))
+
+(defun kwrooijen/python-combobulate-shell-send-block ()
+  (interactive)
+  (save-excursion
+    (let ((start (treesit-node-start kwrooijen/combobulate-current-node ))
+          (end (treesit-node-end kwrooijen/combobulate-current-node )))
+      (python-shell-send-region start end))))
+
+(defun kwrooijen/python-find-import-position (module)
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((import-regex (format "^from %s import.*" (regexp-quote module)))
+           (case-fold-search nil)
+           (import-position nil))
+      (while (re-search-forward import-regex nil t)
+        (setq import-position (point)))
+      import-position)))
+
+(defun kwrooijen/python-add-or-update-import (module class-name)
+  "Add or update an import statement for CLASS-NAME from MODULE in the current Python buffer.
+If MODULE is already imported, append CLASS-NAME to the existing import.
+Otherwise, add a new import statement after existing imports."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((case-fold-search nil)
+          (import-position (kwrooijen/python-find-import-position module)))
+      (if import-position
+          (progn
+            (goto-char import-position)
+            (let ((current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+              (if (string-match-p (format "\\<%s\\>" (regexp-quote class-name)) current-line)
+                  (message "Class name %s already exists in the current line." class-name)
+                (progn
+                  (goto-char (line-end-position))
+                  (insert ", " class-name)))))
+       (progn
+         (while (re-search-forward "^\\(from\\|import\\) " nil t))
+         (forward-line 1)
+         (insert (format "from %s import %s" module class-name))
+         (newline))))))
+
+(defun kwrooijen/run-python-project ()
+  (interactive)
+  (let ((current-window (selected-window))
+        (default-directory (projectile-project-root)))
+    (run-python nil t t)
+    (select-window current-window 'norecord)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/langchain-select-template ()
+  "Prompt the user to select a LangChain template and insert its yasnippet."
+  (interactive)
+  (kwrooijen/yas-completing-read
+   '(("AIMessagePromptTemplate" . "aimessageprompttemplate")
+     ("BaseChatPromptTemplate" . "basechatprompttemplate")
+     ("BaseMessagePromptTemplate" . "basemessageprompttemplate")
+     ("BasePromptTemplate" . "baseprompttemplate")
+     ("BaseStringMessagePromptTemplate" . "basestringmessageprompttemplate")
+     ("ChatMessagePromptTemplate" . "chatmessageprompttemplate")
+     ("ChatPromptTemplate" . "chatprompttemplate")
+     ("DictPromptTemplate" . "dictprompttemplate")
+     ("FewShotChatMessagePromptTemplate" . "fewshotchatmessageprompttemplate")
+     ("FewShotPromptTemplate" . "fewshotprompttemplate")
+     ("FewShotPromptWithTemplates" . "fewshotpromptwithtemplates")
+     ("HumanMessagePromptTemplate" . "humanmessageprompttemplate")
+     ("ImagePromptTemplate" . "imageprompttemplate")
+     ("PromptTemplate" . "prompttemplate")
+     ("StringPromptTemplate" . "stringprompttemplate")
+     ("SystemMessagePromptTemplate" . "systemmessageprompttemplate"))))
+#+END_SRC
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((python-base-mode . eglot-ensure)
+ (python-base-mode . electric-indent-mode)
+ (python-base-mode . kwrooijen/python-get-cached-modules))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(python-shell-completion-native-enable nil)
+(python-indent-guess-indent-offset-verbose nil)
+(python-indent 4)
+(py-indent-offset 4)
+(python-indent-offset 4)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'python-base-mode-map
+  :states '(normal visual)
+  "p" '(:ignore t :which-key "Project")
+  "p w" 'kwrooijen/python-workon-project-venv
+  "e" '(:ignore t :which-key "Eval")
+  "e f" 'python-shell-send-file
+  "e d" 'python-shell-send-defun
+  "e o" 'python-shell-send-block
+  "e e" 'kwrooijen/python-shell-send-block
+  "e s" 'python-shell-send-string
+  "e r" 'python-shell-send-region
+  "e b" 'python-shell-send-buffer
+  "e s" 'python-shell-send-statement
+  "i" '(:ignore t :which-key "Import")
+  "i i" 'kwrooijen/python-import-statement
+  "i s" 'kwrooijen/python-add-import-line-to-extras
+  "i b" 'kwrooijen/python-build-cache
+  "i t" 'kwrooijen/langchain-select-template
+  "h" '(:ignore t :which-key "Help")
+  "h b" 'eldoc-doc-buffer
+  "h d" 'eglot-find-declaration
+  "r" '(:ignore t :which-key "Refactor")
+  "r f" '(python-black-buffer :which-key "Format buffer")
+  "b" '(:ignore t :which-key "Buffer")
+  "b b" 'python-shell-switch-to-shell
+  "'" '(kwrooijen/run-python-project :which-key "REPL"))
+#+END_SRC
+
+
+
+
+* Poetry
+:PROPERTIES:
+:PACKAGE: poetry
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/python-cache-path
+  (file-name-concat kwrooijen/emacs-directory "db/python_module_cache.json")
+  "Path to the JSON file storing the Python module cache.")
+
+(defvar kwrooijen/python-extra-modules-path
+  (file-name-concat kwrooijen/emacs-directory "db/kwrooijen-python-extra-modules.list")
+  "Path to the file storing kwrooijen/python-extra-modules.")
+
+(defvar kwrooijen/python-venv-dir nil
+  "Path to the Python virtual environment directory.")
+
+(defvar kwrooijen/python-cache nil
+  "In-memory cache of module mappings.")
+
+(defun kwrooijen/python-get-venv-dir ()
+  (setq kwrooijen/python-venv-dir
+        (s-trim (shell-command-to-string "python -c 'import sys; print(sys.prefix)'"))))
+
+(defun kwrooijen/python-load-cache ()
+  "Load the cache from kwrooijen/python-cache-path if valid.
+Returns nil if the cache is invalid or doesn't exist."
+  (when (file-exists-p kwrooijen/python-cache-path)
+    (with-temp-buffer
+      (insert-file-contents kwrooijen/python-cache-path)
+      (setq kwrooijen/python-cache
+            (json-read-from-string (buffer-string))))))
+
+(defun kwrooijen/python-get-cached-modules ()
+  "Return the cached module mappings, rebuilding if necessary."
+  (unless kwrooijen/python-cache
+    (setq kwrooijen/python-cache (kwrooijen/python-load-cache)))
+  kwrooijen/python-cache)
+
+(defun kwrooijen/python-find-class-or-function (name)
+  "Search for Python modules defining or exporting NAME using the cache.
+Also check kwrooijen/python-extra-modules."
+  (interactive "sModule name: ")
+  (let* ((cached-modules (kwrooijen/python-get-cached-modules))
+         (matching-modules (alist-get name cached-modules nil nil #'string=))
+         ;; Convert matching-modules obarray to list
+         (matching-modules (append matching-modules '())))
+    (if matching-modules
+        (sort matching-modules #'string<)
+      (message "No modules found defining or exporting %s." name)
+      nil)))
+
+(defun kwrooijen/python-add-or-update-import (module class-name)
+  "Add or update an import statement for CLASS-NAME from MODULE in the current buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (if (re-search-forward (format "^from %s import " (regexp-quote module)) nil t)
+        (let ((existing-imports (buffer-substring-no-properties (point) (line-end-position))))
+          (unless (string-match-p (format "\\b%s\\b" class-name) existing-imports)
+            (end-of-line)
+            (insert (format ", %s" class-name))))
+      (progn
+        (goto-char (point-min))
+        (insert (format "from %s import %s\n" module class-name))))))
+
+(defun kwrooijen/python-import-statement (class-name)
+  "Prompt for a module exporting CLASS-NAME and add/update an import statement.
+Uses cached module data for faster lookup. If only one module is found,
+select it automatically."
+  (interactive (list (or (thing-at-point 'symbol t) (read-string "Class Name: "))))
+  (let* ((module-paths (kwrooijen/python-find-class-or-function class-name)))
+    (if module-paths
+        (let ((selected-module (if (= (length module-paths) 1)
+                                   (car module-paths)
+                                 (completing-read (format "Select module [%s]: " class-name) module-paths nil t))))
+          (kwrooijen/python-add-or-update-import selected-module class-name))
+      (message "No modules found exporting class %s. Call (kwrooijen/python-build-cache) to rebuild" class-name))))
+
+(defvar python-script-var
+  "import ast
+import json
+import os
+import sys
+from collections import defaultdict
+
+def write_all_functions_and_classes(venv_path, output_file):
+    \"\"\"
+    Analyzes Python files in a .venv to map functions and classes to their modules,
+    including modules that expose them via __all__ in __init__.py, and writes the
+    result to a JSON file, merging with existing content if present. Excludes modules
+    with names starting with '_'.
+
+    Args:
+        venv_path (str): Path to the .venv directory.
+        output_file (str): Path to the JSON output file.
+    \"\"\"
+    result = defaultdict(list)
+
+    # Ensure the venv path is valid
+    if not os.path.isdir(venv_path):
+        return
+
+    # Scan the venv directory for function and class definitions
+    for root, _, files in os.walk(venv_path):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        source = f.read()
+
+                    # Parse the source code into an AST
+                    tree = ast.parse(source, filename=file_path)
+
+                    # Calculate the module path
+                    relative_path = os.path.relpath(root, venv_path)
+                    module_parts = relative_path.split(os.sep)
+
+                    # Remove 'lib', 'pythonX.Y', 'site-packages' from the path
+                    try:
+                        site_packages_idx = module_parts.index('site-packages')
+                        module_parts = module_parts[site_packages_idx + 1:]
+                    except ValueError:
+                        pass
+
+                    # Skip if any module part starts with '_'
+                    if any(part.startswith('_') for part in module_parts if part):
+                        continue
+
+                    if any(part.startswith('src') for part in module_parts if part):
+                        continue
+
+                    # Handle __init__.py and regular .py files
+                    if file == '__init__.py':
+                        module_path = '.'.join(part for part in module_parts if part)
+                    else:
+                        module_name = os.path.splitext(file)[0]
+                        # Skip if the module name starts with '_'
+                        if module_name.startswith('_'):
+                            continue
+                        if module_name.startswith('src.'):
+                            continue
+                        module_parts.append(module_name)
+                        module_path = '.'.join(part for part in module_parts if part)
+
+                    # Collect function and class definitions
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.FunctionDef):
+                            result[node.name].append(module_path)
+                        elif isinstance(node, ast.ClassDef):
+                            result[node.name].append(module_path)
+
+                    # For __init__.py, check for __all__ and map listed names
+                    if file == '__init__.py':
+                        for node in ast.walk(tree):
+                            if (isinstance(node, ast.Assign) and
+                                len(node.targets) == 1 and
+                                isinstance(node.targets[0], ast.Name) and
+                                node.targets[0].id == '__all__'):
+                                if isinstance(node.value, ast.List):
+                                    for elt in node.value.elts:
+                                        if isinstance(elt, ast.Str) or (
+                                            isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                                        ):
+                                            # Map string in __all__ to this module
+                                            name = elt.s if hasattr(elt, 's') else elt.value
+                                            result[name].append(module_path)
+
+                except (SyntaxError, UnicodeDecodeError):
+                    continue
+
+    # Convert defaultdict to regular dict and remove duplicates
+    new_result = {k: list(set(v)) for k, v in result.items()}
+
+    # Load existing results if output_file exists
+    merged_result = new_result.copy()
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r', encoding='utf-8') as f:
+                existing_result = json.load(f)
+
+            # Merge existing and new results, combining module lists as sets
+            for name, modules in existing_result.items():
+                if name in merged_result:
+                    # Combine module lists and remove duplicates
+                    merged_result[name] = list(set(merged_result[name] + modules))
+                else:
+                    # Add new name and its modules
+                    merged_result[name] = modules
+        except (json.JSONDecodeError, IOError):
+            # If file is corrupt or unreadable, proceed with new_result
+            pass
+
+    # Write merged result to output_file
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(merged_result, f, indent=2, ensure_ascii=False)
+
+if __name__ == \"__main__\":
+    if len(sys.argv) != 3:
+        print(\"Usage: python script.py <venv_path> <output_file>\")
+        sys.exit(1)
+    venv_path = sys.argv[1]
+    output_file = sys.argv[2]
+    write_all_functions_and_classes(venv_path, output_file)"
+  "Python script to map functions and classes to their modules, stored for execution from Emacs, excluding modules with names starting with '_'.")
+
+
+(defun kwrooijen/python-build-cache ()
+  (interactive)
+  (let ((venv-path (kwrooijen/python-get-venv-dir))
+        (output-file kwrooijen/python-cache-path))
+    (message "Compiling [%s]..." venv-path)
+    (shell-command-to-string
+     (format "python -c %s %s %s"
+             (shell-quote-argument python-script-var)
+             (shell-quote-argument venv-path)
+             (shell-quote-argument output-file)))
+    (setq kwrooijen/python-cache nil)
+    (kwrooijen/python-get-cached-modules)
+    (message "Done")))
+#+END_SRC
+
+
+
+
+* Pyvenv
+:PROPERTIES:
+:PACKAGE: pyvenv
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(setenv "WORKON_HOME" (expand-file-name "~/.virtualenvs/"))
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(python-base-mode . kwrooijen/python-workon-project-venv)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/python-workon-project-venv ()
+  "Activate the Python virtual environment in .venv at the Projectile project root.
+If .venv exists and is not already activated, activate it using pyvenv-activate.
+If the virtual environment is already activated, do nothing."
+  (interactive)
+  (let* ((venv-dir (when-let (project-root (projectile-project-root))
+                     (expand-file-name ".venv" project-root))))
+    (when (and venv-dir
+               (file-directory-p venv-dir)
+               (or (not pyvenv-virtual-env)
+                   (not (string= (directory-file-name (expand-file-name pyvenv-virtual-env))
+                                 (directory-file-name (expand-file-name venv-dir))))))
+      (pyvenv-activate venv-dir)
+      (message "Activated virtual environment: %s" venv-dir))))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(pyvenv-post-activate-hooks
+      (list (lambda ()
+              (setq python-shell-interpreter (concat pyvenv-virtual-env "bin/python")))))
+(pyvenv-post-deactivate-hooks
+      (list (lambda ()
+              (setq python-shell-interpreter "python3"))))
+#+END_SRC
+
+
+
+* Python Black
+:PROPERTIES:
+:PACKAGE: python-black
+:STRAIGHT: t
+:AFTER: python
+:END:
+
+
+
+* Eglot
+:PROPERTIES:
+:PACKAGE: eglot
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/eglot-error-at-point ()
+  "Get the error message at point using Eglot."
+  (interactive)
+  (if (not (eglot-managed-p))
+      (error "Eglot is not managing this buffer")
+    (let ((diagnostics (flymake-diagnostics (point))))
+      (if diagnostics
+          (flymake-diagnostic-text (car diagnostics))
+        (error "No error at point")))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(eglot-workspace-configuration
+ '(:python.analysis
+   (:diagnosticSeverityOverrides
+    (:reportAny "none"
+                :reportAssignmentIssue "error"
+                :reportAssertAlwaysTrue "error"
+                :reportAssertType "error"
+                :reportAttributeAccessIssue "error"
+                :reportCallIssue "error"
+                :reportConstantRedefinition "error"
+                :reportDeprecated "error"
+                :reportDuplicateImport "error"
+                :reportFunctionMemberAccess "error"
+                :reportGeneralTypeIssues "error"
+                :reportImplicitOverride "error"
+                :reportImplicitStringConcatenation "error"
+                :reportImportCycles "error"
+                :reportIncompatibleMethodOverride "error"
+                :reportIncompatibleVariableOverride "error"
+                :reportIndexIssue "none"
+                :reportInvalidStringEscapeSequence "error"
+                :reportInvalidStubStatement "error"
+                :reportMatchNotExhaustive "error"
+                :reportMissingImports "error"
+                :reportMissingModuleSource "error"
+                :reportMissingTypeArgument "error"
+                :reportMissingTypeStubs "none"
+                :reportNoOverload "error"
+                :reportNonPrivateAccess "error"
+                :reportOptionalCall "error"
+                :reportOptionalContextManager "error"
+                :reportOptionalIterable "error"
+                :reportOptionalMemberAccess "error"
+                :reportOptionalOperand "error"
+                :reportOptionalSubscript "error"
+                :reportOverlappingOverload "error"
+                :reportPrivateImportUsage "error"
+                :reportPrivateUsage "error"
+                :reportPropertyTypeMismatch "error"
+                :reportProtocolMemberAccess "error"
+                :reportShadowedImports "error"
+                :reportTypeCommentUsage "error"
+                :reportTypedDictNotRequiredAccess "error"
+                :reportUnboundVariable "error"
+                :reportUndefinedVariable "error"
+                :reportUninitializedInstanceVariable "error"
+                :reportUnknownArgumentType "none"
+                :reportArgumentType "none"
+                :reportUnknownLambdaType "none"
+                :reportUnknownMemberType "none"
+                :reportUnknownParameterType "none"
+                :reportUnknownVariableType "none"
+                :reportUnnecessaryCast "error"
+                :reportUnnecessaryComparison "error"
+                :reportUnnecessaryContains "error"
+                :reportUnnecessaryIsInstance "error"
+                :reportUnnecessaryTypeIgnoreComment "error"
+                :reportUnreachable "error"
+                :reportUnsafeMultipleInheritance "error"
+                :reportUnsupportedDunderAll "error"
+                :reportUnusedCallResult "none"
+                :reportUnusedClass "error"
+                :reportUnusedCoroutine "error"
+                :reportUnusedExpression "error"
+                :reportUnusedFunction "error"
+                :reportUnusedImport "error"
+                :reportUnusedVariable "error"
+                :reportWildcardImportFromLibrary "error"))))
+#+END_SRC

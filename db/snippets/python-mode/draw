@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: draw
+# key: draw
+# --
+with open("${1:graph.png}", "wb") as f:
+    image = ${2:graph}.get_graph().draw_mermaid_png()
+    f.write(image)

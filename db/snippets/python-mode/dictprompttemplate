@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: dictprompttemplate
+# key: dictprompttemplate
+# --
+DictPromptTemplate(
+    input_variables=["name"],
+    template={"greeting": "Hello, {name}!", "question": "How can I assist you?"}
+)

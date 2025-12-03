@@ -1,0 +1,14 @@
+# -*- mode: snippet -*-
+# name: fewshotchatmessageprompttemplate
+# key: fewshotchatmessageprompttemplate
+# --
+FewShotChatMessagePromptTemplate(
+    examples=[
+        {"human": "What's 2+2?", "ai": "4"},
+        {"human": "What's 3+3?", "ai": "6"}
+    ],
+    example_prompt=ChatPromptTemplate.from_messages([
+        ("human", "{human}"),
+        ("ai", "{ai}")
+    ])
+)

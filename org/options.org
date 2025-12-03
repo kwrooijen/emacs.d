@@ -1,0 +1,267 @@
+#+STARTUP: showeverything
+#+PRIORITY: 0
+
+* Emacs Home directory
+#+BEGIN_SRC emacs-lisp
+(setq kwrooijen/emacs-directory (expand-file-name "~/.wisdom.d"))
+#+END_SRC
+
+* Mark ask Emacs
+#+BEGIN_SRC emacs-lisp
+(setenv "INSIDE_EMACS" "true")
+#+END_SRC
+
+* GCMH
+:PROPERTIES:
+:PACKAGE: gcmh
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(emacs-startup-hook . gcmh-mode)
+#+END_SRC
+
+* No Littering :init:
+:PROPERTIES:
+:PACKAGE: no-littering
+:STRAIGHT: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(setq no-littering-etc-directory (expand-file-name "config/" user-emacs-directory))
+(setq no-littering-var-directory (expand-file-name "data/" user-emacs-directory))
+(setq lock-file-name-transforms `(("\\`/.*/\\([^/]+\\)\\'" ,(no-littering-expand-var-file-name "lock-files/") t)))
+(setq backup-directory-alist `((".*" . ,(no-littering-expand-var-file-name "backups/"))))
+(setq auto-save-file-name-transforms `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+
+(require 'no-littering)
+#+END_SRC
+
+Don't prompt the user to override backups.
+
+#+BEGIN_SRC emacs-lisp
+(setq delete-old-versions t)
+#+END_SRC
+
+* Options
+
+
+Disable the default mode-line on startup
+
+#+BEGIN_SRC emacs-lisp
+(setq mode-line-format nil)
+#+END_SRC
+
+** Simplify Emacs startup screen
+#+BEGIN_SRC emacs-lisp
+(setq inhibit-startup-message t
+      inhibit-startup-screen t
+      initial-scratch-message nil)
+#+END_SRC
+
+** Simplify confirmations
+#+BEGIN_SRC emacs-lisp
+(setq confirm-nonexistent-file-or-buffer nil
+      ring-bell-function 'ignore)
+(setq vc-follow-symlinks t)
+(setopt use-short-answers t)
+#+END_SRC
+
+** Less notifications
+
+#+BEGIN_SRC emacs-lisp
+(setq warning-minimum-level :error)
+#+END_SRC
+
+
+** User interface
+
+*** Simplify
+#+BEGIN_SRC emacs-lisp
+(tool-bar-mode 0)
+(menu-bar-mode 0)
+(scroll-bar-mode 0)
+(blink-cursor-mode 0)
+#+END_SRC
+
+Completely disable fringes
+
+#+BEGIN_SRC emacs-lisp
+(set-fringe-mode 0)
+(setq left-fringe-width 0)
+(setq right-fringe-width 0)
+#+END_SRC
+
+Make Emacs title bar the same color as the background (macOS)
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
+#+END_SRC
+
+Remove buffer name from title bar. Weird trick to get the frame title
+to not display most of the time. We keep switching the title from
+regular space to unicode U+3164. This will prevent the window size
+from being displayed in the title bar.
+
+#+BEGIN_SRC emacs-lisp
+(setq-default frame-title-format " ")
+(add-hook 'window-size-change-functions
+          (lambda (_frame)
+            (if (equal frame-title-format " ")
+                (setq frame-title-format "ㅤ")
+              (setq frame-title-format " "))))
+#+END_SRC
+
+Remove proxy icon from title bar
+#+BEGIN_SRC emacs-lisp
+(setq-default ns-use-proxy-icon nil)
+#+END_SRC
+
+*** Enhance
+
+Show the current column in the mode-line
+
+#+BEGIN_SRC emacs-lisp
+(column-number-mode 1)
+#+END_SRC
+
+Add margins around the frame
+
+#+BEGIN_SRC emacs-lisp
+(push '(internal-border-width . 24) default-frame-alist)
+#+END_SRC
+
+** Scrolling
+*** Smooth scrolling
+#+BEGIN_SRC emacs-lisp
+(setq redisplay-dont-pause t
+      scroll-margin 1
+      scroll-conservatively 10000
+      scroll-step 1
+      auto-window-vscroll nil)
+#+END_SRC
+
+*** Scroll
+#+BEGIN_SRC emacs-lisp
+(setq scroll-error-top-bottom t
+      scroll-preserve-screen-position t)
+#+END_SRC
+
+** Programming preferences
+#+BEGIN_SRC emacs-lisp
+(setq fill-column 80
+      tab-width 4)
+
+(setq-default indent-tabs-mode nil)
+#+END_SRC
+
+** System
+*** macOS
+Use Command as Meta (Alt).
+#+BEGIN_SRC emacs-lisp
+(setq mac-command-modifier 'meta)
+(setq mac-option-modifier 'meta)
+#+END_SRC
+
+*** GnuPG
+Force the gpg password prompt into the minibuffer instead of a gui popup.
+#+BEGIN_SRC emacs-lisp
+(setq epa-pinentry-mode 'loopback)
+#+END_SRC
+
+Remember passwords
+#+BEGIN_SRC emacs-lisp
+(setq epa-file-cache-passphrase-for-symmetric-encryption t)
+#+END_SRC
+
+*** Clipboard
+When yanking (copying) text in Emacs, don't push to OS Clipboard
+#+BEGIN_SRC emacs-lisp
+(setq select-enable-clipboard nil)
+#+END_SRC
+
+** Whitespace management
+
+Clean up whitespace from buffer before saving
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+#+END_SRC
+
+* Evil
+
+This loads a set of keybindings for evil in other modes as well as
+setting the initial evil state in those modes. Setting this to nil
+prevents this.
+
+#+BEGIN_SRC emacs-lisp
+(setq evil-want-keybinding nil)
+#+END_SRC
+
+* Other
+
+Allow upcase and downcase region.
+
+#+BEGIN_SRC emacs-lisp
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+#+END_SRC
+
+* Suppress messages
+
+** Less messages
+
+Don't print to a message whenever a file is saved. Failing to save a
+file still messages.
+
+#+BEGIN_SRC emacs-lisp
+(setq save-silently t)
+#+END_SRC
+
+Disable the Emacs default startup message
+
+#+BEGIN_SRC emacs-lisp
+(defun display-startup-echo-area-message ()
+  (message "")))
+#+END_SRC
+
+** Suppressing specific functions
+
+#+BEGIN_SRC emacs-lisp
+(setq warning-suppress-log-types '((org-roam)))
+#+END_SRC
+
+Show a stack trace when a specific message is sent. This allows you to
+retrieve the origin of a `message` call.
+
+~(setq debug-on-message "Position saved to mark ring")~
+
+
+Add any function names to ~kwrooijen/suppress-message-functions~ to
+suppress their messages. Restart is required for this to take effect.
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/suppress-message-functions
+  '(org-mark-ring-push sh-set-shell)
+  "List of functions to suppress."
+  :type '(repeat string)
+  :group 'kwrooijen)
+
+(defun kwrooijen/suppress-function-message (old-fun &rest args)
+  (cl-flet ((silence (&rest args1) (ignore)))
+    (advice-add 'message :around #'silence)
+    (unwind-protect
+         (apply old-fun args)
+      (advice-remove 'message #'silence))))
+
+
+(dolist (f kwrooijen/suppress-message-functions)
+  (advice-add f :around #'kwrooijen/suppress-function-message))
+#+END_SRC
+
+** Disable mail functions
+
+#+BEGIN_SRC emacs-lisp
+(setq ffap-url-regexp nil)
+(setq browse-url-mailto-function nil)
+#+END_SRC

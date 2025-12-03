@@ -1,0 +1,58 @@
+* Anzu
+:PROPERTIES:
+:PACKAGE: anzu
+:STRAIGHT: t
+:END:
+** config :config:
+#+BEGIN_SRC emacs-lisp
+(global-anzu-mode +1)
+#+END_SRC
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"s r" 'anzu-query-replace
+"s R" 'anzu-query-replace-regexp)
+
+("M-%" 'anzu-query-replace)
+("C-M-%" 'anzu-query-replace-regexp)
+#+END_SRC
+
+
+* Evil Anzu
+:PROPERTIES:
+:PACKAGE: evil-anzu
+:STRAIGHT: t
+:END:
+
+* Anzu Overlay
+:PROPERTIES:
+:PACKAGE: anzu-overlay
+:STRAIGHT: (anzu-overlay :type git :host github :repo "kwrooijen/anzu-overlay")
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'anzu)
+(require 'evil)
+(require 'iedit)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(anzu-overlay-mode 1)
+#+END_SRC
+
+* Helpful
+:PROPERTIES:
+:PACKAGE: helpful
+:STRAIGHT: t
+:END:
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+("C-h f" #'helpful-callable)
+("C-h v" #'helpful-variable)
+("C-h k" #'helpful-key)
+("C-h x" #'helpful-command)
+#+END_SRC

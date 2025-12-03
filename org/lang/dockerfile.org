@@ -1,0 +1,5 @@
+Dockerfile
+:PROPERTIES:
+:PACKAGE: dockerfile-mode
+:STRAIGHT: t
+:END:

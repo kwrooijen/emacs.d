@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: ig/resume-key
-# key: resume
-# --
-(defmethod ig/resume-key :$1 [key opts old-opts old-impl]
-  $0)

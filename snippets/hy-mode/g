@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: g
-# key: g
-# --
-(global $1)$0

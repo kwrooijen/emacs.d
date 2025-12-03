@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: mem
+# key: mem
+# --
+${1:memory} = MemorySaver()

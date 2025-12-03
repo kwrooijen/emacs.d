@@ -1,7 +1,0 @@
-# name: defmulti
-# key: defmulti
-# --
-(defmulti $1 (fn [$2] [$2]))
-
-(defmethod $1 [$3] [$2] $0)
-(defmethod $1 :default [$2] [$2])

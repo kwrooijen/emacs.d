@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: runes/expand
-# key: expand
-# --
-(defmethod runes/expand :$1 [_ opts]
-  $0)

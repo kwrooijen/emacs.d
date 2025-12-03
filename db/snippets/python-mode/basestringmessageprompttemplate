@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: basestringmessageprompttemplate
+# key: basestringmessageprompttemplate
+# --
+BaseStringMessagePromptTemplate.from_template(
+    "This is a {role} message: {content}."
+)

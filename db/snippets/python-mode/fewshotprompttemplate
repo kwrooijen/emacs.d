@@ -1,0 +1,21 @@
+# -*- mode: snippet -*-
+# name: fewshotprompttemplate
+# key: fewshotprompttemplate
+# --
+FewShotPromptTemplate(
+    examples=[
+        {"question": "What is 2+2?", "answer": "4"},
+        {"question": "What is 3+3?", "answer": "6"}
+    ],
+    example_prompt=PromptTemplate(
+        input_variables=["question", "answer"],
+        template="Question: {question}
+Answer: {answer}"
+    ),
+    prefix="Answer the following questions:",
+    suffix="Question: {input}
+Answer:",
+    example_separator="
+
+"
+)

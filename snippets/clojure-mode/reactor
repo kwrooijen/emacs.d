@@ -1,9 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: reactor
-# key: reactor
-# --
-(defmethod ig/init-key :$1 [_ opts]
-  (fn reactor-${1:$(replace-regexp-in-string "\\\\/" "--"
-                    (replace-regexp-in-string "\\\\." "-" yas-text))}
-    [context old-state new-state]
-    new-state$0))

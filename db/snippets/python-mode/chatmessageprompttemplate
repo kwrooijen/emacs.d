@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: chatmessageprompttemplate
+# key: chatmessageprompttemplate
+# --
+ChatMessagePromptTemplate.from_template(
+    role="user",
+    template="What is the capital of {country}?"
+)

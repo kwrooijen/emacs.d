@@ -1,0 +1,83 @@
+* Magit
+:PROPERTIES:
+:PACKAGE:  magit
+:STRAIGHT: t
+:END:
+
+** Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/git-magit-use-winum t
+  "Use winum to select Magit windows.
+This will bind the following keys:
+M-1: winum-select-window-1
+M-2: winum-select-window-2
+M-3: winum-select-window-3
+M-4: winum-select-window-4
+"
+  :type 'boolean
+  :group 'kwrooijen/git))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(magit-diff-refine-hunk 'all)
+#+END_SRC
+
+
+** Config :config:
+
+HACK: Override the magit-section-show-level-*-all functions to use
+winum. For some reason I can't override the keybindings using General.
+
+#+BEGIN_SRC emacs-lisp
+(when kwrooijen/git-magit-use-winum
+  (defun magit-section-show-level-1-all () (interactive) (winum-select-window-1))
+  (defun magit-section-show-level-2-all () (interactive) (winum-select-window-2))
+  (defun magit-section-show-level-3-all () (interactive) (winum-select-window-3))
+  (defun magit-section-show-level-4-all () (interactive) (winum-select-window-4)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(define-key magit-status-mode-map (kbd "M-RET") 'magit-diff-visit-file-other-window)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; (set-face-background 'diff-refine-added "#000000")
+;; (set-face-background 'diff-refine-removed "#000000")
+
+(set-face-background 'diff-refine-added "#276128")
+(set-face-background 'diff-refine-removed "#612828")
+#+END_SRC
+
+** Hook :hook:
+
+Enter Evil Insert Mode automatically when starting a Git commit.
+
+#+BEGIN_SRC emacs-lisp
+(git-commit-mode . evil-insert-state)
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"g g" '(magit-status :which-key "Git status"))
+#+END_SRC
+
+
+
+
+* Smerge
+:PROPERTIES:
+:PACKAGE: smerge
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"gu" '(smerge-keep-upper :which-key "Merge keep upper")
+"gl" '(smerge-keep-lower :which-key "Merge keep lower")
+"ga" '(smerge-keep-all :which-key "Merge keep all"))
+#+END_SRC

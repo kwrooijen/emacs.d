@@ -1,0 +1,5 @@
+* Yaml
+:PROPERTIES:
+:PACKAGE: yaml-mode
+:STRAIGHT: t
+:END:

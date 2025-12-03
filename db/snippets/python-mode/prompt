@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: prompt
+# key: prompt
+# --
+ChatPromptTemplate.from_messages(
+    [
+        ("system", "$1"),
+        ("user", "$2"),
+    ]
+)

@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: systemmessageprompttemplate
+# key: systemmessageprompttemplate
+# --
+SystemMessagePromptTemplate.from_template(
+    "You are a knowledgeable assistant specializing in {domain}."
+)
