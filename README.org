@@ -6,6 +6,11 @@ My personal Emacs configuration. This README is compiled using the [[https://git
 #+STARTUP: showeverything
 #+PRIORITY: 0
 
+* Emacs Home directory
+#+BEGIN_SRC emacs-lisp
+(setq kwrooijen/emacs-directory (expand-file-name "~/.wisdom.d"))
+#+END_SRC
+
 * Mark ask Emacs
 #+BEGIN_SRC emacs-lisp
 (setenv "INSIDE_EMACS" "true")
@@ -1307,7 +1312,7 @@ Use a custom version of multiple cursors which works with Evil.
 ** Custom :custom:
 
 #+BEGIN_SRC emacs-lisp
-(mc/list-file "~/.dotfiles/emacs/db/mc-lists.el")
+(mc/list-file (file-name-concat kwrooijen/emacs-directory "db/mc-lists.el"))
 #+END_SRC
 
 ** Config :config:
@@ -2044,7 +2049,8 @@ Recenter screen when searching forward / backwards
 * Options
 
 #+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/snippet-directory "~/.dotfiles/emacs/db/snippets"
+(defcustom kwrooijen/snippet-directory
+  (file-name-concat kwrooijen/emacs-directory "db/snippets")
   "Directory where snippets are stored."
   :type 'string
   :group 'kwrooijen)
@@ -3093,11 +3099,11 @@ Otherwise, add a new import statement after existing imports."
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (defvar kwrooijen/python-cache-path
-  (expand-file-name "~/.dotfiles/emacs/db/python_module_cache.json")
+  (file-name-concat kwrooijen/emacs-directory "db/python_module_cache.json")
   "Path to the JSON file storing the Python module cache.")
 
 (defvar kwrooijen/python-extra-modules-path
-  (expand-file-name "~/.dotfiles/emacs/db/kwrooijen-python-extra-modules.list")
+  (file-name-concat kwrooijen/emacs-directory "db/kwrooijen-python-extra-modules.list")
   "Path to the file storing kwrooijen/python-extra-modules.")
 
 (defvar kwrooijen/python-venv-dir nil
@@ -4900,47 +4906,6 @@ Remove diredfl-match-ignored-extensions
             (forward-line 1)))))))
 #+END_SRC
 
-#+REMOTE: (:host github :repo kwrooijen/test-org :file test.org :branch master)
-#+REMOTE: (:host github :repo kwrooijen/test-org :file test.org :branch master)
-
-#+BEGIN_SRC emacs-lisp
-(setq my-package-enabled nil)
-#+END_SRC
-
-* Magit
-:PROPERTIES:
-:PACKAGE: magit
-:STRAIGHT: t
-:END:
-
-* Helm
-:PROPERTIES:
-:PACKAGE: helm
-:STRAIGHT: t
-:AFTER: evil
-:END:
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/my-helm-function ()
-  "My custom helm function."
-  (interactive)
-  (helm :sources '((name . "My Helm Source")
-                   (candidates . (lambda () (list "Option 1" "Option 2" "Option 3")))
-                   (action . (lambda (candidate) (message "You selected: %s" candidate))))))
-#+END_SRC
-
-** Init :init:
-#+BEGIN_SRC emacs-lisp
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/test-hello ()
-  "docstring"
-  (interactive "P")
-  123)
-#+END_SRC
-
 * Helm
 :PROPERTIES:
 :PACKAGE: helm
@@ -5351,8 +5316,8 @@ https://github.com/cosmicexplorer/helm-rg/blob/ee0a3c09da0c843715344919400ab0a01
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
-(bookmark-default-file (expand-file-name "~/.dotfiles/emacs/db/bookmark-default.el"))
-(bookmark-file (expand-file-name "~/.dotfiles/emacs/db/bookmark-default.el"))
+(bookmark-default-file (file-name-concat kwrooijen/emacs-directory "db/bookmark-default.el")))
+(bookmark-file (file-name-concat kwrooijen/emacs-directory "db/bookmark-default.el")))
 #+END_SRC
 
 ** General :general:
@@ -5859,42 +5824,6 @@ If not, show simply the clocked time like 01:50."
                           ("#+END_QUOTE" . "”")))
 #+END_SRC
 
-# * Org Src Keymap
-# :PROPERTIES:
-# :PACKAGE: org-src-keymap
-# :STRAIGHT: (:host github :repo "kwrooijen/org-src-keymap")
-# :END:
-
-# ** Custom :custom:
-# #+BEGIN_SRC emacs-lisp
-# (org-src-keymap-extra-maps '((emacs-lisp . (lispy-mode-map lispyville-mode-map))))
-# #+END_SRC
-
-# ** Hook :hook:
-# #+BEGIN_SRC emacs-lisp
-# (org-mode-hook . org-src-keymap-mode)
-# #+END_SRC
-
-#+PRIORITY: 0.1
-
-* Reload the frame
-
-Reload the frame to load the new frame options.
-
-#+BEGIN_SRC emacs-lisp
-(let ((old-frame (selected-frame))
-      (inhibit-message t)
-      (message-log-max nil))
-  ;(make-frame '((width . 80) (height . 45)))
-  ;(delete-frame old-frame)
-)
-
-;(push '(internal-border-width . 24) default-frame-alist)
-;(switch-to-buffer  (get-buffer-create "*Wisdom Loading*"))
-
-;; (insert-file-contents "~/.dotfiles/emacs/splash")
-#+END_SRC
-
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
@@ -5938,3 +5867,4 @@ Reload the frame to load the new frame options.
 ((prog-mode . highlight-numbers-mode)
  (org-mode . highlight-numbers-mode))
 #+END_SRC
+
