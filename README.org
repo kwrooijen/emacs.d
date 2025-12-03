@@ -1,0 +1,5940 @@
+* Kwrooijen Emacs Configuration
+
+My personal Emacs configuration. This README is compiled using the [Wisdom Emacs configuration framework](https://github.com/kwrooijen/wisdom). You can find all the separate org files in the org/ directory.
+
+
+#+STARTUP: showeverything
+#+PRIORITY: 0
+
+* Mark ask Emacs
+#+BEGIN_SRC emacs-lisp
+(setenv "INSIDE_EMACS" "true")
+#+END_SRC
+
+* GCMH
+:PROPERTIES:
+:PACKAGE: gcmh
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(emacs-startup-hook . gcmh-mode)
+#+END_SRC
+
+* No Littering :init:
+:PROPERTIES:
+:PACKAGE: no-littering
+:STRAIGHT: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(setq no-littering-etc-directory (expand-file-name "config/" user-emacs-directory))
+(setq no-littering-var-directory (expand-file-name "data/" user-emacs-directory))
+(setq lock-file-name-transforms `(("\\`/.*/\\([^/]+\\)\\'" ,(no-littering-expand-var-file-name "lock-files/") t)))
+(setq backup-directory-alist `((".*" . ,(no-littering-expand-var-file-name "backups/"))))
+(setq auto-save-file-name-transforms `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+
+(require 'no-littering)
+#+END_SRC
+
+Don't prompt the user to override backups.
+
+#+BEGIN_SRC emacs-lisp
+(setq delete-old-versions t)
+#+END_SRC
+
+* Options
+
+
+Disable the default mode-line on startup
+
+#+BEGIN_SRC emacs-lisp
+(setq mode-line-format nil)
+#+END_SRC
+
+** Simplify Emacs startup screen
+#+BEGIN_SRC emacs-lisp
+(setq inhibit-startup-message t
+      inhibit-startup-screen t
+      initial-scratch-message nil)
+#+END_SRC
+
+** Simplify confirmations
+#+BEGIN_SRC emacs-lisp
+(setq confirm-nonexistent-file-or-buffer nil
+      ring-bell-function 'ignore)
+(setq vc-follow-symlinks t)
+(setopt use-short-answers t)
+#+END_SRC
+
+** Less notifications
+
+#+BEGIN_SRC emacs-lisp
+(setq warning-minimum-level :error)
+#+END_SRC
+
+
+** User interface
+
+*** Simplify
+#+BEGIN_SRC emacs-lisp
+(tool-bar-mode 0)
+(menu-bar-mode 0)
+(scroll-bar-mode 0)
+(blink-cursor-mode 0)
+#+END_SRC
+
+Completely disable fringes
+
+#+BEGIN_SRC emacs-lisp
+(set-fringe-mode 0)
+(setq left-fringe-width 0)
+(setq right-fringe-width 0)
+#+END_SRC
+
+Make Emacs title bar the same color as the background (macOS)
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
+#+END_SRC
+
+Remove buffer name from title bar. Weird trick to get the frame title
+to not display most of the time. We keep switching the title from
+regular space to unicode U+3164. This will prevent the window size
+from being displayed in the title bar.
+
+#+BEGIN_SRC emacs-lisp
+(setq-default frame-title-format " ")
+(add-hook 'window-size-change-functions
+          (lambda (_frame)
+            (if (equal frame-title-format " ")
+                (setq frame-title-format "ㅤ")
+              (setq frame-title-format " "))))
+#+END_SRC
+
+Remove proxy icon from title bar
+#+BEGIN_SRC emacs-lisp
+(setq-default ns-use-proxy-icon nil)
+#+END_SRC
+
+*** Enhance
+
+Show the current column in the mode-line
+
+#+BEGIN_SRC emacs-lisp
+(column-number-mode 1)
+#+END_SRC
+
+Add margins around the frame
+
+#+BEGIN_SRC emacs-lisp
+(push '(internal-border-width . 24) default-frame-alist)
+#+END_SRC
+
+** Scrolling
+*** Smooth scrolling
+#+BEGIN_SRC emacs-lisp
+(setq redisplay-dont-pause t
+      scroll-margin 1
+      scroll-conservatively 10000
+      scroll-step 1
+      auto-window-vscroll nil)
+#+END_SRC
+
+*** Scroll
+#+BEGIN_SRC emacs-lisp
+(setq scroll-error-top-bottom t
+      scroll-preserve-screen-position t)
+#+END_SRC
+
+** Programming preferences
+#+BEGIN_SRC emacs-lisp
+(setq fill-column 80
+      tab-width 4)
+
+(setq-default indent-tabs-mode nil)
+#+END_SRC
+
+** System
+*** macOS
+Use Command as Meta (Alt).
+#+BEGIN_SRC emacs-lisp
+(setq mac-command-modifier 'meta)
+(setq mac-option-modifier 'meta)
+#+END_SRC
+
+*** GnuPG
+Force the gpg password prompt into the minibuffer instead of a gui popup.
+#+BEGIN_SRC emacs-lisp
+(setq epa-pinentry-mode 'loopback)
+#+END_SRC
+
+Remember passwords
+#+BEGIN_SRC emacs-lisp
+(setq epa-file-cache-passphrase-for-symmetric-encryption t)
+#+END_SRC
+
+*** Clipboard
+When yanking (copying) text in Emacs, don't push to OS Clipboard
+#+BEGIN_SRC emacs-lisp
+(setq select-enable-clipboard nil)
+#+END_SRC
+
+** Whitespace management
+
+Clean up whitespace from buffer before saving
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+#+END_SRC
+
+* Evil
+
+This loads a set of keybindings for evil in other modes as well as
+setting the initial evil state in those modes. Setting this to nil
+prevents this.
+
+#+BEGIN_SRC emacs-lisp
+(setq evil-want-keybinding nil)
+#+END_SRC
+
+* Other
+
+Allow upcase and downcase region.
+
+#+BEGIN_SRC emacs-lisp
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+#+END_SRC
+
+* Suppress messages
+
+** Less messages
+
+Don't print to a message whenever a file is saved. Failing to save a
+file still messages.
+
+#+BEGIN_SRC emacs-lisp
+(setq save-silently t)
+#+END_SRC
+
+Disable the Emacs default startup message
+
+#+BEGIN_SRC emacs-lisp
+(defun display-startup-echo-area-message ()
+  (message "")))
+#+END_SRC
+
+** Suppressing specific functions
+
+#+BEGIN_SRC emacs-lisp
+(setq warning-suppress-log-types '((org-roam)))
+#+END_SRC
+
+Show a stack trace when a specific message is sent. This allows you to
+retrieve the origin of a `message` call.
+
+~(setq debug-on-message "Position saved to mark ring")~
+
+
+Add any function names to ~kwrooijen/suppress-message-functions~ to
+suppress their messages. Restart is required for this to take effect.
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/suppress-message-functions
+  '(org-mark-ring-push sh-set-shell)
+  "List of functions to suppress."
+  :type '(repeat string)
+  :group 'kwrooijen)
+
+(defun kwrooijen/suppress-function-message (old-fun &rest args)
+  (cl-flet ((silence (&rest args1) (ignore)))
+    (advice-add 'message :around #'silence)
+    (unwind-protect
+         (apply old-fun args)
+      (advice-remove 'message #'silence))))
+
+
+(dolist (f kwrooijen/suppress-message-functions)
+  (advice-add f :around #'kwrooijen/suppress-function-message))
+#+END_SRC
+
+** Disable mail functions
+
+#+BEGIN_SRC emacs-lisp
+(setq ffap-url-regexp nil)
+(setq browse-url-mailto-function nil)
+#+END_SRC
+
+#+STARTUP: showeverything
+#+PRIORITY: 1
+
+* System
+
+** Options
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/system-leader-key "SPC"
+  "The leader key for system commands."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/system-local-leader-key "'"
+  "The local leader key for system commands."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/system-leader-keymaps '(override)
+  "The keymaps in which the leader key is active."
+  :type 'list
+  :group 'kwrooijen)
+#+END_SRC
+
+* Exec Path from Shell
+:PROPERTIES:
+:PACKAGE: exec-path-from-shell
+:STRAIGHT: t
+:END:
+
+A GNU Emacs library to ensure environment variables inside Emacs look
+the same as in the user's shell.
+
+** Config :config:
+
+Initialize environment from the user’s shell.
+
+#+BEGIN_SRC emacs-lisp
+(exec-path-from-shell-initialize)
+#+END_SRC
+
+Set the environment variable $NAME from the user’s shell.
+
+#+BEGIN_SRC emacs-lisp
+(exec-path-from-shell-copy-env "SSH_AUTH_SOCK")
+#+END_SRC
+
+* Which Key
+:PROPERTIES:
+:PACKAGE: which-key
+:STRAIGHT: t
+:END:
+
+Show previews of keybindings when pressing the leader key or other prefix keys.
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(which-key-mode 1)
+#+END_SRC
+
+* All the icons
+:PROPERTIES:
+:PACKAGE: all-the-icons
+:STRAIGHT: t
+:END:
+
+Run M-x `all-the-icons-install-fonts` manually
+
+* Dash
+:PROPERTIES:
+:PACKAGE: dash
+:STRAIGHT: t
+:END:
+
+* General
+:PROPERTIES:
+:PACKAGE: general
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+Advise ‘define-key’ to automatically unbind keys when necessary.
+This will prevent errors when a sub-sequence of a key is already bound.
+
+#+BEGIN_SRC emacs-lisp
+(general-auto-unbind-keys)
+#+END_SRC
+
+Set up some basic equivalents for vim mapping functions.
+
+#+BEGIN_SRC emacs-lisp
+(general-evil-setup t)
+#+END_SRC
+
+Define Leader and Local Leader keymaps. The Leader keymap is active in
+all modes, the Local Leader keymap is only active in specific
+modes. These keys are configurable through the variables
+‘kwrooijen/system-leader-key’ and ‘kwrooijen/system-local-leader-key’.
+
+#+BEGIN_SRC emacs-lisp
+
+(general-create-definer kwrooijen/leader
+  :keymaps kwrooijen/system-leader-keymaps
+  :states '(normal visual emacs)
+  :prefix kwrooijen/system-leader-key
+
+  "c" '(:ignore t :which-key "Compile")
+  "g" '(:ignore t :which-key "Git")
+  "s" '(:ignore t :which-key "Search")
+  "b" '(:ignore t :which-key "Buffers")
+  "f" '(:ignore t :which-key "Files")
+  "p" '(:ignore t :which-key "Project")
+  "w" '(:ignore t :which-key "Window")
+  "r" '(:ignore t :which-key "Resume"))
+
+(general-create-definer kwrooijen/local-leader
+  :keymaps kwrooijen/system-leader-keymaps
+  :states '(normal visual)
+  :prefix kwrooijen/system-local-leader-key)
+#+END_SRC
+
+** Bindings :config:
+
+Global keybindings. These are not defined using the `:general` keyword
+because General hasn't been loaded yet.
+
+#+BEGIN_SRC emacs-lisp
+(defun unpop-to-mark-command ()
+  "Unpop off mark ring. Does nothing if mark ring is empty."
+  (interactive)
+      (when mark-ring
+        (setq mark-ring (cons (copy-marker (mark-marker)) mark-ring))
+        (set-marker (mark-marker) (car (last mark-ring)) (current-buffer))
+        (when (null (mark t)) (ding))
+        (setq mark-ring (nbutlast mark-ring))
+        (goto-char (marker-position (car (last mark-ring))))))
+
+(let ((frame (framep (selected-frame))))
+  (or (eq  t  frame)
+      (eq 'pc frame)
+      (define-key input-decode-map
+                  (kbd "C-[")
+                  [control-bracketleft])))
+
+(general-define-key
+ :states '(insert normal visual)
+ "M-C" 'kwrooijen/capitalize-previous-word
+ "M-c" 'clipboard-kill-ring-save
+ "M-v" 'clipboard-yank
+ "M-q" 'fill-paragraph
+ "M-+" 'align-regexp
+ [control-bracketleft] 'pop-to-mark-command
+ "C-]" 'unpop-to-mark-command)
+
+(general-define-key
+ :states '(insert)
+ :keymaps 'prog-mode-map
+ "M-RET" 'evil-open-below)
+#+END_SRC
+
+Window keys
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "w q" '(kill-current-buffer :which-key "Kill buffer")
+  "w j" 'windmove-down
+  "w k" 'windmove-up
+  "w h" 'windmove-left
+  "w l" 'windmove-right)
+#+END_SRC
+
+Resume keys
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/select-minibuffer ()
+  "Make the active minibuffer the selected window."
+  (interactive)
+  (when-let ((minibuffer-window (active-minibuffer-window)))
+    (select-window minibuffer-window)))
+
+(kwrooijen/leader
+  "r b" '(kwrooijen/select-minibuffer :which-key "Select minibuffer"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps 'minibuffer-mode-map
+ "M-v" 'clipboard-yank
+ "M-k" 'previous-line-or-history-element
+ "M-j" 'next-line-or-history-element)
+#+END_SRC
+
+Add separate describe key hotkey (useful when C-h is rebound, or in minibuffer)
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ "M-9" 'describe-key)
+#+END_SRC
+
+#+LEXICAL_BINDING: nil
+#+PRIORITY: 2
+
+M-x ~kwrooijen/hex-colors-enable~
+
+#FFFFFF
+#ECEFF4
+#2E3440
+#2D323E
+#3B4252
+#434C5E
+#616E88
+#81A1C1
+#D08770
+#BF616A
+#FFC16D
+
+ :strong     "#FFFFFF"
+ :foreground "#ECEFF4"
+ :subtle     "#434C5E"
+ :faded      "#616E88"
+ :salient    "#81A1C1"
+ :popout     "#D08770"
+ :error      "#BF616A"
+ :warning    "#FFC16D"
+
+ ;; == Tokyo
+ :background "#222436"
+ :darken     "#1e2030"
+ :highlight  "#2f334d")
+
+* Functions
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/define-face (face color &optional color2)
+  ;; TODO create combinations
+  ;; face/darken-       ;; darken foreground
+  ;; face/-darken       ;; darken background
+  ;; face/darken-darken ;; darken foreground, darken background
+  ;; face/subtle-darken ;; subtle foreground, darken background
+;; e.g. darken-white, white-darken, subtle-popout, highlight-foreground.
+
+  (eval `(defface ,(intern (format "kwrooijen/%s-bg-face" face)) `((t (:background ,color))) ""))
+  (eval `(defface ,(intern (format "kwrooijen/%s-fg-face" face)) `((t (:foreground ,color))) ""))
+  (eval `(defface ,(intern (format "kwrooijen/%s-fb-face" face)) `((t (:foreground ,color :background ,(or color2 color)))) "")))
+
+(defun kwrooijen/set-theme (&rest opts)
+  (kwrooijen/define-face 'background (plist-get opts :background))
+  (kwrooijen/define-face 'foreground (plist-get opts :foreground))
+  (kwrooijen/define-face 'highlight (plist-get opts :highlight))
+  (kwrooijen/define-face 'subtle (plist-get opts :subtle))
+  (kwrooijen/define-face 'strong (plist-get opts :strong))
+  (kwrooijen/define-face 'salient (plist-get opts :salient))
+  (kwrooijen/define-face 'popout (plist-get opts :popout))
+  (kwrooijen/define-face 'faded (plist-get opts :faded))
+  (kwrooijen/define-face 'darken (plist-get opts :darken))
+  (kwrooijen/define-face 'faded-darken (plist-get opts :faded) (plist-get opts :darken))
+  (kwrooijen/define-face 'error (plist-get opts :error))
+  (kwrooijen/define-face 'warning (plist-get opts :error)))
+
+(defun kwrooijen/reset-face-attributes (&rest faces)
+  "Reset all attributes of the given FACE."
+  (dolist (face faces)
+    (set-face-attribute
+     face nil
+     :foreground 'unspecified
+     :inherit 'unspecified
+     :stipple 'unspecified
+     :background 'unspecified
+     :foreground 'unspecified
+     :inverse-video 'unspecified
+     :box 'unspecified
+     :strike-through 'unspecified
+     :overline 'unspecified
+     :underline 'unspecified
+     :slant 'unspecified
+     :weight 'unspecified
+     :height 'unspecified
+     :width 'unspecified
+     :foundry 'unspecified
+     :family 'unspecified)))
+
+(defun kwrooijen/reset-inherit-face! (&rest face-pairs)
+  (dolist (face-pair (-partition 2 face-pairs))
+    (let ((face (car face-pair))
+          (inherit-face (cadr face-pair)))
+      (kwrooijen/reset-face-attributes face)
+      (set-face-attribute face nil :inherit inherit-face))))
+#+END_SRC
+
+* Nord
+:PROPERTIES:
+:PACKAGE: nord-theme
+:STRAIGHT: (:host github :repo "nordtheme/emacs")
+:END:
+
+Install the Roboto font, Fira font
+
+#+BEGIN_SRC bash
+brew tap homebrew/cask-fonts
+brew install --cask font-roboto-mono font-fira-code
+#+END_SRC
+
+
+** init :init:
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/theme 'nord)
+
+(defvar kwrooijen/font "Fira Code")
+
+(let ((inhibit-message t)
+      (message-log-max nil))
+  (load-theme kwrooijen/theme t))
+
+(set-face-attribute 'default nil :family kwrooijen/font)
+
+(kwrooijen/set-theme
+ ;; == Original
+ :strong     "#FFFFFF"
+ :foreground "#ECEFF4"
+ ;; :background "#2E3440"
+ ;; :darken     "#2D323E"
+ ;; :highlight  "#3B4252"
+ :subtle     "#434C5E"
+ :faded      "#616E88"
+ :salient    "#81A1C1"
+ :popout     "#D08770"
+ :error      "#BF616A"
+ :warning    "#FFC16D"
+
+ ;; == Tokyo
+ :background "#222436"
+ :darken     "#1e2030"
+ :highlight  "#2f334d")
+
+(set-frame-parameter nil 'background-color
+                        (face-attribute 'kwrooijen/background-bg-face :background))
+(custom-theme-set-faces
+ kwrooijen/theme
+ `(default ((()
+             (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)
+              :background ,(face-attribute 'kwrooijen/background-bg-face :background))))))
+
+(set-face-attribute 'button nil :box 'unspecified)
+
+(kwrooijen/reset-inherit-face!
+ 'isearch        'kwrooijen/faded-bg-face
+ 'lazy-highlight 'kwrooijen/subtle-bg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'error   'kwrooijen/error-fg-face
+ 'warning 'kwrooijen/warning-fg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'font-lock-comment-face       'kwrooijen/faded-fg-face
+ 'font-lock-doc-face           'kwrooijen/faded-fg-face
+ 'font-lock-string-face        'kwrooijen/popout-fg-face
+ 'font-lock-constant-face      'kwrooijen/salient-fg-face
+ 'font-lock-warning-face       'kwrooijen/popout-fg-face
+ 'font-lock-function-name-face 'kwrooijen/strong-fg-face
+ 'font-lock-variable-name-face 'kwrooijen/strong-fg-face
+ 'font-lock-builtin-face       'kwrooijen/salient-fg-face
+ 'font-lock-type-face          'kwrooijen/salient-fg-face
+ 'font-lock-keyword-face       'kwrooijen/salient-fg-face)
+
+(kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
+
+(kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
+
+(set-face-attribute 'highlight nil :foreground 'unspecified)
+(set-face-attribute 'bold nil :foreground "#ffffff" :weight 'bold)
+
+(set-face-attribute 'fringe nil :inherit 'kwrooijen/background-bg-face
+:background 'unspecified)
+
+#+END_SRC
+
+* Theme
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/default-font-size
+  200
+  "Default font size."
+  :type 'integer
+  :group 'kwrooijen)
+
+(defun kwrooijen/font-size-set (size)
+  "Adjust the global font size by DELTA."
+  (let ((current-size (face-attribute 'default :height)))
+    (set-face-attribute 'default nil :height size)))
+
+(defun kwrooijen/font-size-increase ()
+  "Increase global font size."
+  (interactive)
+  (kwrooijen/font-size-set (+ (face-attribute 'default :height) 20)))
+
+(defun kwrooijen/font-size-decrease ()
+  "Decrease global font size."
+  (interactive)
+  (kwrooijen/font-size-set (- (face-attribute 'default :height) 20)))
+
+(defun kwrooijen/font-size-reset ()
+  "Decrease global font size."
+  (interactive)
+  (kwrooijen/font-size-set kwrooijen/default-font-size))
+
+(kwrooijen/font-size-set kwrooijen/default-font-size)
+
+(general-define-key
+ "C-x C-=" 'kwrooijen/font-size-increase
+ "C-x C--" 'kwrooijen/font-size-decrease
+ "C-x C-0" 'kwrooijen/font-size-reset)
+#+END_SRC
+
+
+* Helper functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/hex-colors-enable ()
+  (interactive)
+  (font-lock-add-keywords
+   nil
+   '(("#[[:xdigit:]]\\{6\\}"
+      (0 (put-text-property (match-beginning 0) (match-end 0)
+                            'face (list :foreground (match-string-no-properties 0)))))))
+  (font-lock-mode -1)
+  (font-lock-mode 1))
+
+(defun kwrooijen/hex-colors-disable ()
+  (interactive)
+  (font-lock-remove-keywords
+   nil
+   '(("#[[:xdigit:]]\\{6\\}"
+      (0 (put-text-property (match-beginning 0) (match-end 0)
+                            'face (list :foreground (match-string-no-properties 0)))))))
+  (font-lock-mode -1)
+  (font-lock-mode 1))
+  #+END_SRC
+
+* Iedit :config:
+:PROPERTIES:
+:PACKAGE: iedit
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'iedit-occurrence 'kwrooijen/salient-bg-face)
+(set-face-attribute 'iedit-occurrence nil :foreground "#FFFFFF")
+#+END_SRC
+
+Recenter screen when iedit is used.
+
+#+BEGIN_SRC emacs-lisp
+(advice-add 'iedit-next-occurrence :after #'kwrooijen/recenter)
+(advice-add 'iedit-prev-occurrence :after #'kwrooijen/recenter)
+#+END_SRC
+
+* Magit :config:
+:PROPERTIES:
+:PACKAGE: magit
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-face-attributes 'magit-section-highlight)
+(set-face-attribute 'magit-section-highlight nil :foreground 'unspecified :inherit 'highlight)
+#+END_SRC
+
+
+* Helm :config:
+:PROPERTIES:
+:PACKAGE: helm
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-face-attributes 'helm-source-header)
+#+END_SRC
+
+* Helm-rg :config:
+:PROPERTIES:
+:PACKAGE: helm-rg
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'helm-rg-file-match-face 'kwrooijen/faded-fg-face)
+#+END_SRC
+
+* Org :config:
+:PROPERTIES:
+:PACKAGE: org
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+
+(kwrooijen/reset-inherit-face!
+ 'org-block              'kwrooijen/darken-bg-face
+ 'org-block-begin-line   'kwrooijen/faded-darken-fb-face
+ 'org-block-end-line     'kwrooijen/faded-darken-fb-face)
+
+(kwrooijen/reset-inherit-face!
+ 'org-agenda-clocking          'kwrooijen/faded-fg-face
+ 'org-agenda-column-dateline   'kwrooijen/faded-fg-face
+ 'org-agenda-date-weekend      'kwrooijen/faded-fg-face
+ 'org-agenda-diary             'kwrooijen/faded-fg-face
+ 'org-agenda-dimmed-todo-face  'kwrooijen/faded-fg-face
+ 'org-agenda-done              'kwrooijen/faded-fg-face
+ 'org-agenda-filter-category   'kwrooijen/faded-fg-face
+ 'org-agenda-filter-effort     'kwrooijen/faded-fg-face
+ 'org-agenda-filter-regexp     'kwrooijen/faded-fg-face
+ 'org-agenda-filter-tags       'kwrooijen/faded-fg-face
+ 'org-agenda-restriction-lock  'kwrooijen/faded-fg-face
+ 'org-archived                 'kwrooijen/faded-fg-face
+ 'org-checkbox                 'kwrooijen/faded-fg-face
+ 'org-checkbox-statistics-done 'kwrooijen/faded-fg-face
+ 'org-checkbox-statistics-todo 'kwrooijen/faded-fg-face
+ 'org-clock-overlay            'kwrooijen/faded-fg-face
+ 'org-code                     'kwrooijen/salient-fg-face
+ 'org-column                   'kwrooijen/faded-fg-face
+ 'org-column-title             'kwrooijen/faded-fg-face
+ 'org-date                     'kwrooijen/faded-fg-face
+ 'org-date-selected            'kwrooijen/faded-fg-face
+ 'org-default                  'kwrooijen/faded-fg-face
+ 'org-document-info            'kwrooijen/faded-fg-face
+ 'org-document-info-keyword    'kwrooijen/faded-fg-face
+ 'org-document-title           'kwrooijen/faded-fg-face
+ 'org-drawer                   'kwrooijen/faded-fg-face
+ 'org-ellipsis                 'kwrooijen/faded-fg-face
+ 'org-footnote                 'kwrooijen/faded-fg-face
+ 'org-formula                  'kwrooijen/faded-fg-face
+ 'org-headline-done            'kwrooijen/faded-fg-face
+ 'org-latex-and-related        'kwrooijen/faded-fg-face
+ 'org-list-dt                  'kwrooijen/faded-fg-face
+ 'org-macro                    'kwrooijen/faded-fg-face
+ 'org-meta-line                'kwrooijen/faded-fg-face
+ 'org-mode-line-clock          'kwrooijen/faded-fg-face
+ 'org-mode-line-clock-overrun  'kwrooijen/faded-fg-face
+ 'org-priority                 'kwrooijen/faded-fg-face
+ 'org-property-value           'kwrooijen/faded-fg-face
+ 'org-quote                    'kwrooijen/faded-fg-face
+ 'org-scheduled                'kwrooijen/faded-fg-face
+ 'org-scheduled-previously     'kwrooijen/faded-fg-face
+ 'org-sexp-date                'kwrooijen/faded-fg-face
+ 'org-special-keyword          'kwrooijen/faded-fg-face
+ 'org-tag-group                'kwrooijen/faded-fg-face
+ 'org-target                   'kwrooijen/faded-fg-face
+ 'org-time-grid                'kwrooijen/faded-fg-face
+ 'org-verse                    'kwrooijen/faded-fg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'org-agenda-calendar-event 'kwrooijen/foreground-fg-face
+ 'org-done                  'kwrooijen/foreground-fg-face
+ 'org-level-1               'kwrooijen/foreground-fg-face
+ 'org-level-2               'kwrooijen/foreground-fg-face
+ 'org-level-3               'kwrooijen/foreground-fg-face
+ 'org-level-4               'kwrooijen/foreground-fg-face
+ 'org-level-5               'kwrooijen/foreground-fg-face
+ 'org-level-6               'kwrooijen/foreground-fg-face
+ 'org-level-7               'kwrooijen/foreground-fg-face
+ 'org-level-8               'kwrooijen/foreground-fg-face
+ 'org-upcoming-deadline     'kwrooijen/foreground-fg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'org-tag      'kwrooijen/popout-fg-face
+ 'org-verbatim 'kwrooijen/popout-fg-face
+ 'org-warning  'kwrooijen/popout-fg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'org-agenda-current-time 'kwrooijen/strong-fg-face
+ 'org-agenda-structure    'kwrooijen/strong-fg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'org-agenda-calendar-sexp 'kwrooijen/salient-fg-face
+ 'org-agenda-date          'kwrooijen/salient-fg-face
+ 'org-link                 'kwrooijen/salient-fg-face
+ 'org-table                'kwrooijen/salient-fg-face
+ 'org-todo                 'kwrooijen/salient-fg-face)
+#+END_SRC
+
+* Doom Modeline
+:PROPERTIES:
+:PACKAGE: doom-modeline
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(doom-modeline-height 40)
+(doom-modeline-buffer-file-name-style 'relative-to-project)
+(doom-modeline-major-mode-icon nil)
+(doom-modeline-buffer-state-icon nil)
+(doom-modeline-buffer-encoding nil)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(doom-modeline-mode 1)
+
+(kwrooijen/reset-inherit-face!
+ 'doom-modeline-urgent             'kwrooijen/error-fg-face
+ 'doom-modeline-overwrite          'kwrooijen/error-fg-face
+ 'doom-modeline-lsp-error          'kwrooijen/error-fg-face
+ 'doom-modeline-battery-error      'kwrooijen/error-fg-face
+ 'doom-modeline-battery-critical   'kwrooijen/error-fg-face
+ 'doom-modeline-evil-replace-state 'kwrooijen/error-fg-face
+ 'doom-modeline-buffer-modified    'kwrooijen/error-fg-face
+ 'doom-modeline-bar-inactive       'kwrooijen/darken-bg-face
+ 'doom-modeline-bar                'kwrooijen/strong-bg-face)
+
+(kwrooijen/reset-inherit-face!
+ 'mode-line           'kwrooijen/darken-bg-face
+ 'mode-line-active    'kwrooijen/darken-bg-face
+ 'mode-line-inactive  'kwrooijen/darken-bg-face
+ 'mode-line-highlight 'unspecified
+ 'header-line         'unspecified)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(doom-modeline-def-modeline 'kwrooijen
+  '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info matches)
+  '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs check time))
+
+(doom-modeline-set-modeline 'kwrooijen 'default)
+#+END_SRC
+
+
+* Company :config:
+:PROPERTIES:
+:PACKAGE: company
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'company-preview-common 'kwrooijen/faded-bg-face
+ 'company-preview-search 'kwrooijen/faded-bg-face)
+#+END_SRC
+
+
+* Paren :config:
+:PROPERTIES:
+:PACKAGE: paren
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'show-paren-match 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'show-paren-mismatch 'kwrooijen/error-fg-face)
+(kwrooijen/reset-inherit-face! 'show-paren-match-expression 'kwrooijen/popout-fg-face)
+#+END_SRC
+
+* Web Mode :config:
+:PROPERTIES:
+:PACKAGE: web-mode
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'web-mode-string-face 'font-lock-string-face)
+(kwrooijen/reset-inherit-face! 'web-mode-html-attr-value-face 'font-lock-string-face)
+(kwrooijen/reset-inherit-face! 'web-mode-symbol-face 'font-lock-keyword-face)
+(kwrooijen/reset-inherit-face! 'web-mode-builtin-face 'kwrooijen/strong-fg-face)
+(kwrooijen/reset-inherit-face! 'web-mode-variable-name-face 'font-lock-variable-name-face)
+(kwrooijen/reset-inherit-face! 'web-mode-variable-name-face 'font-lock-variable-name-face)
+(kwrooijen/reset-inherit-face! 'web-mode-current-element-highlight-face 'underline)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
+#+END_SRC
+
+* Window divider
+:PROPERTIES:
+:PACKAGE: frame
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'window-divider             'kwrooijen/background-fb-face
+ 'window-divider-first-pixel 'kwrooijen/background-fb-face
+ 'window-divider-last-pixel  'kwrooijen/background-fb-face
+ 'vertical-border            'kwrooijen/background-fb-face)
+
+;; Vertical window divider
+(setq window-divider-default-right-width 24)
+(setq window-divider-default-places 'right-only)
+(window-divider-mode 1)
+#+END_SRC
+
+* Evil Highlight Persist :config:
+:PROPERTIES:
+:PACKAGE: evil-search-highlight-persist
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'evil-search-highlight-persist-highlight-face 'highlight)
+#+END_SRC
+
+* HL Line :config:
+:PROPERTIES:
+:PACKAGE: hl-line
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'hl-line 'kwrooijen/highlight-bg-face)
+#+END_SRC
+
+* Anzu Overlay :config:
+:PROPERTIES:
+:PACKAGE: anzu-overlay
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'anzu-overlay-face nil
+  :foreground (face-attribute 'kwrooijen/salient-fg-face :foreground)
+  :inherit 'kwrooijen/highlight-bg-face)
+#+END_SRC
+
+* Diredfl :config:
+:PROPERTIES:
+:PACKAGE: diredfl
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'diredfl-file-name 'kwrooijen/fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-file-suffix 'kwrooijen/fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-dir-name 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-dir-heading 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-dir-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-date-time 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-read-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-write-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-exec-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-number 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-no-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-other-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-link-priv 'kwrooijen/subtle-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-symlink 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-compressed-file-name 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-face-attributes 'diredfl-ignored-file-name)
+#+END_SRC
+
+#+STARTUP: showeverything
+#+PRIORITY: 3
+
+* Package: key-chord
+:PROPERTIES:
+:PACKAGE: key-chord
+:AFTER: evil
+:END:
+
+*** Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/key-chord-save-and-evil-normal-key "xs"
+  "Key combination for keychord to save buffer and switch to Evil
+normal state."
+  :type 'string
+  :group 'kwrooijen)
+
+(defcustom kwrooijen/key-chord-evil t
+  "Whether to use key-chord with Evil. If t, key-chord will be
+configured for Evil mode"
+  :type 'boolean
+  :group 'kwrooijen)
+#+END_SRC
+
+** Straight :straight:
+
+[[https://github.com/emacsorphanage/key-chord/issues/6][Because of an issue]] in key-chord, we specify the git hash.
+
+#+BEGIN_SRC emacs-lisp
+(key-chord
+ :host github
+ :repo "emacsorphanage/key-chord"
+ :commit "68264d09593e69c1d4773859ac570bd9feb008d9")
+#+END_SRC
+
+** Hooks :hook:
+
++ Add `key-chord-mode` to all programming modes.
++ Add `key-chord-mode` to `isearch` to allow breaking out of search using key-chord.
+
+#+BEGIN_SRC emacs-lisp
+((prog-mode . key-chord-mode)
+ (text-mode . key-chord-mode)
+ (isearch-mode . key-chord-mode))
+#+END_SRC
+
+** Config :config:
+
+kwrooijen/key-chord provides a function to return to normal mode and
+save the buffer. Therefore, instead of `Esc + :w + RET` you simply
+type (by default) `xs`. Configurable through
+`kwrooijen/key-chord-save-and-evil-normal-key`.
+
+#+BEGIN_SRC emacs-lisp
+(when (and kwrooijen/key-chord-evil
+           kwrooijen/key-chord-save-and-evil-normal-key)
+  (defun kwrooijen/key-chord-evil-normal-state-and-save ( )
+    "Switch to Evil normal state and save buffer."
+    (interactive)
+    (evil-normal-state)
+    (save-buffer))
+
+  (key-chord-define-global
+   kwrooijen/key-chord-save-and-evil-normal-key
+  'kwrooijen/key-chord-evil-normal-state-and-save))
+#+END_SRC
+
+#+PRIORITY: 4
+
+* Paredit
+:PROPERTIES:
+:PACKAGE: paredit
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-key paredit-mode-map (kbd "M-(") 'paredit-wrap-sexp)
+(define-key paredit-mode-map (kbd "M-{") 'paredit-wrap-curly)
+(define-key paredit-mode-map (kbd "M-[") 'paredit-wrap-square)
+(define-key paredit-mode-map (kbd "M-C-p") nil)
+(define-key paredit-mode-map (kbd "M-C-n") nil)
+#+END_SRC
+
+* Lispyville
+:PROPERTIES:
+:PACKAGE: lispyville
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(lispyville--define-key 'normal (kbd "M-J") #'mc/mark-next-like-this)
+(lispyville--define-key 'normal (kbd "M-K") #'mc/mark-previous-like-this)
+#+END_SRC
+
+* Lispy
+:PROPERTIES:
+:PACKAGE: lispy
+:STRAIGHT: t
+:AFTER: evil-collection
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun lispy--clojure-middleware-load ())
+(defun sexp-at-point ()
+  (interactive)
+  (let ((current (point))
+        (end (save-excursion (lispy-different) (point))))
+    (buffer-substring current end)))
+
+(defun cider-tap-sexp ()
+  (interactive)
+  (cider-interactive-eval (format "(tap> %s)" (cider-eval-sexp-at-point))))
+
+(defun lispy--mode-p ()
+  (or (lispy-left-p)
+      (lispy-right-p)))
+
+(defun lispy-brackets-or-barf (arg)
+  (interactive "P")
+  (if (lispy--mode-p)
+      (lispy-barf 1)
+    (lispy-brackets arg)))
+
+(defun lispy-left-insert ()
+  (interactive)
+  (when (not (lispy--mode-p))
+    (lispy-left 1))
+  (when (not (lispy--mode-p))
+    (beginning-of-defun))
+  (when (lispy--mode-p)
+    (evil-insert-state 1)))
+
+(defun lispy-right-insert ()
+  (interactive)
+  (when (not (lispy--mode-p))
+    (lispy-right 1))
+  (when (not (lispy--mode-p))
+    (end-of-defun))
+  (when (lispy--mode-p)
+    (evil-insert-state 1)))
+
+(defun lispy-o ()
+  (interactive)
+  (when (lispy-left-p)
+    (lispy-different))
+  (lispy-newline-and-indent-plain))
+
+(defun kwrooijen/lispy-delete-line ()
+  (interactive)
+  (let ((left? (lispy-left-p))
+        (current (point)))
+    (when (lispy-right-p)
+      (lispy-different))
+    (kill-sexp)
+    (save-excursion
+      (lispy-left-insert))
+    (when (not (lispy--mode-p))
+      (evil-join (save-excursion (beginning-of-line) (point))
+                 (save-excursion (end-of-line) (point))))
+    (indent-for-tab-command)
+    (when (not (eq left? (lispy-left-p)))
+      (lispy-different))))
+
+(defun lispy-global-teleport (arg)
+  (interactive "p")
+  (let ((lispy-teleport-global t))
+    (lispy-teleport arg)))
+
+(add-hook 'lispy-mode-hook
+          (lambda ()
+            ;; This breaks company mode if not set to nil
+            (define-key lispy-mode-map (kbd "C-k") nil)
+
+            (define-key lispy-mode-map (kbd "M-[") #'lispy-wrap-brackets)
+            (define-key lispy-mode-map (kbd "M-{") #'lispy-wrap-braces)
+            (define-key lispy-mode-map (kbd "M-(") #'lispy-wrap-round)
+            (define-key lispy-mode-map (kbd "C-k") nil)
+            (define-key lispy-mode-map (kbd "M-o") #'pop-to-mark-command)
+            (define-key lispyville-mode-map (kbd "M-o") #'pop-to-mark-command)
+
+            (evil-define-key 'insert lispy-mode-map "]" #'lispy-slurp)
+            (evil-define-key 'insert lispy-mode-map "[" #'lispy-brackets-or-barf)
+            (evil-define-key 'insert lispy-mode-map "{" #'lispy-braces)
+            (evil-define-key 'insert lispy-mode-map (kbd "C-d") #'lispy-describe-inline)
+            (evil-define-key 'insert lispy-mode-map (kbd "C-e") #'lispy-arglist-inline)
+            (evil-define-key 'normal lispy-mode-map (kbd "M-a") #'lispy-left-insert)
+            (evil-define-key 'normal lispyville-mode-map (kbd "M-a") #'lispy-left-insert)
+            (evil-define-key 'normal lispyville-mode-map (kbd "M-o") #'pop-to-mark-command)
+            (evil-collection-define-key 'normal 'lispy-mode-map (kbd "M-d") #'lispy-kill-word)
+            (evil-collection-define-key 'normal 'lispy-mode-map (kbd "D") #'paredit-kill)
+            (lispy-define-key lispy-mode-map "v" #'er/expand-region)
+            (lispy-define-key lispy-mode-map "o" 'lispy-o)
+            (lispy-define-key lispy-mode-map "M-o" 'pop-to-mark-command)
+            (lispy-define-key lispy-mode-map "x" 'kwrooijen/lispy-delete-line)
+            (lispy-define-key lispy-mode-map "d" 'lispy-different)
+            (lispy-define-key lispy-mode-map "i" 'indent-sexp)
+            (lispy-define-key lispy-mode-map "x" 'lispyville-delete)
+            (lispy-define-key lispy-mode-map "A" 'lispy-ace-symbol-replace)
+            (lispy-define-key lispy-mode-map "H" 'special-lispy-move-left)
+            (lispy-define-key lispy-mode-map "J" 'special-lispy-down-slurp)
+            (lispy-define-key lispy-mode-map "K" 'special-lispy-up-slurp)
+            (lispy-define-key lispy-mode-map "L" 'special-lispy-move-right)
+            (lispy-define-key lispy-mode-map "I" 'evil-insert-state)
+            (lispy-define-key lispy-mode-map "T" 'lispy-global-teleport)
+            (define-key lispy-mode-map (kbd "M-a") 'lispy-left-insert)
+            (define-key lispy-mode-map (kbd "M-e") 'lispy-right-insert)
+            ;; Fix for copilot
+            (lispy-define-key lispy-mode-map "j" 'kwrooijen/special-lispy-down)
+            (lispy-define-key lispy-mode-map "k" 'kwrooijen/special-lispy-up)))
+
+
+(defface ignore-paren-face
+  `((t (:inherit kwrooijen/subtle-fg-face))) "")
+
+(add-hook 'lispy-mode-hook
+          (lambda ()
+            (font-lock-add-keywords nil '((")" . 'ignore-paren-face)))
+            (font-lock-add-keywords nil '(("}" . 'ignore-paren-face)))
+            (font-lock-add-keywords nil '(("]" . 'ignore-paren-face)))))
+
+
+(defun kwrooijen/special-lispy-down ()
+  "lispy down is broken with copilot, so we need to override it."
+  (interactive)
+  (if (copilot--overlay-visible)
+      (insert "j")
+    (special-lispy-down)))
+
+(defun kwrooijen/special-lispy-up ()
+  "lispy up is broken with copilot, so we need to override it."
+  (interactive)
+  (if (copilot--overlay-visible)
+      (insert "k")
+    (special-lispy-up)))
+
+(defun kwrooijen/recenter (&rest x)
+  (evil-scroll-line-to-center (line-number-at-pos)))
+
+
+(advice-add 'special-lispy-down :after #'kwrooijen/recenter)
+(advice-add 'special-lispy-up :after #'kwrooijen/recenter)
+(add-hook 'lispy-mode-hook #'show-paren-mode)
+(add-hook 'lispy-mode-hook #'paredit-mode)
+(add-hook 'lispy-mode-hook #'lispyville-mode)
+#+END_SRC
+
+* Iedit
+:PROPERTIES:
+:PACKAGE: iedit
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-i" 'iedit-mode)
+#+END_SRC
+
+* Expand region
+:PROPERTIES:
+:PACKAGE: expand-region
+:STRAIGHT: t
+:END:
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+("M-]" 'er/expand-region)
+("M-[" 'er/contract-region)
+#+END_SRC
+
+* Multiple Cursors
+:PROPERTIES:
+:PACKAGE: multiple-cursors
+:END:
+
+** Straight :straight:
+
+Use a custom version of multiple cursors which works with Evil.
+
+#+BEGIN_SRC emacs-lisp
+(multiple-cursors
+             :host github
+             :repo "kwrooijen/mc"
+             :files (:defaults (:exclude "*.el.in")))
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-P" 'mc/mark-previous-like-this)
+("M-N" 'mc/mark-next-like-this)
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(mc/list-file "~/.dotfiles/emacs/db/mc-lists.el")
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(multiple-cursors-mode t)
+#+END_SRC
+
+* Undo Tree
+:PROPERTIES:
+:PACKAGE: undo-tree
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(undo-tree-auto-save-history t)
+(undo-tree-history-directory-alist `((".*" . "~/.emacs.d/undo-tree-history/")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(global-undo-tree-mode 1)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:states  'normal
+"U" 'undo-tree-redo
+"u" 'undo-tree-undo)
+
+("M-u" 'undo-tree-redo)
+#+END_SRC
+
+* Smart Parens
+:PROPERTIES:
+:PACKAGE: smartparens
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'smartparens-config)
+#+END_SRC
+
+** Hook :hook:
+
+Enable for all programming modes. Would this be ok for lisp modes?
+
+#+BEGIN_SRC emacs-lisp
+((prog-mode . smartparens-mode))
+#+END_SRC
+
+* Hl line mode
+:PROPERTIES:
+:PACKAGE: hl-line
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . hl-line-mode)
+ (text-mode . hl-line-mode))
+#+END_SRC
+
+#+STARTUP: showeverything
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/insert-euro-symbol ()
+  "Inserts the € symbol at the cursor's position."
+  (interactive)
+  (insert "€"))
+#+END_SRC
+
+* Evil
+:PROPERTIES:
+:PACKAGE: evil
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-mode 1)
+;; What is this?
+;; (define-key evil-motion-state-map "'" nil)
+#+END_SRC
+
+
+Recenter screen when searching forward / backwards
+#+BEGIN_SRC emacs-lisp
+(advice-add 'evil-search-next :after #'kwrooijen/recenter)
+(advice-add 'evil-search-previous :after #'kwrooijen/recenter)
+#+END_SRC
+
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(:states 'insert
+         "C-$" 'kwrooijen/insert-euro-symbol)
+#+END_SRC
+
+* Evil Collection
+:PROPERTIES:
+:PACKAGE: evil-collection
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-collection-init)
+#+END_SRC
+
+* Evil Nerd commenter
+:PROPERTIES:
+:PACKAGE: evil-nerd-commenter
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-/" 'evilnc-comment-or-uncomment-lines)
+#+END_SRC
+
+
+# (use-package evil-snipe
+#   :straight t
+#   :after evil
+#   :config
+#   (evil-define-key 'visual evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
+#   (evil-define-key 'normal evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
+#   (evil-snipe-mode +1))
+# #+END_SRC
+
+* Evil Highlight Persist
+:PROPERTIES:
+:PACKAGE: evil-search-highlight-persist
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(global-evil-search-highlight-persist t)
+(advice-add 'keyboard-quit :before #'evil-search-highlight-persist-remove-all)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; -*- lexical-binding: t; -*-
+
+(require 'cl-lib)
+
+(defvar navi-visual-overlay nil
+  "")
+
+(defvar navi-node nil
+  "")
+
+(defvar navi-position 'start
+  "")
+
+(defface navi-highlight
+  '((((class color) (background light))
+     :background "#393c4c" :foreground "white")
+    (((class color) (background dark))
+     :background "#393c4c" :foreground "white"))
+  ""
+  :group 'navi-faces)
+
+(defcustom navi-use-hl-line t
+  "Disable hl-line-mode in navi state."
+  :type 'boolean
+  :group 'navi)
+
+(defcustom navi-hl-mode nil
+  "hl-line-mode or global-hl-line-mode."
+  :type 'symbol
+  :group 'navi)
+
+(defun navi-get-major-mode ()
+  (interactive)
+  (if (and (eq major-mode 'org-mode)
+           (equal 'src-block (car (org-element-context))))
+      (intern (format "%s-mode" (org-element-property :language (org-element-context))))
+    major-mode))
+
+(defun navi-node-length-of? (length)
+  (let ((length length))
+    (lambda (node)
+      (= length (treesit--node-length node)))))
+
+(defun navi-node-has-only-one-child? (node)
+  (= 1 (length (treesit-node-children node))))
+
+(defun navi-rules ()
+  (let ((rules (intern (format "navi-rules:%s" (navi-get-major-mode)))))
+    (when (boundp rules)
+      (symbol-value rules))))
+
+(defcustom navi-rules:ruby-ts-mode
+  `(:navigation
+    (("program"        . (:ignore t))
+     ("."              . (:action navi-next-node :pred identity))
+     (":"              . (:action navi-next-node :pred identity))
+     ("::"             . (:action navi-next-node :pred identity))
+     ("="              . (:action navi-next-node :pred identity))
+     (","              . (:action navi-next-node :pred identity))
+     ("def"            . (:action navi-next-shift-node :pred identity))
+     ("end"            . (:action navi-next-shift-node :pred identity))
+     ("{"              . (:action navi-next-shift-node :pred identity))
+     ("}"              . (:action navi-next-shift-node :pred identity))
+     ("("              . (:action navi-next-shift-node :pred identity))
+     (")"              . (:action navi-next-shift-node :pred identity))
+     ("\""             . (:action navi-next-shift-node :pred identity))
+     ("\""             . (:action navi-next-shift-node :pred identity))
+     ;; ("class"          . (:action navi-next-shift-node :pred ,(navi-node-length-of? 5)))
+     ;; ("module"         . (:action navi-next-shift-node :pred ,(navi-node-length-of? 6)))
+     ("body_statement" . (:action navi-next-shift-node :pred navi-node-has-only-one-child?)))
+    :avy
+    (("program"        . (:ignore t))
+     ("."              . (:ignore t))
+     (":"              . (:ignore t))
+     ("::"             . (:ignore t))
+     ("="              . (:ignore t))
+     (","              . (:ignore t))
+     ("def"            . (:ignore t))
+     ("end"            . (:ignore t))
+     ("{"              . (:ignore t))
+     ("}"              . (:ignore t))
+     ("("              . (:ignore t))
+     (")"              . (:ignore t))
+     ("\""             . (:ignore t))
+     ("\""             . (:ignore t))
+     ;; ("class"          . (:ignore t :pred ,(navi-node-length-of? 5)))
+     ;; ("module"         . (:ignore t :pred ,(navi-node-length-of? 6)))
+     ("body_statement" . (:ignore t))))
+  ""
+  :type '()
+  :group 'navi)
+
+(defun navi-outdated-p ()
+  (if navi-node
+      (treesit-node-check navi-node 'outdated)
+    t))
+
+(defun navi-node-hash (node)
+  (list (- (treesit-node-start node)
+           (treesit-node-end node))
+        (treesit-node-type node)))
+
+(defun navi-node-hash-get (hash nodes &optional default)
+  (let ((found nil)
+        (node))
+    (while (and (setq node (pop nodes))
+                (not found))
+      (when (equal hash (navi-node-hash node))
+        (setq found node)))
+    (or found default)))
+
+(defun navi-node-hash-at (hash point)
+  (navi-node-hash-get hash (navi-nodes-at point)))
+
+(defun navi-kill-node ()
+  (interactive)
+  ;; TODO
+  (let ((node navi-node))
+    (if (treesit-node-prev-sibling node)
+        (navi-navigate-backward)
+      (navi-navigate-forward))
+    (kill-region (treesit-node-start node)
+                 (treesit-node-end node))
+    (navi-set-node-top)))
+
+(defun navi-node-stringify ()
+  (interactive)
+  (let* ((start (treesit-node-start navi-node))
+         (end (treesit-node-end navi-node))
+         (region-content (buffer-substring-no-properties start end)))
+    (replace-region-contents start end (lambda () (prin1-to-string region-content)))
+    (navi-set-node-top)))
+
+(defun navi-set-node (node)
+  (interactive)
+  (setq navi-node node)
+  (goto-char (treesit-node-start node))
+  (navi-set-position)
+  (navi-visual-mark-node)
+  node)
+
+(defun navi-set-node-top ()
+  (interactive)
+  (navi-set-node (car (last (navi-nodes-at (point))))))
+
+(defun navi-navigate-flow ()
+  (interactive)
+  (when-let ((node (or (navi-node-travel navi-node 'down)
+                       (navi-node-travel navi-node 'forward)
+                       (navi-node-travel navi-node 'up 'forward))))
+    (navi-set-node node)))
+
+
+(defun navi-navigate-flow-up ()
+  (interactive)
+  (when-let ((node (or (navi-node-travel navi-node 'backward)
+                       (navi-node-travel navi-node 'up))))
+    (navi-set-node node)))
+
+(defun navi-navigate-forward ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'forward)))
+    (navi-set-node node)))
+
+(defun navi-navigate-backward ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'backward)))
+    (navi-set-node node)))
+
+(defun navi-navigate-up ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'up)))
+    (navi-set-node node)))
+
+(defun navi-navigate-down ()
+  (interactive)
+  (when-let ((node (navi-node-travel navi-node 'down)))
+    (navi-set-node node)))
+
+(defun navi-different ()
+  (interactive)
+  (if (= (point) (treesit-node-start navi-node))
+      (setq navi-position 'end)
+    (setq navi-position 'start))
+  (navi-set-position))
+
+(defun navi-set-position ()
+  (if (equal navi-position 'start)
+      (goto-char (treesit-node-start navi-node))
+    (goto-char (treesit-node-end navi-node))))
+
+(defun navi-eval ()
+  (interactive)
+  (let ((eval-func (intern (format "navi-eval:%s" (navi-get-major-mode)))))
+    (if (fboundp eval-func)
+        (funcall eval-func
+                 (buffer-substring-no-properties
+                  (treesit-node-start navi-node)
+                  (treesit-node-end navi-node)))
+      (message "No eval function for %s" (navi-get-major-mode)))))
+
+(defun navi-back-to-indentation ()
+  (interactive)
+  (back-to-indentation)
+  (evil-navi-state))
+
+(defun navi-eval-top ()
+  (interactive)
+  (save-mark-and-excursion
+    (navi-navigate-up)
+    (navi-eval)))
+
+(defun navi-start-visual (start end)
+  (when navi-visual-overlay
+    (delete-overlay navi-visual-overlay))
+  (setq navi-visual-overlay (make-overlay start end))
+  (overlay-put navi-visual-overlay 'face 'navi-highlight))
+
+(defun navi-node-descendants (node)
+  "Collect all children of NODE and their children without using recursion."
+  (let ((stack (list node))
+        (descendants '()))
+    (while stack
+      (let ((current-node (pop stack)))
+        (setq descendants (append descendants (treesit-node-children current-node)))
+        (setq stack (append stack (treesit-node-children current-node)))))
+    descendants))
+
+
+(defun navi-avy ()
+  (interactive)
+  (let* ((nodes (navi-node-descendants navi-node))
+         (nodes (cl-remove-if (lambda (node)
+                                (when-let ((entry (alist-get (treesit-node-type node) (plist-get (navi-rules) :avy) nil nil 'string=)))
+                                  (or (and (plist-get entry :pred)
+                                           (plist-get entry :ignore)
+                                           (funcall (plist-get entry :pred) node))
+                                      (and (plist-get entry :ignore)
+                                           (not (plist-get entry :pred)))))) nodes))
+         (avy-result
+          (avy-with navi-avy
+            (avy-process
+             (cl-remove-duplicates
+              (mapcar 'treesit-node-start nodes)))))
+         (node (cl-find-if (lambda (node) (= (treesit-node-start node) avy-result)) nodes)))
+    (navi-set-node node)
+    node))
+
+(defun navi-node-space-between (node1 node2)
+  (let ((node1-start (treesit-node-start node1))
+        (node1-end (treesit-node-end node1))
+        (node2-start (treesit-node-start node2))
+        (node2-end (treesit-node-end node2)))
+    (if (< (treesit-node-start node1)
+           (treesit-node-start node2))
+        (- node2-start node1-end)
+      (- node1-start node2-end))))
+
+(defun navi-avy-delete ()
+  (interactive)
+  (if (navi-node-descendants navi-node)
+      (when (navi-avy)
+        (kill-region (treesit-node-start navi-node)
+                     (treesit-node-end navi-node))
+        (evil-insert-state))
+    (progn
+      (kill-region (treesit-node-start navi-node)
+                   (treesit-node-end navi-node))
+      (evil-insert-state))))
+
+(defun navi-visual-mark-node ()
+  (interactive)
+  (when (not (navi-outdated-p))
+    (navi-start-visual
+     (treesit-node-start navi-node)
+     (treesit-node-end navi-node))))
+
+(defun navi-yank-node ()
+  (interactive)
+  (let ((node navi-node))
+    (when node
+      (copy-region-as-kill
+       (treesit-node-start node)
+       (treesit-node-end node)))))
+
+(defun navi-paste-down ()
+  (interactive)
+  ;; TODO
+  )
+
+(defun navi-paste-up ()
+  (interactive)
+  ;; TODO
+  )
+
+(defun navi-comment-node ()
+  (interactive)
+  (let* ((start (treesit-node-start navi-node))
+         (end (treesit-node-end navi-node))
+         (_ (or (navi-navigate-backward)
+                (navi-navigate-forward)
+                (navi-navigate-up)))
+         (hash (navi-node-hash navi-node)))
+    (comment-region start end)
+    (navi-set-node
+     (navi-node-hash-at hash (point)))))
+
+(defun navi-next-node (node direction)
+  (cl-case direction
+    (forward (treesit-node-next-sibling node))
+    (backward (treesit-node-prev-sibling node))
+    (up (treesit-node-parent node))
+    (down (treesit-node-child node 0))))
+
+
+(defun navi-next-shift-node (node direction)
+  (cl-case direction
+    (forward (treesit-node-child node 0))
+    (backward (treesit-node-parent node))
+    (up (treesit-node-prev-sibling node))
+    (down (treesit-node-next-sibling node))))
+
+(defun navi-node-travel-1 (current-node direction)
+  (let* ((next-node (navi-next-node current-node direction))
+         (node-type (treesit-node-type next-node))
+         (current-mode-key-list (plist-get (navi-rules) :navigation))
+         (current-mode-key-node-f (alist-get node-type current-mode-key-list nil nil 'string=))
+         (pred (or (plist-get current-mode-key-node-f :pred) 'ignore))
+         (action (plist-get current-mode-key-node-f :action))
+         (ignore (plist-get current-mode-key-node-f :ignore)))
+    (when (not ignore)
+     (if (funcall pred next-node)
+         (funcall action next-node direction)
+       next-node))))
+
+(defun navi-node-travel (current-node &rest directions)
+  (interactive)
+  (cl-reduce
+   (lambda (node direction)
+     (navi-node-travel-1 node direction))
+   directions
+   :initial-value current-node))
+
+(defun navi-nodes-at (point)
+  (let* ((node (treesit-node-at point))
+         (nodes (list node))
+         (done nil))
+    (while (not done)
+      (let* ((node (car (last nodes)))
+             (parent (treesit-node-parent node))
+             (parent-start (treesit-node-start parent))
+             (node-start (treesit-node-start node)))
+        (if (equal parent-start node-start)
+            (setq nodes (append nodes (list parent)))
+          (setq done t))))
+    nodes))
+
+(defun navi-node-swap (node1 node2)
+  (interactive)
+  ;; TODO use marks
+  (let* ((reversed (> (treesit-node-start node1) (treesit-node-start node2)))
+         (upper-node (if reversed node2 node1))
+         (lower-node (if reversed node1 node2))
+         (temp-buffer (generate-new-buffer " *navi-temp*"))
+         (c (current-buffer)))
+    (let ((result
+           (with-current-buffer temp-buffer
+             (insert-buffer-substring c)
+             (let* ((upper-node-start (treesit-node-start upper-node))
+                    (upper-node-end (treesit-node-end upper-node))
+                    (lower-node-start (treesit-node-start lower-node))
+                    (lower-node-end (treesit-node-end lower-node))
+	            (upper-node-substring (buffer-substring upper-node-start upper-node-end))
+                    (lower-node-substring (buffer-substring lower-node-start lower-node-end)))
+               (delete-region lower-node-start lower-node-end)
+               (goto-char lower-node-start)
+               (insert upper-node-substring)
+               (delete-region upper-node-start upper-node-end)
+               (goto-char upper-node-start)
+               (insert lower-node-substring)
+               (let ((new-node1-point
+                      (- lower-node-start
+                         (- (length upper-node-substring)
+                            (length lower-node-substring))))
+                     (new-node2-point upper-node-start))
+                 (if reversed
+                     (reverse (list new-node1-point new-node2-point))
+                   (list new-node1-point new-node2-point)))))))
+      (replace-buffer-contents temp-buffer)
+      result)))
+
+(defun navi-drag-up ()
+  (interactive)
+  (let ((next-node
+         (navi-node-travel navi-node 'backward)))
+    (when (and (navi-p)
+               next-node
+               (not (navi-node-descendant? next-node navi-node))
+               (not (navi-node-descendant? navi-node next-node)))
+      (let* ((hash (navi-node-hash navi-node))
+             (new-points (navi-node-swap navi-node next-node)))
+        (navi-set-node
+         (navi-node-hash-get hash (navi-nodes-at (car new-points))
+                             (treesit-node-at (car new-points))))))))
+
+(defun navi-drag-down ()
+  (interactive)
+  (let ((next-node
+         (navi-node-travel navi-node 'forward)))
+    (when (and (navi-p)
+               next-node
+               (not (navi-node-descendant? next-node navi-node))
+               (not (navi-node-descendant? navi-node next-node)))
+      (let* ((hash (navi-node-hash navi-node))
+             (new-points (navi-node-swap navi-node next-node)))
+        (navi-set-node
+         (navi-node-hash-get hash
+                             (navi-nodes-at (car new-points))
+                             (treesit-node-at (car new-points))))))))
+
+(defun navi-node-descendant? (node1 node2)
+  (member node2 (navi-node-descendants node1)))
+
+(defcustom navi-children-wip:ruby-ts-mode
+  '(("class" . (:action foo ))
+    ("module" . (:action foo)))
+  ""
+  :type '()
+  :group 'navi)
+
+(evil-define-key nil evil-navi-state-map
+  (kbd "<escape>") 'evil-normal-state
+  (kbd "]") 'navi-yoink-forward
+  (kbd "[") 'navi-yeet-forward
+  (kbd "@") nil
+  (kbd "q") nil
+  (kbd "Q") nil
+  (kbd "w") 'navi-drag-up
+  (kbd "e") 'navi-eval
+  (kbd "E") nil
+  (kbd "r") nil ;; special-lispy-raise
+  (kbd "R") nil ;; special-lispy-raise-some
+  (kbd "t") nil ;; Teleport one day
+  (kbd "T") nil ;; Teleport transfer one day
+  (kbd "y") 'navi-yank-node
+  (kbd "Y") nil ;; Free
+  (kbd "u") 'undo-tree-undo
+  (kbd "U") 'undo-tree-redo
+  (kbd "i") 'evil-insert-state
+  (kbd "I") 'evil-insert-line
+  (kbd "o") 'evil-open-below
+  (kbd "O") 'evil-open-above
+  (kbd "p") 'navi-paste-down
+  (kbd "P") 'navi-paste-up
+  (kbd "a") 'navi-avy
+  (kbd "A") 'navi-avy-delete
+  (kbd "s") 'navi-drag-down
+  (kbd "S") 'navi-node-stringify
+  (kbd "d") 'navi-different
+  (kbd "D") nil ;; idk
+  (kbd "f") nil
+  (kbd "F") nil
+  (kbd "g") 'pop-global-mark
+  (kbd "G") nil
+  (kbd "h") 'navi-navigate-up
+  (kbd "H") 'navi-navigate-parent
+  (kbd "j") 'navi-navigate-forward
+  (kbd "J") nil ;; Free
+  (kbd "k") 'navi-navigate-backward
+  (kbd "K") nil ;; Free
+  (kbd "l") 'navi-navigate-down
+  (kbd "L") 'navi-navigate-child
+  (kbd ";") 'navi-comment-node
+  (kbd ":") nil  ;; Free
+  (kbd "'") nil  ;; Free
+  (kbd "\"") nil ;; Free
+  (kbd "/") nil  ;; Free
+  (kbd "z") nil  ;; Free
+  (kbd "Z") nil  ;; Free
+  (kbd "x") 'navi-kill-node
+  (kbd "X") nil ;; Free
+  (kbd "c") nil ;; Clone
+  (kbd "C") nil ;; Convolute, but how?
+  (kbd "v") 'elpy-goto-definition
+  (kbd "V") 'elpy-goto-definition-other-window
+  (kbd "b") 'evil-backward-word-begin
+  (kbd "B") 'evil-backward-WORD-begin
+  (kbd "n") 'navi-navigate-flow
+  (kbd "N") 'navi-navigate-flow-up
+  (kbd "m") 'navi-format-block
+  (kbd "M") nil
+  (kbd ",") nil ;; Free
+  (kbd "<") nil ;; Slurp back?
+  (kbd ".") 'evil-repeat
+  (kbd ">") nil ;; barf back?
+  (kbd "/") nil ;; Occur
+  (kbd "?") nil ;; Free
+  )
+
+;; Modes
+
+(evil-define-state navi
+  "Navi state."
+  :tag " <*> "
+  :message "Entering Navi mode..."
+  :entry-hook (evil-navi-enter)
+  :exit-hook (evil-navi-exit))
+
+(defun evil-navi-enter ()
+  (when (and (boundp 'hl-line-mode)
+             hl-line-mode)
+    (setq navi-hl-mode 'hl-line-mode)
+    (hl-line-mode -1))
+  (when (and (boundp 'global-hl-line-mode)
+             global-hl-line-mode)
+    (setq navi-hl-mode 'global-hl-line-mode)
+    (global-hl-line-mode -1))
+  (navi-set-node-top)
+  (set-cursor-color "#2571ff"))
+
+(defun evil-navi-exit ()
+  (when (eq navi-hl-mode 'hl-line-mode)
+    (hl-line-mode 1))
+  (when (eq navi-hl-mode 'global-hl-line-mode)
+    (global-hl-line-mode 1))
+  (delete-overlay navi-visual-overlay)
+  (set-cursor-color "#e95678"))
+
+(defun navi-p ()
+  (equal evil-state 'navi))
+
+(defcustom navi-navigate-functions
+  '(undo-tree-undo
+    undo-tree-redo
+    pop-global-mark
+    elpy-goto-definition
+    navi-navigate-next
+    navi-navigate-previous
+    navi-drag-up
+    navi-drag-down
+    navi-format-block
+    navi-yoink-forward
+    navi-yeet-forward
+    navi-navigate-up
+    navi-navigate-down
+    navi-navigate-parent
+    navi-navigate-child
+    navi-avy
+    navi-avy-delete
+    navi-avy-mark
+    navi-paste-down
+    navi-paste-up)
+  ""
+  :type '()
+  :group 'navi)
+
+(defun navi-update-node-advice (&rest _)
+  (when (and (navi-p)
+             (navi-outdated-p))
+    (navi-set-node-top)))
+
+(defun navi-mark-if-visual-advice (&rest _)
+  (when (navi-p)
+    (navi-visual-mark-node)))
+
+(dolist (func navi-navigate-functions)
+  (advice-add func :after  'navi-mark-if-visual-advice)
+  (advice-add func :before 'navi-update-node-advice))
+
+(advice-add 'undo-tree-undo :after 'navi-update-node-advice)
+(advice-add 'undo-tree-redo :after 'navi-update-node-advice)
+
+(defun navi-node-name ()
+  (interactive)
+  (let ((node navi-node))
+    (when node
+      (message (treesit-node-type node)))))
+
+#+END_SRC
+
+#+STARTUP: showeverything
+
+* Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/snippet-directory "~/.dotfiles/emacs/db/snippets"
+  "Directory where snippets are stored."
+  :type 'string
+  :group 'kwrooijen)
+#+END_SRC
+
+* Yasnippet
+:PROPERTIES:
+:PACKAGE: yasnippet
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path kwrooijen/snippet-directory)
+(add-to-list 'yas-snippet-dirs kwrooijen/snippet-directory)
+(let ((yas-snippets-dir (expand-file-name "straight/repos/yasnippet-snippets/snippets" user-emacs-directory)))
+  (add-to-list 'load-path kwrooijen/snippet-directory)
+  (add-to-list 'yas-snippet-dirs kwrooijen/snippet-directory))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/yas-completing-read (templates)
+  "Prompt the user to select a template from TEMPLATES and insert its yasnippet.
+TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
+  (interactive)
+  (let* ((template-names (mapcar #'car templates))
+         (selected (completing-read "Select template: " template-names nil t)))
+    (when selected
+      (let ((snippet-key (cdr (assoc selected templates))))
+        (if (and (featurep 'yasnippet) (yas-lookup-snippet snippet-key))
+            (yas-expand-snippet (yas-lookup-snippet snippet-key))
+          (error "Yasnippet not available or snippet '%s' not found" snippet-key))))))
+#+END_SRC
+
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . yas-minor-mode)
+ (org-mode . yas-minor-mode))
+#+END_SRC
+
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "i s" 'yas-insert-snippet)
+#+END_SRC
+
+* Yasnippet snippets
+:PROPERTIES:
+:PACKAGE: yasnippet-snippets
+:STRAIGHT: t
+:AFTER: yasnippet
+:END:
+
+** Jinx (spell checker)
+:PROPERTIES:
+:PACKAGE: jinx
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/jinx-add-word-at-point ()
+  "Add the word at point to Jinx personal dictionary."
+  (interactive)
+  (let ((word (thing-at-point 'word t)))
+    (if (not word)
+        (user-error "No word at point")
+      ;; Call the same save logic that jinx uses for @word
+      (jinx--save-personal 'save ?@ word)
+      (jinx--recheck-overlays)
+      (message "Added '%s' to Jinx personal dictionary" word))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(jinx-languages "en_US,nl")
+;(defun jinx--read-languages ()
+;; '("en_US" "nl")
+;"en_US,nl"
+;(jinx--table-with-metadata '("en_US" "nl") `((group-function . ,#'jinx--group)))
+;)
+
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+("M-$" 'jinx-correct)
+("C-M-$" 'jinx-languages)
+
+(kwrooijen/leader
+ "jj" 'kwrooijen/jinx-add-word-at-point)
+#+END_SRC
+
+* Flycheck
+:PROPERTIES:
+:PACKAGE: flycheck
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
+(global-flycheck-mode 0)
+#+END_SRC
+* Copilot
+:PROPERTIES:
+:PACKAGE: copilot
+:STRAIGHT: (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
+:END:
+
+** Hooks :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . copilot-mode))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'copilot-completion-map
+          "M-TAB" 'copilot-accept-completion-by-word
+          "M-<tab>" 'copilot-accept-completion-by-word
+          "<tab>" 'kwrooijen/tab
+          "TAB" 'kwrooijen/tab
+          "C-<tab>" 'copilot-next-completion
+          "C-TAB" 'copilot-next-completion)
+
+(:states 'insert
+  "C-o" 'copilot-next-completion)
+
+("M-O" 'copilot-mode)
+#+END_SRC
+
+* Company
+:PROPERTIES:
+:PACKAGE: company
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'company-active-map
+          "C-j" 'company-select-next-or-abort
+          "C-k" 'company-select-previous-or-abort
+          "C-f" 'company-next-page
+          "C-b" 'company-previous-page
+          "C-;" 'helm-company
+          "<escape>" 'company-abort)
+
+("M-;" 'company-complete)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((after-init . global-company-mode))
+#+END_SRC
+
+
+* Company Box
+:PROPERTIES:
+:PACKAGE: company-box
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(company-mode . company-box-mode)
+#+END_SRC
+
+* Lsp
+:PROPERTIES:
+:PACKAGE: lsp-mode
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(lsp-headerline-breadcrumb-enable nil)
+#+END_SRC
+
+
+* Aider.el
+:PROPERTIES:
+:PACKAGE: aider
+:STRAIGHT: (:host github :repo "tninja/aider.el")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(aider-args '("--model" "openrouter/anthropic/claude-3.7-sonnet" "--no-auto-accept-architect" "--no-auto-commits"))
+(kwrooijen/aider-models '(("gemini 2.5-flash" . "openrouter/google/gemini-2.5-flash-preview")
+                          ("gpt-5-nano" . "openrouter/openai/gpt-5-nano")
+                          ("Claude 4.0" . "openrouter/anthropic/claude-3.7-sonnet")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/aider-run-aider ()
+  (interactive)
+  (let ((default-directory (or (projectile-project-root)
+                               default-directory)))
+    (aider-run-aider)))
+
+(defun kwrooijen/aider-switch-model ()
+  (interactive)
+  (let* ((model (completing-read "Select model: " (mapcar 'car kwrooijen/aider-models)))
+         (model-args (cdr (assoc model kwrooijen/aider-models))))
+    (setq aider-args `("--model" ,model-args "--no-auto-accept-architect"))
+    (message "Aider model set to: %s" model)))
+
+(defun kwrooijen/aider-switch-mode (mode)
+  "Either switch to Code Mode, Ask Mode, Architect Mode, or Help Mode"
+  (interactive
+   (list (completing-read "Select mode: " '("Code" "Ask" "Architect" "Help"))))
+  (cond
+   ((string= mode "Code")
+    (aider--send-command "/code")
+    (message "Switched to Code Mode"))
+   ((string= mode "Ask")
+    (aider--send-command "/ask")
+    (message "Switched to Ask Mode"))
+   ((string= mode "Architect")
+    (aider--send-command "/architect")
+    (message "Switched to Architect Mode"))
+   ((string= mode "Help")
+    (aider--send-command "/help")
+    (message "Switched to Help Mode"))))
+
+(defun kwrooijen/aider-clear-prompt ()
+  "Clear the user input at the current prompt in the Aider buffer."
+  (interactive)
+  (when (eq major-mode 'aider-comint-mode)
+    (let ((inhibit-read-only t))
+      (delete-region comint-last-input-start (point-max)))))
+
+(defun kwrooijen/aider-explain-error-at-point ()
+  "Explain the eglot error at point."
+  (interactive)
+  (let ((error-message (kwrooijen/eglot-error-at-point))
+        (line-number (line-number-at-pos))
+        (line (thing-at-point 'line t))
+        (file-name (buffer-file-name)))
+    (if error-message
+        (progn
+          (aider-switch-to-buffer)
+          (kwrooijen/aider-clear-prompt)
+          (aider--send-command "/ask")
+          (aider-add-current-file)
+          (aider--send-command (format "Explain the following error in %s:%s\nLine:%s\nError:%s" file-name line-number line error-message)))
+      (error "No error message at point"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; Defcustom kwrooijen/aider-style-guides, List of style guides to use based on key
+;; (defcustom kwrooijen/aider-style-guides
+;;   '(("LangChain" . "You hare a coding assistent writing Python, LangChain code.
+;; Every node should have their own class, with the following format:
+
+;; ```python
+;; class State(BaseModel):
+;;     items: List[Any] = []
+
+;; class NodeFoobar:
+;;     def __init__(self, *args, **kwargs):
+;;         # Any initialization code goes here
+;;     def invoke(self, state):
+;;         # Any code to run the node goes here
+;;         return state
+
+;; class NodeBarbaz:
+;;     def __init__(self, *args, **kwargs):
+;;         # Any initialization code goes here
+;;     def invoke(self, state):
+;;         # Any code to run the node goes here
+;;         return state
+
+;; class GraphMyProject:
+;;     def add_sequence(self, sequence):
+;;         for i in range(len(sequence) - 1):
+;;             self.graph_builder.add_edge(sequence[i], sequence[i + 1])
+
+;;     def __init__(self):
+;;         self.graph_builder = StateGraph(state_schema=State, config_schema=RunnableConfig)
+;;         self.graph_builder.add_node(\"Foobar\" , NodeFoobar())
+;;         self.graph_builder.add_node(\"Barbaz\" , NodeBarBaz())
+
+
+;;         self.add_sequence([START, \"Foobar\", \"Barbaz\"])
+;;         self.graph = self.graph_builder.compile()
+
+;;     def invoke(self):
+;;         return self.graph.invoke(State(), {})
+
+;;     def ainvoke(self):
+;;         return self.graph.ainvoke(State(), {})
+
+;; ```
+;; ")))
+#+END_SRC
+
+
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "aa" 'kwrooijen/aider-run-aider
+  "af" 'aider-add-current-file
+  "ag" 'aider-go-ahead
+  "aq" 'aider-exit
+  "ac" 'aider-clear-buffer
+  "ak" 'aider-ask-question
+  "ao" 'aider-open-history
+  "au" 'aider-write-unit-test
+  "aK" 'aider-general-question
+  "al" 'aider-send-block-by-line
+  "as" 'aider-send-line-or-region
+  "aM" 'kwrooijen/aider-switch-model
+  "am" 'kwrooijen/aider-switch-mode
+  "ae" 'kwrooijen/aider-explain-error-at-point)
+#+END_SRC
+
+
+* Combobulate
+:PROPERTIES:
+:PACKAGE: combobulate
+:STRAIGHT: (:host github :repo "mickeynp/combobulate" :branch "master")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(combobulate-flash-node nil)
+#+END_SRC
+
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+;; (require 'evil)
+
+(evil-define-state combobulate
+  "My custom Evil mode, inheriting from normal mode."
+  :tag " <C> "
+  :enable (normal)
+  :cursor (bar . 2))
+
+(define-key evil-combobulate-state-map (kbd "h") 'combobulate-navigate-up)
+(define-key evil-combobulate-state-map (kbd "n") 'combobulate-navigate-down)
+(define-key evil-combobulate-state-map (kbd "j") 'combobulate-navigate-next)
+(define-key evil-combobulate-state-map (kbd "k") 'combobulate-navigate-previous)
+(define-key evil-combobulate-state-map (kbd "f") 'combobulate-navigate-forward)
+(define-key evil-combobulate-state-map (kbd "l") 'combobulate-navigate-logical-next)
+(define-key evil-combobulate-state-map (kbd "a") 'kwrooijen/treesit-jump)
+(define-key evil-combobulate-state-map (kbd "R") 'combobulate-splice-up)
+(define-key evil-combobulate-state-map (kbd "r") 'combobulate-splice-self)
+(define-key evil-combobulate-state-map (kbd "w") 'combobulate-drag-up)
+(define-key evil-combobulate-state-map (kbd "s") 'combobulate-drag-down)
+(define-key evil-combobulate-state-map (kbd "c") 'combobulate-clone-node-dwim)
+(define-key evil-combobulate-state-map (kbd "x") 'kwrooijen/combobulate-kill-node-dwim)
+(define-key evil-combobulate-state-map (kbd "d") 'kwrooijen/combobulate-different)
+(define-key evil-combobulate-state-map (kbd "RET") 'kwrooijen/combobulate-move-one-down)
+(define-key evil-combobulate-state-map (kbd "<backspace>") 'kwrooijen/combobulate-move-one-up)
+;; Python specific
+(define-key evil-combobulate-state-map (kbd "e") 'kwrooijen/python-combobulate-shell-send-block)
+(define-key evil-combobulate-state-map (kbd "TAB") 'combobulate-python-indent-for-tab-command)
+(define-key python-base-mode-map (kbd "M-a") 'kwrooijen/combobulate-left-state)
+(define-key python-base-mode-map (kbd "M-r") 'kwrooijen/combobulate-rise)
+
+(defun kwrooijen/combobulate-left-state ()
+  (interactive)
+  (while (looking-at-p "^[[:space:]]*$")
+    (forward-line -1)
+    (back-to-indentation))
+  (back-to-indentation)
+  (evil-combobulate-state))
+
+(defun kwrooijen/treesit-get-descendants (node &optional named)
+  "Return a list of all descendant nodes of NODE.
+If NAMED is t, only include named nodes."
+  (let (descendants)
+    (dolist (child (treesit-node-children node named))
+      (push child descendants)
+      (setq descendants (append descendants (kwrooijen/treesit-get-descendants child named))))
+    descendants))
+
+(defun kwrooijen/treesit-jump ()
+  "Jump to one of the descendant nodes' positions using avy."
+  (interactive)
+  (let* ((avy-keys '(?a ?b ?c ?d ?e ?f ?g ?h ?i ?j ?k ?l ?m ?n ?o ?p ?q ?r ?s ?t ?u ?v ?w ?x ?y ?z))
+         (parent (treesit-node-parent (treesit-node-at (point))))
+         (allowed-types '("false"
+                          "integer"
+                          "call"
+                          "identifier"
+                          "dictionary"
+                          "string_start"
+                          "string_content"))
+         (descendants (kwrooijen/treesit-get-descendants parent t))
+         ;; Debugging purposes
+         ;; (_ (message "DESC %s" (-distinct (mapcar 'treesit-node-type descendants)) ))
+         (descendants (-filter (lambda (node)
+                                 (member (treesit-node-type node) allowed-types))
+                               descendants))
+         (positions (mapcar 'treesit-node-start descendants))
+         (positions (sort (-remove (lambda (pos) (equal pos (point))) positions))))
+    (avy-with my-avy-jump
+      (avy-process positions))))
+
+(defun kwrooijen/combobulate-kill-node-dwim ()
+  (interactive)
+  (let ((at-indentation?
+         (save-excursion
+           (let ((p (point)))
+             (back-to-indentation)
+             (= p (point))))))
+    (combobulate-kill-node-dwim)
+    (when at-indentation?
+      (evil-delete-line
+       (save-excursion (beginning-of-line) (point))
+       (save-excursion (end-of-line) (1+ (point))))
+      (back-to-indentation))))
+
+(defun kwrooijen/combobulate-move-one-down ()
+  (interactive)
+  (save-excursion
+    (evil-open-above 0)
+    (evil-combobulate-state))
+  (if (bolp)
+      (forward-line 1)))
+
+(defun kwrooijen/combobulate-move-one-up ()
+  (interactive)
+  (save-excursion
+    (next-line -1)
+    (when (looking-at-p "^[[:space:]]*$")
+      (evil-delete-line
+       (save-excursion (beginning-of-line) (point))
+       (save-excursion (end-of-line) (1+ (point)))))))
+
+(defun kwrooijen/combobulate-rise ()
+  (interactive)
+  (combobulate-navigate-up)
+  (kwrooijen/combobulate-different))
+
+(defun kwrooijen/combobulate-different ()
+  (interactive)
+  (when kwrooijen/combobulate-current-node
+    (if (= (treesit-node-start kwrooijen/combobulate-current-node) (point))
+        (goto-char (treesit-node-end kwrooijen/combobulate-current-node))
+      (goto-char (treesit-node-start kwrooijen/combobulate-current-node)))))
+
+(defvar kwrooijen/combobulate-current-node nil
+  "The current node in the combobulate buffer.")
+
+(defvar kwrooijen/combobulate-visual-overlay nil
+  "")
+
+(defun kwrooijen/combobulate-start-visual (start end)
+  (when kwrooijen/combobulate-visual-overlay
+    (delete-overlay kwrooijen/combobulate-visual-overlay))
+  (setq kwrooijen/combobulate-visual-overlay (make-overlay start end))
+  (overlay-put kwrooijen/combobulate-visual-overlay 'face 'kwrooijen/combobulate-highlight))
+
+(defface kwrooijen/combobulate-highlight
+  '((((class color) (background light))
+     :background "#393c4c" :foreground unspecified)
+    (((class color) (background dark))
+     :background "#393c4c" :foreground unspecified))
+  ""
+  :group 'kwrooijen/combobulate-faces)
+
+(defun kwrooijen/combobulate-node-at-point ()
+  (let* ((nodes (combobulate-all-nodes-at-point)))
+    (if (= (length nodes) 1)
+        (car nodes)
+      (or (car (last (--remove (string= (combobulate-node-type it) "block") nodes)))
+          (car (last nodes))))))
+
+(defun kwrooijen/combobulate-highlight-current-node (&optional node)
+  (interactive)
+  (if (treesit-node-p node)
+      (setq kwrooijen/combobulate-current-node node)
+    (setq kwrooijen/combobulate-current-node (kwrooijen/combobulate-node-at-point)))
+  (kwrooijen/combobulate-start-visual
+   (treesit-node-start kwrooijen/combobulate-current-node)
+   (treesit-node-end kwrooijen/combobulate-current-node)))
+
+(defcustom kwrooijen/combobulate-navigate-functions
+  '(undo-tree-undo
+    undo-tree-redo
+    pop-global-mark
+    elpy-goto-definition
+    combobulate-navigate-next
+    combobulate-navigate-up
+    combobulate-navigate-down
+    combobulate-navigate-next
+    combobulate-navigate-previous
+    combobulate-navigate-forward
+    combobulate-navigate-logical-next
+    kwrooijen/treesit-jump
+    combobulate-splice-up
+    combobulate-splice-self
+    combobulate-drag-up
+    combobulate-drag-down
+    kwrooijen/combobulate-left-state
+    kwrooijen/combobulate-move-one-down
+    kwrooijen/combobulate-move-one-up)
+
+  ""
+  :type '()
+  :group 'kwrooijen/combobulate)
+
+(defun kwrooijen/combobulate-clear-highlight ()
+  (when kwrooijen/combobulate-visual-overlay
+    (delete-overlay kwrooijen/combobulate-visual-overlay)
+    (setq kwrooijen/combobulate-visual-overlay nil)))
+
+(add-hook 'evil-combobulate-state-exit-hook #'kwrooijen/combobulate-clear-highlight)
+
+(dolist (func kwrooijen/combobulate-navigate-functions)
+  (advice-add func :filter-return  'kwrooijen/combobulate-highlight-current-node))
+#+END_SRC
+
+
+* Aidermacs
+:PROPERTIES:
+:PACKAGE: aidermacs
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(aidermacs-show-diff-after-change nil)
+(aidermacs-auto-commits nil)
+(aidermacs-extra-args '("--no-auto-commits"))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-advice aidermacs-run (:around (orig-fun &rest args) set-project-root)
+  "Run aidermacs-run with default-directory set to project root."
+  (let ((default-directory (projectile-project-root)))
+    (apply orig-fun args)))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"a" 'aidermacs-transient-menu)
+#+END_SRC
+
+* Winum
+:PROPERTIES:
+:PACKAGE: winum
+:STRAIGHT: t
+:END:
+
+Number your open windows and switch between them.
+
+** Custom :custom:
+
+Don't add window number to modeline
+
+#+BEGIN_SRC emacs-lisp
+(winum-auto-setup-mode-line nil)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(winum-mode)
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-1" 'winum-select-window-1)
+("M-2" 'winum-select-window-2)
+("M-3" 'winum-select-window-3)
+("M-4" 'winum-select-window-4)
+("M-5" 'winum-select-window-5)
+("M-6" 'winum-select-window-6)
+("M-7" 'winum-select-window-7)
+("M-8" 'winum-select-window-8)
+("M-9" 'winum-select-window-9)
+#+END_SRC
+
+* Winner
+:PROPERTIES:
+:PACKAGE: winner
+:STRAIGHT: t
+:END:
+
+Undo or redo changes in your window layout.
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(winner-mode 1)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "w u" '(winner-undo :which-key "Undo window layout")
+  "w U" '(winner-redo :which-key "Redo window layout"))
+#+END_SRC
+
+* Popwin
+:PROPERTIES:
+:PACKAGE: popwin
+:STRAIGHT: t
+:END:
+
+Manage windows that pop up on your screen.
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(popwin-mode 1)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(push '("*eval*" :height 10 :dedicated t) popwin:special-display-config)
+(push '("*shell*" :height 20 :position bottom :stick t) popwin:special-display-config)
+(push '("*eshell*" :height 30 :position bottom :stick t) popwin:special-display-config)
+(push '("\\*vterm.*\\*" :height 30 :position bottom :stick t :regexp t) popwin:special-display-config)
+(push '("*Bebop Interceptor*" :height 40 :dedicated t) popwin:special-display-config)
+(push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
+(push '("^.*\\-eshell\\*.*$" :regexp t) popwin:special-display-config)
+#+END_SRC
+
+
+* Shackle :config:
+:PROPERTIES:
+:PACKAGE: shackle
+:STRAIGHT: t
+:END:
+
+Package for managing window positions. Similar to popwin.
+
+#+BEGIN_SRC emacs-lisp
+(shackle-mode 1)
+#+END_SRC
+
+#+STARTUP: showeverthing
+
+* Clojure
+:PROPERTIES:
+:PACKAGE: clojure-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+
+#+BEGIN_SRC emacs-lisp
+((clojure-mode . cider-mode)
+ (clojure-mode . lispy-mode)
+ (clojure-mode . clj-refactor-mode)
+ (clojure-mode . flycheck-mode))
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(clojure-indent-style 'always-align)
+(clojure-align-forms-automatically t)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps '(clojure-mode-map clojurescript-mode-map)
+          "M-e" 'cider-pprint-eval-sexp)
+#+END_SRC
+
+* Clojure refactor
+:PROPERTIES:
+:PACKAGE: clj-refactor
+:STRAIGHT: t
+:AFTER: clojure
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(cljr-warn-on-eval nil)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+ :keymaps '(clojure-mode-map clojurescript-mode-map)
+            :states 'normal
+            "r t f" 'cljr-thread-first-all
+            "r t l" 'cljr-thread-last-all)
+#+END_SRC
+
+
+* Cider
+:PROPERTIES:
+:PACKAGE: cider
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+
+This setting enables dynamic cljs completions.
+That is, expressions at point are evaluated and the properties of the
+resulting value are used to compute completions.
+
+#+BEGIN_SRC emacs-lisp
+(cider-enhanced-cljs-completion-p nil)
+#+END_SRC
+
+When non-nil a bit of help text will be displayed on REPL start.
+
+#+BEGIN_SRC emacs-lisp
+(cider-repl-display-help-banner nil)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(cider-repl-display-help-banner nil)
+(cider-figwheel-main-default-options "dev")
+(cider-default-cljs-repl 'figwheel-main)
+(cider-preferred-build-tool 'clojure-cli)
+(cider-shadow-default-options "app")
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'safe-local-variable-values '(cider-default-cljs-repl . shadow))
+(add-to-list 'safe-local-variable-values '(cider-shadow-default-options . "app"))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps '(clojure-mode-map clojurescript-mode-map)
+            :states 'normal
+            "r j" 'cider-jack-in-clj
+            "r c" 'cider-connect-clj
+            "s j n" 'cider-jack-in-clj&cljs
+            "b b" 'cider-switch-to-repl-buffer
+            "e b" 'cider-eval-buffer)
+#+END_SRC
+
+Dockerfile
+:PROPERTIES:
+:PACKAGE: dockerfile-mode
+:STRAIGHT: t
+:END:
+
+* Emacs lisp
+:PROPERTIES:
+:PACKAGE: emacs-lisp
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(emacs-lisp-mode . lispy-mode)
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'emacs-lisp-mode-map
+  :states 'normal
+  "e b" 'eval-buffer
+  "r t f" 'cljr-thread-first-all
+  "r t l" 'cljr-thread-last-all)
+#+END_SRC
+
+* Go
+:PROPERTIES:
+:PACKAGE: go-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((before-save . gofmt-before-save))
+#+END_SRC
+
+* Javascript
+:PROPERTIES:
+:PACKAGE: js2-mode
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
+(setq-default js2-strict-missing-semi-warning nil)
+(setq-default js2-basic-offset 2)
+#+END_SRC
+
+* Json
+:PROPERTIES:
+:PACKAGE: json-mode
+:STRAIGHT: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/paperspace-set-notebook-session (url)
+  "Update the Jupyter session and token based on the provided URL."
+  (interactive "sEnter the Paperspace Jupyter Kernel URL: ")
+  (let* ((url-components (url-generic-parse-url url))
+         (host (url-host url-components))
+         (token (url-filename url-components))
+         (token-value (replace-regexp-in-string "^\\?token=" "" token))
+         (session (concat host "#0:jupyter")))
+    (setq jupyter-rest-api-default-token token-value)
+    (save-excursion
+      (goto-char (point-min))
+      (if (re-search-forward "^#\\+PROPERTY: header-args:python" nil t)
+          (progn
+            (beginning-of-line)
+            (kill-line)
+            (insert (concat "#+PROPERTY: header-args:python :session /jpys:" session " :pandoc t")))
+        ;; If the property doesn't exist, insert it at the beginning of the buffer
+        (goto-char (point-min))
+        (insert (concat "#+PROPERTY: header-args:python :session /jpys:" session " :pandoc t\n"))))
+    (org-mode-restart)
+    (message "Session set to: %s and token set to: %s" session token-value)))
+
+(use-package ox-ipynb
+  :straight (:host github :repo "jkitchin/ox-ipynb" :files ("dist" "*.el")))
+
+(use-package jupyter
+  :straight t
+  :general
+  (kwrooijen/local-leader
+    :keymaps 'org-mode-map
+    :states 'normal
+    ";" 'kwrooijen/jupyter-color-fix)
+
+  :hook (org-mode . kwrooijen/jupyter-setup)
+  :config
+
+  (defun kwrooijen/jupyter-setup ()
+    (interactive)
+    (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+    (add-hook 'org-babel-after-execute-hook 'kwrooijen/jupyter-color-fix))
+
+  (defun kwrooijen/jupyter-color-fix (&rest _)
+    (interactive)
+    (org-babel-jupyter-override-src-block "python")
+    (jupyter-ansi-color-apply-on-region (point-min) (point-max)))
+
+  (require 'ob-jupyter)
+  (require 'ob-shell)
+  (setq-local org-image-actual-width 1024))
+
+(use-package org
+  :init
+  (add-to-list 'org-babel-load-languages '(python . t))
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((python . t)
+     (jupyter . t)))
+  (add-to-list 'org-src-lang-modes '("python" . python-ts))
+  (when (not (boundp 'org-babel-default-header-args:python))
+    (setq org-babel-default-header-args:python nil))
+  (add-to-list 'org-babel-default-header-args:python '(:session . "*Python*")))
+#+END_SRC
+
+* Markdown
+:PROPERTIES:
+:PACKAGE: markdown-mode
+:STRAIGHT: t
+:END:
+
+Install Poetry + Pyright
+
+#+BEGIN_SRC shell
+brew install poetry pyright
+#+END_SRC
+
+Add in-project to your global poetry config. This will make it easier
+for pyright to find your dependencies
+
+#+BEGIN_QUOTE ~/Library/Application\ Support/pypoetry/config.toml
+[virtualenvs]
+in-project = true
+#+END_QUOTE
+
+#+BEGIN_SRC emacs-lisp
+(when (and (fboundp 'python-ts-mode)
+           (treesit-available-p))
+  (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode)))
+#+END_SRC
+
+
+* Python
+:PROPERTIES:
+:PACKAGE: python
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'eglot)
+(setenv "PYTHONIOENCODING" "utf8")
+(define-key python-base-mode-map (kbd "M-n") 'evil-collection-unimpaired-next-error)
+(define-key python-base-mode-map (kbd "M-p") 'evil-collection-unimpaired-previous-error)
+#+END_SRC
+
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'eglot-server-programs
+             `(python-base-mode . ("pyright-langserver" "--stdio")))
+
+(defun kwrooijen/python-combobulate-shell-send-block ()
+  (interactive)
+  (save-excursion
+    (let ((start (treesit-node-start kwrooijen/combobulate-current-node ))
+          (end (treesit-node-end kwrooijen/combobulate-current-node )))
+      (python-shell-send-region start end))))
+
+(defun kwrooijen/python-find-import-position (module)
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((import-regex (format "^from %s import.*" (regexp-quote module)))
+           (case-fold-search nil)
+           (import-position nil))
+      (while (re-search-forward import-regex nil t)
+        (setq import-position (point)))
+      import-position)))
+
+(defun kwrooijen/python-add-or-update-import (module class-name)
+  "Add or update an import statement for CLASS-NAME from MODULE in the current Python buffer.
+If MODULE is already imported, append CLASS-NAME to the existing import.
+Otherwise, add a new import statement after existing imports."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((case-fold-search nil)
+          (import-position (kwrooijen/python-find-import-position module)))
+      (if import-position
+          (progn
+            (goto-char import-position)
+            (let ((current-line (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+              (if (string-match-p (format "\\<%s\\>" (regexp-quote class-name)) current-line)
+                  (message "Class name %s already exists in the current line." class-name)
+                (progn
+                  (goto-char (line-end-position))
+                  (insert ", " class-name)))))
+       (progn
+         (while (re-search-forward "^\\(from\\|import\\) " nil t))
+         (forward-line 1)
+         (insert (format "from %s import %s" module class-name))
+         (newline))))))
+
+(defun kwrooijen/run-python-project ()
+  (interactive)
+  (let ((current-window (selected-window))
+        (default-directory (projectile-project-root)))
+    (run-python nil t t)
+    (select-window current-window 'norecord)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/langchain-select-template ()
+  "Prompt the user to select a LangChain template and insert its yasnippet."
+  (interactive)
+  (kwrooijen/yas-completing-read
+   '(("AIMessagePromptTemplate" . "aimessageprompttemplate")
+     ("BaseChatPromptTemplate" . "basechatprompttemplate")
+     ("BaseMessagePromptTemplate" . "basemessageprompttemplate")
+     ("BasePromptTemplate" . "baseprompttemplate")
+     ("BaseStringMessagePromptTemplate" . "basestringmessageprompttemplate")
+     ("ChatMessagePromptTemplate" . "chatmessageprompttemplate")
+     ("ChatPromptTemplate" . "chatprompttemplate")
+     ("DictPromptTemplate" . "dictprompttemplate")
+     ("FewShotChatMessagePromptTemplate" . "fewshotchatmessageprompttemplate")
+     ("FewShotPromptTemplate" . "fewshotprompttemplate")
+     ("FewShotPromptWithTemplates" . "fewshotpromptwithtemplates")
+     ("HumanMessagePromptTemplate" . "humanmessageprompttemplate")
+     ("ImagePromptTemplate" . "imageprompttemplate")
+     ("PromptTemplate" . "prompttemplate")
+     ("StringPromptTemplate" . "stringprompttemplate")
+     ("SystemMessagePromptTemplate" . "systemmessageprompttemplate"))))
+#+END_SRC
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((python-base-mode . eglot-ensure)
+ (python-base-mode . electric-indent-mode)
+ (python-base-mode . kwrooijen/python-get-cached-modules))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(python-shell-completion-native-enable nil)
+(python-indent-guess-indent-offset-verbose nil)
+(python-indent 4)
+(py-indent-offset 4)
+(python-indent-offset 4)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'python-base-mode-map
+  :states '(normal visual)
+  "p" '(:ignore t :which-key "Project")
+  "p w" 'kwrooijen/python-workon-project-venv
+  "e" '(:ignore t :which-key "Eval")
+  "e f" 'python-shell-send-file
+  "e d" 'python-shell-send-defun
+  "e o" 'python-shell-send-block
+  "e e" 'kwrooijen/python-shell-send-block
+  "e s" 'python-shell-send-string
+  "e r" 'python-shell-send-region
+  "e b" 'python-shell-send-buffer
+  "e s" 'python-shell-send-statement
+  "i" '(:ignore t :which-key "Import")
+  "i i" 'kwrooijen/python-import-statement
+  "i s" 'kwrooijen/python-add-import-line-to-extras
+  "i b" 'kwrooijen/python-build-cache
+  "i t" 'kwrooijen/langchain-select-template
+  "h" '(:ignore t :which-key "Help")
+  "h b" 'eldoc-doc-buffer
+  "h d" 'eglot-find-declaration
+  "r" '(:ignore t :which-key "Refactor")
+  "r f" '(python-black-buffer :which-key "Format buffer")
+  "b" '(:ignore t :which-key "Buffer")
+  "b b" 'python-shell-switch-to-shell
+  "'" '(kwrooijen/run-python-project :which-key "REPL"))
+#+END_SRC
+
+
+
+
+* Poetry
+:PROPERTIES:
+:PACKAGE: poetry
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/python-cache-path
+  (expand-file-name "~/.dotfiles/emacs/db/python_module_cache.json")
+  "Path to the JSON file storing the Python module cache.")
+
+(defvar kwrooijen/python-extra-modules-path
+  (expand-file-name "~/.dotfiles/emacs/db/kwrooijen-python-extra-modules.list")
+  "Path to the file storing kwrooijen/python-extra-modules.")
+
+(defvar kwrooijen/python-venv-dir nil
+  "Path to the Python virtual environment directory.")
+
+(defvar kwrooijen/python-cache nil
+  "In-memory cache of module mappings.")
+
+(defun kwrooijen/python-get-venv-dir ()
+  (setq kwrooijen/python-venv-dir
+        (s-trim (shell-command-to-string "python -c 'import sys; print(sys.prefix)'"))))
+
+(defun kwrooijen/python-load-cache ()
+  "Load the cache from kwrooijen/python-cache-path if valid.
+Returns nil if the cache is invalid or doesn't exist."
+  (when (file-exists-p kwrooijen/python-cache-path)
+    (with-temp-buffer
+      (insert-file-contents kwrooijen/python-cache-path)
+      (setq kwrooijen/python-cache
+            (json-read-from-string (buffer-string))))))
+
+(defun kwrooijen/python-get-cached-modules ()
+  "Return the cached module mappings, rebuilding if necessary."
+  (unless kwrooijen/python-cache
+    (setq kwrooijen/python-cache (kwrooijen/python-load-cache)))
+  kwrooijen/python-cache)
+
+(defun kwrooijen/python-find-class-or-function (name)
+  "Search for Python modules defining or exporting NAME using the cache.
+Also check kwrooijen/python-extra-modules."
+  (interactive "sModule name: ")
+  (let* ((cached-modules (kwrooijen/python-get-cached-modules))
+         (matching-modules (alist-get name cached-modules nil nil #'string=))
+         ;; Convert matching-modules obarray to list
+         (matching-modules (append matching-modules '())))
+    (if matching-modules
+        (sort matching-modules #'string<)
+      (message "No modules found defining or exporting %s." name)
+      nil)))
+
+(defun kwrooijen/python-add-or-update-import (module class-name)
+  "Add or update an import statement for CLASS-NAME from MODULE in the current buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (if (re-search-forward (format "^from %s import " (regexp-quote module)) nil t)
+        (let ((existing-imports (buffer-substring-no-properties (point) (line-end-position))))
+          (unless (string-match-p (format "\\b%s\\b" class-name) existing-imports)
+            (end-of-line)
+            (insert (format ", %s" class-name))))
+      (progn
+        (goto-char (point-min))
+        (insert (format "from %s import %s\n" module class-name))))))
+
+(defun kwrooijen/python-import-statement (class-name)
+  "Prompt for a module exporting CLASS-NAME and add/update an import statement.
+Uses cached module data for faster lookup. If only one module is found,
+select it automatically."
+  (interactive (list (or (thing-at-point 'symbol t) (read-string "Class Name: "))))
+  (let* ((module-paths (kwrooijen/python-find-class-or-function class-name)))
+    (if module-paths
+        (let ((selected-module (if (= (length module-paths) 1)
+                                   (car module-paths)
+                                 (completing-read (format "Select module [%s]: " class-name) module-paths nil t))))
+          (kwrooijen/python-add-or-update-import selected-module class-name))
+      (message "No modules found exporting class %s. Call (kwrooijen/python-build-cache) to rebuild" class-name))))
+
+(defvar python-script-var
+  "import ast
+import json
+import os
+import sys
+from collections import defaultdict
+
+def write_all_functions_and_classes(venv_path, output_file):
+    \"\"\"
+    Analyzes Python files in a .venv to map functions and classes to their modules,
+    including modules that expose them via __all__ in __init__.py, and writes the
+    result to a JSON file, merging with existing content if present. Excludes modules
+    with names starting with '_'.
+
+    Args:
+        venv_path (str): Path to the .venv directory.
+        output_file (str): Path to the JSON output file.
+    \"\"\"
+    result = defaultdict(list)
+
+    # Ensure the venv path is valid
+    if not os.path.isdir(venv_path):
+        return
+
+    # Scan the venv directory for function and class definitions
+    for root, _, files in os.walk(venv_path):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        source = f.read()
+
+                    # Parse the source code into an AST
+                    tree = ast.parse(source, filename=file_path)
+
+                    # Calculate the module path
+                    relative_path = os.path.relpath(root, venv_path)
+                    module_parts = relative_path.split(os.sep)
+
+                    # Remove 'lib', 'pythonX.Y', 'site-packages' from the path
+                    try:
+                        site_packages_idx = module_parts.index('site-packages')
+                        module_parts = module_parts[site_packages_idx + 1:]
+                    except ValueError:
+                        pass
+
+                    # Skip if any module part starts with '_'
+                    if any(part.startswith('_') for part in module_parts if part):
+                        continue
+
+                    if any(part.startswith('src') for part in module_parts if part):
+                        continue
+
+                    # Handle __init__.py and regular .py files
+                    if file == '__init__.py':
+                        module_path = '.'.join(part for part in module_parts if part)
+                    else:
+                        module_name = os.path.splitext(file)[0]
+                        # Skip if the module name starts with '_'
+                        if module_name.startswith('_'):
+                            continue
+                        if module_name.startswith('src.'):
+                            continue
+                        module_parts.append(module_name)
+                        module_path = '.'.join(part for part in module_parts if part)
+
+                    # Collect function and class definitions
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.FunctionDef):
+                            result[node.name].append(module_path)
+                        elif isinstance(node, ast.ClassDef):
+                            result[node.name].append(module_path)
+
+                    # For __init__.py, check for __all__ and map listed names
+                    if file == '__init__.py':
+                        for node in ast.walk(tree):
+                            if (isinstance(node, ast.Assign) and
+                                len(node.targets) == 1 and
+                                isinstance(node.targets[0], ast.Name) and
+                                node.targets[0].id == '__all__'):
+                                if isinstance(node.value, ast.List):
+                                    for elt in node.value.elts:
+                                        if isinstance(elt, ast.Str) or (
+                                            isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                                        ):
+                                            # Map string in __all__ to this module
+                                            name = elt.s if hasattr(elt, 's') else elt.value
+                                            result[name].append(module_path)
+
+                except (SyntaxError, UnicodeDecodeError):
+                    continue
+
+    # Convert defaultdict to regular dict and remove duplicates
+    new_result = {k: list(set(v)) for k, v in result.items()}
+
+    # Load existing results if output_file exists
+    merged_result = new_result.copy()
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r', encoding='utf-8') as f:
+                existing_result = json.load(f)
+
+            # Merge existing and new results, combining module lists as sets
+            for name, modules in existing_result.items():
+                if name in merged_result:
+                    # Combine module lists and remove duplicates
+                    merged_result[name] = list(set(merged_result[name] + modules))
+                else:
+                    # Add new name and its modules
+                    merged_result[name] = modules
+        except (json.JSONDecodeError, IOError):
+            # If file is corrupt or unreadable, proceed with new_result
+            pass
+
+    # Write merged result to output_file
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(merged_result, f, indent=2, ensure_ascii=False)
+
+if __name__ == \"__main__\":
+    if len(sys.argv) != 3:
+        print(\"Usage: python script.py <venv_path> <output_file>\")
+        sys.exit(1)
+    venv_path = sys.argv[1]
+    output_file = sys.argv[2]
+    write_all_functions_and_classes(venv_path, output_file)"
+  "Python script to map functions and classes to their modules, stored for execution from Emacs, excluding modules with names starting with '_'.")
+
+
+(defun kwrooijen/python-build-cache ()
+  (interactive)
+  (let ((venv-path (kwrooijen/python-get-venv-dir))
+        (output-file kwrooijen/python-cache-path))
+    (message "Compiling [%s]..." venv-path)
+    (shell-command-to-string
+     (format "python -c %s %s %s"
+             (shell-quote-argument python-script-var)
+             (shell-quote-argument venv-path)
+             (shell-quote-argument output-file)))
+    (setq kwrooijen/python-cache nil)
+    (kwrooijen/python-get-cached-modules)
+    (message "Done")))
+#+END_SRC
+
+
+
+
+* Pyvenv
+:PROPERTIES:
+:PACKAGE: pyvenv
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(setenv "WORKON_HOME" (expand-file-name "~/.virtualenvs/"))
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(python-base-mode . kwrooijen/python-workon-project-venv)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/python-workon-project-venv ()
+  "Activate the Python virtual environment in .venv at the Projectile project root.
+If .venv exists and is not already activated, activate it using pyvenv-activate.
+If the virtual environment is already activated, do nothing."
+  (interactive)
+  (let* ((venv-dir (when-let (project-root (projectile-project-root))
+                     (expand-file-name ".venv" project-root))))
+    (when (and venv-dir
+               (file-directory-p venv-dir)
+               (or (not pyvenv-virtual-env)
+                   (not (string= (directory-file-name (expand-file-name pyvenv-virtual-env))
+                                 (directory-file-name (expand-file-name venv-dir))))))
+      (pyvenv-activate venv-dir)
+      (message "Activated virtual environment: %s" venv-dir))))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(pyvenv-post-activate-hooks
+      (list (lambda ()
+              (setq python-shell-interpreter (concat pyvenv-virtual-env "bin/python")))))
+(pyvenv-post-deactivate-hooks
+      (list (lambda ()
+              (setq python-shell-interpreter "python3"))))
+#+END_SRC
+
+
+
+* Python Black
+:PROPERTIES:
+:PACKAGE: python-black
+:STRAIGHT: t
+:AFTER: python
+:END:
+
+
+
+* Eglot
+:PROPERTIES:
+:PACKAGE: eglot
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/eglot-error-at-point ()
+  "Get the error message at point using Eglot."
+  (interactive)
+  (if (not (eglot-managed-p))
+      (error "Eglot is not managing this buffer")
+    (let ((diagnostics (flymake-diagnostics (point))))
+      (if diagnostics
+          (flymake-diagnostic-text (car diagnostics))
+        (error "No error at point")))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(eglot-workspace-configuration
+ '(:python.analysis
+   (:diagnosticSeverityOverrides
+    (:reportAny "none"
+                :reportAssignmentIssue "error"
+                :reportAssertAlwaysTrue "error"
+                :reportAssertType "error"
+                :reportAttributeAccessIssue "error"
+                :reportCallIssue "error"
+                :reportConstantRedefinition "error"
+                :reportDeprecated "error"
+                :reportDuplicateImport "error"
+                :reportFunctionMemberAccess "error"
+                :reportGeneralTypeIssues "error"
+                :reportImplicitOverride "error"
+                :reportImplicitStringConcatenation "error"
+                :reportImportCycles "error"
+                :reportIncompatibleMethodOverride "error"
+                :reportIncompatibleVariableOverride "error"
+                :reportIndexIssue "none"
+                :reportInvalidStringEscapeSequence "error"
+                :reportInvalidStubStatement "error"
+                :reportMatchNotExhaustive "error"
+                :reportMissingImports "error"
+                :reportMissingModuleSource "error"
+                :reportMissingTypeArgument "error"
+                :reportMissingTypeStubs "none"
+                :reportNoOverload "error"
+                :reportNonPrivateAccess "error"
+                :reportOptionalCall "error"
+                :reportOptionalContextManager "error"
+                :reportOptionalIterable "error"
+                :reportOptionalMemberAccess "error"
+                :reportOptionalOperand "error"
+                :reportOptionalSubscript "error"
+                :reportOverlappingOverload "error"
+                :reportPrivateImportUsage "error"
+                :reportPrivateUsage "error"
+                :reportPropertyTypeMismatch "error"
+                :reportProtocolMemberAccess "error"
+                :reportShadowedImports "error"
+                :reportTypeCommentUsage "error"
+                :reportTypedDictNotRequiredAccess "error"
+                :reportUnboundVariable "error"
+                :reportUndefinedVariable "error"
+                :reportUninitializedInstanceVariable "error"
+                :reportUnknownArgumentType "none"
+                :reportArgumentType "none"
+                :reportUnknownLambdaType "none"
+                :reportUnknownMemberType "none"
+                :reportUnknownParameterType "none"
+                :reportUnknownVariableType "none"
+                :reportUnnecessaryCast "error"
+                :reportUnnecessaryComparison "error"
+                :reportUnnecessaryContains "error"
+                :reportUnnecessaryIsInstance "error"
+                :reportUnnecessaryTypeIgnoreComment "error"
+                :reportUnreachable "error"
+                :reportUnsafeMultipleInheritance "error"
+                :reportUnsupportedDunderAll "error"
+                :reportUnusedCallResult "none"
+                :reportUnusedClass "error"
+                :reportUnusedCoroutine "error"
+                :reportUnusedExpression "error"
+                :reportUnusedFunction "error"
+                :reportUnusedImport "error"
+                :reportUnusedVariable "error"
+                :reportWildcardImportFromLibrary "error"))))
+#+END_SRC
+
+* Ruby Treesitter mode
+:PROPERTIES:
+:PACKAGE: ruby-ts-mode
+:END:
+
+** Config :config:
+
+Custom Ruby eval function for Navi
+
+#+BEGIN_SRC emacs-lisp
+(defun navi-eval:ruby-ts-mode (code)
+  (comint-send-string (inf-ruby-proc) (format "%s\n" (string-trim-right code) ))
+  (save-excursion
+    (forward-line 1)
+    (inf-ruby--eval-overlay
+     (ruby-print-result-value))))
+
+(defun kwrooijen/ruby-eval-and-return (code)
+  "Send CODE to the inferior Ruby process and return the result.
+To prevent the inferior Ruby process buffer from being polluted,
+we store the buffer content in a temporary buffer, send the code
+to the inferior Ruby process, and then return the result. Then we
+restore the inferior Ruby process buffer to its original state."
+  (let ((temp-buffer (generate-new-buffer "ruby-eval")))
+    (with-current-buffer (process-buffer (inf-ruby-proc))
+      (copy-to-buffer temp-buffer (point-min) (point-max))
+      (comint-send-string (inf-ruby-proc) (format "%s\n" (string-trim code)))
+      (let ((result (ruby-print-result-value))
+            (inhibit-read-only t))
+        (replace-buffer-contents temp-buffer)
+        (kill-buffer temp-buffer)
+        result))))
+#+END_SRC
+
+Require inf ruby
+
+#+BEGIN_SRC emacs-lisp
+(require 'inf-ruby)
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'ruby-ts-mode-map
+          "M-a" 'navi-back-to-indentation)
+#+END_SRC
+
+** Hook :hook:
+
+#+BEGIN_SRC emacs-lisp
+(ruby-ts-mode . electric-indent-mode)
+#+END_SRC
+
+
+* Ruby mode
+:PROPERTIES:
+:PACKAGE: ruby-mode
+:END:
+
+** Hook :hook:
+
+If we enter Ruby mode, switch to ruby-ts-mode.
+
+#+BEGIN_SRC emacs-lisp
+(ruby-mode . ruby-ts-mode)
+#+END_SRC
+
+** Init :init:
+
+Remap ruby-mode to ruby-ts-mode to make use of Treesitter.
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/rails-routes ()
+  "Find the rails route based on a search string"
+  (interactive)
+  (let ((search-string (read-string "Search string: ")))
+    (async-shell-command (concat "rails routes | grep " search-string))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/rails-create-stimulus-controller (name)
+  "Create a Stimulus controller in the current Rails project.
+Given a NAME, this function creates a new Stimulus controller in the
+app/javascript/controllers directory of the current Rails project.
+"
+  (interactive "sStimulus Controller name: ")
+  (let ((controller-name (concat name "_controller.js"))
+        (controller-dir (expand-file-name "app/javascript/controllers" (projectile-project-root))))
+    (unless (file-directory-p controller-dir)
+      (make-directory controller-dir t))
+    (with-temp-file (expand-file-name controller-name controller-dir)
+      (insert "import { Controller } from \"@hotwired/stimulus\"
+
+export default class extends Controller {
+  static values = {}
+  static classes = [];
+  static targets = [];
+
+  connect() {
+  }
+
+  disconnect() {
+  }
+}"))
+    (find-file (expand-file-name controller-name controller-dir))))
+#+END_SRC
+
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "c r c" 'kwrooijen/rails-create-stimulus-controller)
+#+END_SRC
+
+
+* Inferior Ruby
+:PROPERTIES:
+:PACKAGE: inf-ruby
+:STRAIGHT: t
+:END:
+
+https://github.com/nonsequitur/inf-ruby
+
+inf-ruby provides a REPL buffer connected to a Ruby subprocess.
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ruby-rdbg ()
+  (interactive)
+  (if (get-buffer "*rdbg*")
+      (switch-to-buffer "*rdbg*")
+    (inf-ruby-console-run (format "rdbg -An") "rdbg")))
+#+END_SRC
+
+** Config :config:
+
+Start the inf ruby console at the root of the rails project
+
+#+BEGIN_SRC emacs-lisp
+(defun inf-ruby-console-rails-from-project-root ()
+  (interactive)
+  (inf-ruby-console-rails (projectile-project-root)))
+#+END_SRC
+
+Locally remove underlines from the Inf-Ruby buffers to make it less
+chaotic.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/inf-ruby-remove-underline ()
+  (face-remap-add-relative 'underline :underline nil))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'ruby-ts-mode-map
+  :states 'normal
+  "'" 'inf-ruby
+  ";" 'kwrooijen/ruby-rdbg
+  "r" 'inf-ruby-console-rails-from-project-root
+  "i s" 'ruby-switch-to-inf
+  "i j" 'ruby-send-line
+  "b b" 'ruby-switch-to-inf)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(inf-ruby-mode . kwrooijen/inf-ruby-remove-underline)
+#+END_SRC
+
+
+* Ruby Robe
+:PROPERTIES:
+:PACKAGE: robe
+:STRAIGHT: t
+:END:
+
+https://github.com/dgutov/robe
+
+Robe is a code assistance tool that uses a Ruby REPL subprocess with
+your application or gem code loaded, to provide information about
+loaded classes and modules, and where each method is defined.
+
+** Hook :hook:
+
+#+BEGIN_SRC emacs-lisp
+((ruby-mode-hook . 'robe-mode)
+ (inf-ruby-mode-hook . 'robe-mode)
+ (inf-ruby-mode-hook . 'robe-start))
+#+END_SRC
+
+** Config :config:
+
+Add Robe to company backends
+
+#+BEGIN_SRC emacs-lisp
+(eval-after-load 'company '(push 'company-robe company-backends))
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(:states 'normal
+         "s-<return>" 'robe-jump)
+#+END_SRC
+
+
+* Chruby
+:PROPERTIES:
+:PACKAGE: chruby
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+
+#+BEGIN_SRC emacs-lisp
+(ruby-mode-hook . 'chruby-use-corresponding)
+#+END_SRC
+
+* Rust
+:PROPERTIES:
+:PACKAGE: rust-mode
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'rust-mode-map
+  :states 'normal
+  "r" 'rust-run
+  "t" 'rust-test
+  "b" 'rust-compile)
+#+END_SRC
+
+** Custom :custom:
+
+#+BEGIN_SRC emacs-lisp
+(rust-format-on-save t)
+#+END_SRC
+
+* Solidity
+:PROPERTIES:
+:PACKAGE: solidity-mode
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+
+# TODO
+Add "jump to definition" for solidity
+
+
+# TODO
+;; Ensure the custom face is defined
+
+** Forge Init :init:
+
+Configuration variables for forge. These are used to interact with the
+forge cli. Forge has 10 default user accounts that never change.
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/foundry-selected-rpc-url "http://127.0.0.1:8545")
+(defvar kwrooijen/foundry-account-key-list
+  '(("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" . "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+    ("0x70997970C51812dc3A010C7d01b50e0d17dc79C8" . "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
+    ("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" . "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")
+    ("0x90F79bf6EB2c4f870365E785982E1f101E93b906" . "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6")
+    ("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" . "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a")
+    ("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc" . "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba")
+    ("0x976EA74026E726554dB657fA54763abd0C3a0aa9" . "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e")
+    ("0x14dC79964da2C08b23698B3D3cc7Ca32193d9955" . "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356")
+    ("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" . "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97")
+    ("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720" . "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")))
+(defvar kwrooijen/foundry-selected-account (car kwrooijen/foundry-account-key-list))
+(defvar kwrooijen/foundry-selected-contract-address nil)
+(defvar kwrooijen/foundry-contracts nil)
+#+END_SRC
+
+Functions to select a user and a contract.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-select-user ()
+  (interactive)
+  (let ((user (completing-read "Select user: "
+                               (mapcar 'car kwrooijen/foundry-account-key-list)
+                               nil t nil nil nil nil)))
+    (setq kwrooijen/foundry-selected-account (assoc user kwrooijen/foundry-account-key-list))))
+
+(defun kwrooijen/foundry-register-contract (contract-name contract-address)
+  (interactive "sContract name: \nsContract address: ")
+  (add-to-list 'kwrooijen/foundry-contracts (cons contract-name contract-address)))
+
+(defun kwrooijen/foundry-select-contract ()
+  (interactive)
+  (let ((contract (completing-read "Select contract: "
+                                   (mapcar 'car kwrooijen/foundry-contracts)
+                                   nil t nil nil nil nil)))
+    (setq kwrooijen/foundry-selected-contract-address (assoc contract kwrooijen/foundry-contracts))))
+#+END_SRC
+
+# TODO
+forge inspect <CONTRACT> <FIELD>
+
+  <FIELD>: [abi, bytecode, deployedBytecode, assembly, assemblyOptimized, methodIdentifiers, gasEstimates, storageLayout, devdoc, ir, irOptimized, metadata, userdoc, ewasm, errors, events]
+
+** Forge :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/forge-test ()
+  (interactive)
+  ;; save window excursion
+ (async-shell-command "forge test -vvv"))
+
+(defun kwrooijen/forge-test-file ()
+  (interactive)
+  (let ((file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name))))
+    (async-shell-command (format "forge test -vvv --match-path %s" file))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/foundry-get-contract-name ()
+  (save-excursion
+    (re-search-backward "contract \\(.*\\) {" nil t)
+    (forward-word 2)
+    (word-at-point t)))
+
+(defun kwrooijen/foundry-forge-create-contract ()
+  (interactive)
+  (when (equal major-mode 'solidity-mode)
+    (let* ((contract-name (kwrooijen/foundry-get-contract-name))
+           (file (buffer-file-name))
+           (command (format "forge create --rpc-url %s --private-key %s %s:%s"
+                            kwrooijen/foundry-selected-rpc-url
+                            (cdr kwrooijen/foundry-selected-account)
+                            file
+                            contract-name))
+           (result (shell-command-to-string command)))
+      (string-match "Deployed to: \\(.*\\)" result)
+      (match-string 1 result))))
+
+(defun kwrooijen/foundry-forge-script-broadcast ()
+  (interactive)
+  (when (equal major-mode 'solidity-mode)
+    (let* (;; (contract-name (kwrooijen/foundry-get-contract-name ))
+              (default-directory (or (projectile-project-root) default-directory))
+              (file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name)))
+              (command (format "forge script --broadcast --rpc-url %s --private-key %s %s"
+                               kwrooijen/foundry-selected-rpc-url
+                               (cdr kwrooijen/foundry-selected-account)
+                               file)))
+              (message "#%s" command)
+              (async-shell-command command))))
+#+END_SRC
+
+Forge fmt
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-forge-fmt-buffer ()
+  (interactive)
+;; (let ((file (buffer-file-name)))
+;;     (when (and file (equal major-mode 'solidity-mode))
+;;       (save-excursion
+;;         (call-process "forge" nil nil nil "fmt" file)
+;;         (revert-buffer t t t))))
+  )
+#+END_SRC
+
+
+# ** Hook :hook:
+# #+BEGIN_SRC emacs-lisp
+# ;; ((solidity-mode . (lambda ()
+# ;;                    (remove-hook 'after-save-hook 'kwrooijen/foundry-forge-fmt-buffer nil t))))
+# #+END_SRC
+
+** Cast :init:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-cast-generic (command args)
+  (when (not kwrooijen/foundry-selected-rpc-url)
+    (error "No rpc url selected"))
+  (when (not kwrooijen/foundry-selected-account)
+    (error "No user selected"))
+  (when (not kwrooijen/foundry-selected-contract-address)
+    (error "No contract selected"))
+  (let ((window (selected-window))
+        (default-directory (or (projectile-project-root) default-directory))
+        (command (format "cast %s --rpc-url=%s" command kwrooijen/foundry-selected-rpc-url)))
+    (when (member command '("send" "call"))
+      (setq command
+            (format "%s --private-key=%s" command (cdr kwrooijen/foundry-selected-account)))
+      (setq command
+            (format "%s %s" command (cdr kwrooijen/foundry-selected-contract-address))))
+    (async-shell-command (format "%s %s" command args))))
+
+(defun kwrooijen/foundry-cast-send (args)
+  (interactive "scast send ")
+  (kwrooijen/foundry-cast-generic "send" args))
+
+
+(defun kwrooijen/foundry-cast-call (args)
+  (interactive "scast call ")
+  (kwrooijen/foundry-cast-generic "call" args))
+
+(defun kwrooijen/foundry-cast-balance (args)
+  (interactive (list (read-string "cast balance: " (car kwrooijen/foundry-selected-account))))
+  (kwrooijen/foundry-cast-generic "balance" args))
+
+#+END_SRC
+
+
+
+** Anvil :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-anvil-start ()
+  (interactive)
+  (let ((buffer (get-buffer "*anvil*"))
+        (default-directory (or (projectile-project-root) default-directory)))
+    (if buffer
+        (switch-to-buffer-other-window buffer)
+      (async-shell-command "anvil" "*anvil*"))))
+#+END_SRC
+
+
+** Chisel :config:
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/foundry-chisel-show-buffer ()
+  (interactive)
+  (when (not (get-buffer "*chisel*"))
+    (error "No chisel buffer found"))
+  (when (not (get-buffer-window "*chisel*"))
+    (let ((window (selected-window)))
+      (switch-to-buffer-other-window "*chisel*")
+      (select-window window))))
+
+(defun kwrooijen/foundry-chisel-start ()
+  (interactive)
+  (switch-to-buffer-other-window "*chisel*")
+  (with-current-buffer "*chisel*"
+    (setq default-directory (or (projectile-project-root) default-directory))
+    (comint-run "chisel" (when kwrooijen/foundry-selected-rpc-url  (list "--fork-url" kwrooijen/foundry-selected-rpc-url)))))
+
+(defun kwrooijen/foundry-chisel-send-string (string)
+  (interactive "sChisel command: ")
+  (kwrooijen/foundry-chisel-show-buffer)
+  (comint-send-string "*chisel*" (format "%s\n" string)))
+
+(defun kwrooijen/foundry-chisel-send-region (start end)
+  (interactive "r")
+  (kwrooijen/foundry-chisel-show-buffer)
+  (comint-send-region "*chisel*" start end)
+  (comint-send-string "*chisel*" "\n"))
+
+(defun kwrooijen/foundry-chisel-send-line ()
+  (interactive)
+  (kwrooijen/foundry-chisel-show-buffer)
+  (let ((start (line-beginning-position))
+        (end (line-end-position)))
+    (kwrooijen/foundry-chisel-send-region start end)))
+#+END_SRC
+
+** Keybindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'solidity-mode-map
+  "t a" 'kwrooijen/forge-test
+  "t t" 'kwrooijen/forge-test-file
+  "c u" 'kwrooijen/foundry-select-user
+  "c c" 'kwrooijen/foundry-select-contract
+  "c r" 'kwrooijen/foundry-register-contract
+  "'" 'kwrooijen/foundry-chisel-start
+  ";" 'kwrooijen/foundry-anvil-start)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps 'solidity-mode-map
+ "C-x C-e" 'kwrooijen/foundry-chisel-send-line
+ "C-c C-e" 'kwrooijen/foundry-chisel-send-region)
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(solidity-comment-style 'slash)
+;; (setq solidity-solc-path "/home/lefteris/ew/cpp-ethereum/build/solc/solc")
+#+END_SRC
+
+* Solidity Flycheck
+:PROPERTIES:
+:PACKAGE: solidity-flycheck
+:AFTER: solidity-mode
+:STRAIGHT: t
+:END:
+
+* Solidity Company
+:PROPERTIES:
+:PACKAGE: company-solidity
+:AFTER: solidity-mode
+:STRAIGHT: t
+:END:
+
+* Web mode
+:PROPERTIES:
+:PACKAGE:  web-mode
+:STRAIGHT: t
+:END:
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.css\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.scss\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.sass\\'" . web-mode))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/web-wrap-erb-output ()
+  "Wrap the current region (highlighted text) in <%= %>."
+  (interactive)
+  (if (use-region-p)
+      (let ((beg (region-beginning))
+            (end (region-end)))
+        (save-excursion
+          (goto-char end)
+          (insert " %>")
+          (goto-char beg)
+          (insert "<%= ")
+          (call-interactively 'evil-insert)))
+    (progn
+      (insert "<%=  %>")
+      (backward-char 3)
+      (call-interactively 'evil-insert))))
+
+(defun kwrooijen/web-wrap-erb ()
+  "Wrap the current region (highlighted text) in <% %>."
+  (interactive)
+  (if (use-region-p)
+      (let ((beg (region-beginning))
+            (end (region-end)))
+        (save-excursion
+          (goto-char end)
+          (insert " %>")
+          (goto-char beg)
+          (insert "<% ")
+          (call-interactively 'evil-insert)))
+    (progn
+      (insert "<%  %>")
+      (backward-char 3)
+      (call-interactively 'evil-insert))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+
+(defun kwrooijen/web-mode-before-save-hook ()
+  (interactive)
+  (when (eq major-mode 'web-mode)
+    ;(web-mode-buffer-indent)
+))
+
+#+END_SRC
+
+
+
+** Custom :custom:
+
+Basic indentation rules
+
+#+BEGIN_SRC emacs-lisp
+(web-mode-markup-indent-offset 2)
+(web-mode-css-indent-offset 2)
+(web-mode-code-indent-offset 2)
+(web-mode-part-padding 2)
+(web-mode-style-padding 2)
+(web-mode-block-padding 2)
+(web-mode-script-padding 2)
+#+END_SRC
+
+
+
+Highlight the tags of the current element.
+
+#+BEGIN_SRC emacs-lisp
+(web-mode-enable-current-element-highlight t)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((web-mode . electric-indent-mode)
+ (web-mode . paredit-mode)
+ (before-save . kwrooijen/web-mode-before-save-hook))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+ :keymaps '(web-mode-map)
+            :states '(normal visual)
+            "r r" 'kwrooijen/web-wrap-erb-output
+            "r e" 'kwrooijen/web-wrap-erb)
+#+END_SRC
+
+* Emmet mode
+:PROPERTIES:
+:PACKAGE:  emmet-mode
+:STRAIGHT: t
+:END:
+
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(:states 'insert
+         "C-j" 'emmet-expand-line)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((sgml-mode-hook . emmet-mode)
+ (css-mode-hook . emmet-mode))
+#+END_SRC
+
+* Tailwind
+:PROPERTIES:
+:PACKAGE:  lsp-tailwindcss
+:STRAIGHT: (:host github :repo "merrickluo/lsp-tailwindcss" :files ("dist" "*.el"))
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(lsp-tailwindcss-add-on-mode t)
+#+END_SRC
+
+* Yaml
+:PROPERTIES:
+:PACKAGE: yaml-mode
+:STRAIGHT: t
+:END:
+
+* Magit
+:PROPERTIES:
+:PACKAGE:  magit
+:STRAIGHT: t
+:END:
+
+** Options
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/git-magit-use-winum t
+  "Use winum to select Magit windows.
+This will bind the following keys:
+M-1: winum-select-window-1
+M-2: winum-select-window-2
+M-3: winum-select-window-3
+M-4: winum-select-window-4
+"
+  :type 'boolean
+  :group 'kwrooijen/git))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(magit-diff-refine-hunk 'all)
+#+END_SRC
+
+
+** Config :config:
+
+HACK: Override the magit-section-show-level-*-all functions to use
+winum. For some reason I can't override the keybindings using General.
+
+#+BEGIN_SRC emacs-lisp
+(when kwrooijen/git-magit-use-winum
+  (defun magit-section-show-level-1-all () (interactive) (winum-select-window-1))
+  (defun magit-section-show-level-2-all () (interactive) (winum-select-window-2))
+  (defun magit-section-show-level-3-all () (interactive) (winum-select-window-3))
+  (defun magit-section-show-level-4-all () (interactive) (winum-select-window-4)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(define-key magit-status-mode-map (kbd "M-RET") 'magit-diff-visit-file-other-window)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; (set-face-background 'diff-refine-added "#000000")
+;; (set-face-background 'diff-refine-removed "#000000")
+
+(set-face-background 'diff-refine-added "#276128")
+(set-face-background 'diff-refine-removed "#612828")
+#+END_SRC
+
+** Hook :hook:
+
+Enter Evil Insert Mode automatically when starting a Git commit.
+
+#+BEGIN_SRC emacs-lisp
+(git-commit-mode . evil-insert-state)
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"g g" '(magit-status :which-key "Git status"))
+#+END_SRC
+
+
+
+
+* Smerge
+:PROPERTIES:
+:PACKAGE: smerge
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"gu" '(smerge-keep-upper :which-key "Merge keep upper")
+"gl" '(smerge-keep-lower :which-key "Merge keep lower")
+"ga" '(smerge-keep-all :which-key "Merge keep all"))
+#+END_SRC
+
+* Anzu
+:PROPERTIES:
+:PACKAGE: anzu
+:STRAIGHT: t
+:END:
+** config :config:
+#+BEGIN_SRC emacs-lisp
+(global-anzu-mode +1)
+#+END_SRC
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"s r" 'anzu-query-replace
+"s R" 'anzu-query-replace-regexp)
+
+("M-%" 'anzu-query-replace)
+("C-M-%" 'anzu-query-replace-regexp)
+#+END_SRC
+
+
+* Evil Anzu
+:PROPERTIES:
+:PACKAGE: evil-anzu
+:STRAIGHT: t
+:END:
+
+* Anzu Overlay
+:PROPERTIES:
+:PACKAGE: anzu-overlay
+:STRAIGHT: (anzu-overlay :type git :host github :repo "kwrooijen/anzu-overlay")
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'anzu)
+(require 'evil)
+(require 'iedit)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(anzu-overlay-mode 1)
+#+END_SRC
+
+* Helpful
+:PROPERTIES:
+:PACKAGE: helpful
+:STRAIGHT: t
+:END:
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+("C-h f" #'helpful-callable)
+("C-h v" #'helpful-variable)
+("C-h k" #'helpful-key)
+("C-h x" #'helpful-command)
+#+END_SRC
+
+* Projectile
+:PROPERTIES:
+:PACKAGE: projectile
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "pi" 'projectile-invalidate-cache
+  "pr" 'projectile-replace)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(projectile-mode 1)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; --- Audio files ---
+(dolist (ext '("mp3" "wav" "flac" "aac" "ogg" "m4a" "aiff"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Video files ---
+(dolist (ext '("mp4" "mkv" "mov" "avi" "wmv" "flv" "mpeg" "mpg" "webm"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Images ---
+(dolist (ext '("jpg" "jpeg" "png" "gif" "bmp" "tiff" "svg" "heic" "webp"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- RAW / high-resolution photos ---
+(dolist (ext '("raw" "cr2" "nef" "arw" "dng"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- 3D / CAD ---
+(dolist (ext '("obj" "fbx" "stl" "blend" "dae"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Archives / compressed ---
+(dolist (ext '("zip" "tar" "gz" "7z" "rar" "xz" "bz2"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Disk images / installers ---
+(dolist (ext '("iso" "dmg" "img" "exe" "msi"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Misc large binaries ---
+(dolist (ext '("bin" "dat" "pak" "db" "sqlite" "db3"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+;; --- Project ---
+(dolist (ext '("output.css"))
+  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
+
+#+END_SRC
+
+
+** Custom :custom:
+
+Don't use fd, use git-ls instead
+
+#+BEGIN_SRC emacs-lisp
+(projectile-git-use-fd nil)
+#+END_SRC
+
+Set indexing method to `hybrid`.
+If set to `alien`, indexing won't use `projectile-globally-ignored-file-suffixes`.
+If set to `native`, indexing will be very slow
+
+#+BEGIN_SRC emacs-lisp
+(projectile-indexing-method 'hybrid)
+#+END_SRC
+
+Ignore all images
+
+#+BEGIN_SRC emacs-lisp
+(setq projectile-globally-ignored-file-suffixes
+ '(".gif" ".jpeg" ".jpg" ".png" ".svg" "eot" "ttf" "woff" "woff2" "min.js" "min.css"))
+#+END_SRC
+
+
+
+** Config :config:
+
+There doesn't seem to be an option in projectile to exclude submodules
+in `projectile-find-file`. To "fix" this for now, we force
+`projectile-get-sub-projects-files` to always return nil.
+
+#+BEGIN_SRC emacs-lisp
+(defun projectile-get-sub-projects-files (_ _) nil)
+#+END_SRC
+
+
+In order for ~grep-find-ignored-files~ to property ignore files in
+~helm-projectile-rg~, we need to override the ~glob-quote~ function. For
+some reason it messes up the askerisk.
+
+TODO: Create an issue
+https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L994-L997
+
+#+BEGIN_SRC emacs-lisp
+(defun glob-quote (string)
+  "Quote the special glob characters: *, ?, [, and ].
+STRING the string in which to escape special characters."
+  ;; (replace-regexp-in-string "[]*?[]" "\\\\\\&" string)
+  string)
+#+END_SRC
+
+
+Add any `projectile-globally-ignored-file-suffixes` to `grep-find-ignored-files`.
+This should work for `helm-projectile-rg`.
+(see: helm-projectile.el:helm-projectile-rg:ignored-files)
+
+#+BEGIN_SRC emacs-lisp
+(dolist (file projectile-globally-ignored-file-suffixes)
+  (add-to-list 'grep-find-ignored-files (concat "*" file)))
+#+END_SRC
+
+* Eshell
+:PROPERTIES:
+:PACKAGE: eshell
+:END:
+
+** Config :config:
+
+Use dired colors
+
+#+BEGIN_SRC emacs-lisp
+(require 'em-ls)
+(require 'em-prompt)
+(set-face-attribute 'eshell-ls-directory nil :inherit 'dired-directory)
+(set-face-attribute 'eshell-prompt nil :foreground 'unspecified :inherit 'minibuffer-prompt)
+#+END_SRC
+
+*** Functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/eshell-toggle ()
+  "Toggles between eshell and the previous buffer."
+  (interactive)
+  (if (string= (buffer-name) "*eshell*")
+      (bury-buffer "*eshell*")
+    (progn (eshell)
+           (evil-insert-state))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/project-eshell-toggle ()
+  "Opens an eshell buffer in the root of the current project."
+  (interactive)
+  (if (string= (buffer-name) "*eshell*")
+      (bury-buffer "*eshell*")
+    (progn (project-eshell)
+           (evil-insert-state))))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "e e" 'kwrooijen/eshell-toggle
+  "e p" 'kwrooijen/project-eshell-toggle)
+#+END_SRC
+
+* Vterm
+:PROPERTIES:
+:PACKAGE: vterm
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(define-key vterm-mode-map (kbd "M-1") 'winum-select-window-1)
+(define-key vterm-mode-map (kbd "M-2") 'winum-select-window-2)
+(define-key vterm-mode-map (kbd "M-3") 'winum-select-window-3)
+(define-key vterm-mode-map (kbd "M-4") 'winum-select-window-4)
+(define-key vterm-mode-map (kbd "M-5") 'winum-select-window-5)
+(define-key vterm-mode-map (kbd "M-6") 'winum-select-window-6)
+(define-key vterm-mode-map (kbd "M-7") 'winum-select-window-7)
+(define-key vterm-mode-map (kbd "M-8") 'winum-select-window-8)
+(define-key vterm-mode-map (kbd "M-<backspace>")
+            (lambda()
+              (interactive)
+              (let ((p (point))
+                    (_ (evil-backward-word-begin))
+                    (e (point)))
+                (evil-collection-vterm-delete p e))))
+
+(defun kwrooijen/toggle-vterm ()
+  (interactive)
+  (if (eq major-mode 'vterm-mode)
+      (delete-window)
+    (vterm)))
+
+(defun kwrooijen/projectile-vterm ()
+  (interactive)
+  (let ((default-directory (projectile-project-root))
+        (vterm-buffer-name (concat "*vterm " (projectile-project-name) "*")))
+    (if (eq major-mode 'vterm-mode)
+        (delete-window)
+      (if (get-buffer vterm-buffer-name)
+          (popwin:special-display-popup-window vterm-buffer-name)
+        (vterm vterm-buffer-name)))))
+#+END_SRC
+
+** Bindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "e E" 'kwrooijen/toggle-vterm
+  "e P" 'kwrooijen/projectile-vterm)
+#+END_SRC
+
+* Restclient
+:PROPERTIES:
+:PACKAGE: restclient
+:STRAIGHT: t
+:END:
+
+* Ellama
+:PROPERTIES:
+:PACKAGE: ellama
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'llm-ollama)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setopt ellama-provider
+        (make-llm-ollama
+         :chat-model "mistral:7b-instruct-v0.2-q6_K"
+         :embedding-model "mistral:7b-instruct-v0.2-q6_K"))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(setopt ellama-providers
+        '(("zephyr" . (make-llm-ollama
+                       :chat-model "zephyr:7b-beta-q6_K"
+                       :embedding-model "zephyr:7b-beta-q6_K"))
+          ("mistral" . (make-llm-ollama
+                        :chat-model "mistral:7b-instruct-v0.2-q6_K"
+                        :embedding-model "mistral:7b-instruct-v0.2-q6_K"))))
+#+END_SRC
+
+*** Ellama chatbox
+
+Some functions to interact with the ellama chatbox.
+
+The chatbox is a special buffer that is used to send text to the
+ellama chatbot. This is more user friendly than using the minibuffer.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-send-buffer ()
+  "Send the buffer to the ellama chatbox"
+  (interactive)
+  (when (equal (buffer-name) "*ellama-chatbox*")
+    (let ((text (buffer-substring-no-properties (point-min) (point-max))))
+      (erase-buffer)
+      (ellama-chat text))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-toggle-chatbox ()
+  "Toggle the ellama chatbox"
+  (interactive)
+  (if (equal (current-buffer) (get-buffer "*ellama-chatbox*"))
+      (popwin:close-popup-window)
+    (progn
+      (popwin:special-display-popup-window "*ellama-chatbox*" :height 0.2 :position 'bottom)
+      (with-current-buffer "*ellama-chatbox*"
+        (prog-mode)
+        (local-set-key (kbd "M-RET") 'kwrooijen/ellama-send-buffer)))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/ellama-send-buffer-context ()
+  (interactive)
+  (let ((buffer-string (buffer-substring-no-properties (point-min) (point-max))))
+    (ellama-chat (format "=== CONTEXT START === %s === CONTEXT END ===" buffer-string))))
+#+END_SRC
+
+** Keybindings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+"e l" 'kwrooijen/ellama-toggle-chatbox
+"e b" 'kwrooijen/ellama-send-buffer-context)
+#+END_SRC
+
+
+* Dictionary
+:PROPERTIES:
+:PACKAGE: dictionary
+:END:
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "sd" 'dictionary-search)
+#+END_SRC
+
+
+* GPTel
+:PROPERTIES:
+:PACKAGE: gptel
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'gptel)
+;; -*- lexical-binding: t -*-
+
+(defun kwrooijen/gptel-apply-changes ()
+  "Apply changes to the current buffer. Simply replace current buffer with *gptel-temp* buffer."
+  (interactive)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer)))
+    (if temp-buffer
+        (progn
+          (replace-buffer-contents temp-buffer)
+          (save-buffer)
+          (kill-buffer temp-buffer))
+      (message "No temp buffer found"))))
+
+(defun kwrooijen/gptel-send-buffer-with ()
+  "Send the current buffer with `gptel-request' as well as user input."
+  (interactive)
+  ;; TODO Keep a log of diffs for context
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer))
+         (string "")
+         (string (concat string "=== ORIGINAL CODE START ===\n"))
+         (string (concat string (buffer-string)))
+         (string (concat string "=== ORIGINAL CODE END ===\n"))
+         (string (concat string "=== CODE START ===\n"))
+         (string (concat string (if temp-buffer
+                                    (with-current-buffer temp-buffer
+                                      (buffer-string))
+                                  (buffer-string))))
+         (string (concat string "=== CODE STOP ===\n"))
+         (string (concat string "=== CONTEXT START ===\n"))
+         (string (concat string "ONLY RESPONSE WITH THE MODIFIED VERSION IF THE CONTENTS OF `CODE`\n"))
+         (string (concat string "DO NOT REMOVE ANY CODE THAT WASN'T ASKED TO BE REMOVED\n"))
+         (string (concat string "DO NOT REMOVE ANY COMMENTS\n"))
+         (string (concat string "DO NOT REMOVE ANY # COMMENTS\n"))
+         (string (concat string "DO NOT INCLUDE THE `CODE` SECTION\n"))
+         (string (concat string "DO NOT INCLUDE THE `CONTEXT` SECTION\n"))
+         (string (concat string "DO NOT INCLUDE YOUR OWN COMMENTS\n"))
+         (string (concat string "DO NOT WRAP THE CODE IN BACKTICKS"))
+         (string (concat string "=== CONTEXT STOP ===\n"))
+         (string (concat string
+                         (read-string "Prompt: " nil nil nil nil))))
+    (gptel-request string :callback (lambda (response something)
+                                      (let ((temp-buffer (get-buffer-create "*gptel-temp*")))
+                                        (with-current-buffer temp-buffer
+                                          (erase-buffer)
+                                          (insert response "\n")
+                                          (diff-buffers current-buffer temp-buffer)))))))
+
+
+(defun kwrooijen/gptel-copy-write-paragraph ()
+  "Send the current buffer with `gptel-request' as well as user input."
+  (interactive)
+  (setq lexical-binding t)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (current-buffer (current-buffer))
+         (paragraph
+          (progn
+            (backward-paragraph)
+            (forward-char 1)
+            (set-mark (point))
+            (forward-paragraph)
+            (forward-char -2)
+            (buffer-substring-no-properties (region-beginning) (region-end))))
+         (string "")
+         (string (concat string "=== PARAGRAPH START ===\n"))
+         (string (concat string paragraph))
+         (string (concat string "=== PARAGRAPH STOP ===\n"))
+         (string (concat string "=== CONTEXT START ===\n"))
+         (string (concat string "YOU ARE A COPY WRITER\n"))
+         (string (concat string "YOU WRITE CLEAR AND DIRECT CONTENT. NOT SUGARCOATED\n"))
+         (string (concat string "YOU WRITE HELPFUL, CORRECT, AND POLITE CONTENT\n"))
+         (string (concat string "MAKE A SUGGESTION FOR THE FOLLOWING PARAGRAPH\n"))
+         (string (concat string "YOU ONLY RESPOND WITH THE MODIFIED VERSION OF THE `PARAGRAPH`\n"))
+         (string (concat string "INCLUDE ALL FORMATTING SUCH AS NEWLINES\n"))
+         (string (concat string "DO NOT START YOUR RESPONSE WITH THINGS LIKE: 'Here is a suggested rephrasing:'\n"))
+         (string (concat string "DO NOT END YOUR RESPONSE WITH THINGS LIKE: 'Let me know if you'd like me to suggest any further changes!'"))
+         (string (concat string "DO NOT START OR END YOUR RESPONSE WITH BACKTICKS\n"))
+         (string (concat string "DO NOT START OR END YOUR RESPONSE WITH === PARAGRAPH START / END === \n"))
+         (string (concat string "=== CONTEXT STOP ===\n")))
+    (gptel-request string :callback (lambda (response something)
+                                      (let ((temp-buffer (get-buffer-create "*gptel-temp*")))
+                                        (with-current-buffer temp-buffer
+                                          (erase-buffer)
+                                          (kill-new response)
+                                          (insert response "\n")
+                                          (display-buffer temp-buffer t)))))))
+
+
+(defun kwrooijen/gptel-cancel ()
+  "Cancel the current operation."
+  (interactive)
+  (let* ((temp-buffer (get-buffer "*gptel-temp*"))
+         (diff-buffer (get-buffer "*Diff*")))
+    (when temp-buffer (kill-buffer temp-buffer))
+    (when diff-buffer (kill-buffer diff-buffer))
+    (message "Operation cancelled")))
+#+END_SRC
+
+#+RESULTS:
+: kwrooijen/gptel-cancel
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(gptel-model "llama3-70b-8192")
+(gptel-backend (gptel-make-openai
+                "Groq"
+                :host "api.groq.com"
+                :endpoint "/openai/v1/chat/completions"
+                :stream t
+                :key #'read-groq-key
+                :models '("llama3-70b-8192"))))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defvar gptel--known-backends '())
+
+(defvar read-groq-key-cache nil)
+
+(defun read-groq-key ()
+  "Read $HOME .gptel.api.gpg file and return string."
+  (if read-groq-key-cache
+      read-groq-key-cache
+    (setq read-groq-key-cache
+          (with-temp-buffer
+            (insert-file-contents (expand-file-name "~/.gptel.api.gpg"))
+            (buffer-string)))))
+#+END_SRC
+
+** Binding :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'gptel-mode-map
+"M-RET" 'gptel-send)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "ja" 'kwrooijen/gptel-apply-changes
+ "ji" 'kwrooijen/gptel-send-buffer-with
+ "jp" 'kwrooijen/gptel-copy-write-paragraph
+ "jc" 'kwrooijen/gptel-cancel)
+#+END_SRC
+
+
+* GLSL
+:PROPERTIES:
+:PACKAGE: glsl-mode
+:STRAIGHT: (:host github :repo "jimhourihan/glsl-mode" :files ("dist" "*.el"))
+:END:
+
+* Dired
+:PROPERTIES:
+:PACKAGE: dired
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dired-listing-switches "-laoh")
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((dired-mode . hl-line-mode))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states 'normal
+ :keymaps 'dired-mode-map
+ ";" #'helm-find-files)
+#+END_SRC
+
+* Diredfl
+:PROPERTIES:
+:PACKAGE: diredfl
+:STRAIGHT: t
+:DEFER: t
+:END:
+
+** Init :init:
+
+Enable diredfl mode globally
+#+BEGIN_SRC emacs-lisp
+(diredfl-global-mode 1)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-owner
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the file owner field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-owner 'kwrooijen/diredfl-owner)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-size
+  '((((background dark)) (:inherit kwrooijen/popout-fg-face))
+    (t                   (:inherit kwrooijen/popout-fg-face)))
+  "Face for the file group field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-size 'kwrooijen/diredfl-size)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-acl-flag
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the ACL '+' flag in Dired permission strings."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-acl-flag 'kwrooijen/diredfl-acl-flag)
+#+END_SRC
+
+Add custom faces to diredfl-font-lock-keywords-1
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\([-bcdlps]\\([r-][w-][x-]\\)\\{3\\}\\)\\([+@]\\)"
+   (3 kwrooijen/diredfl-acl-flag)))
+
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\S-+ +[0-9]+ +\\([^ ]+\\) +\\([^ ]+\\) +"
+   (1 kwrooijen/diredfl-owner)
+   (2 kwrooijen/diredfl-size)))
+#+END_SRC
+
+Remove diredfl-match-ignored-extensions
+#+BEGIN_SRC emacs-lisp
+(setq diredfl-font-lock-keywords-1
+        (cl-remove-if
+         (lambda (entry)
+           (and (listp entry)
+                (eq (car entry) 'diredfl-match-ignored-extensions)))
+         diredfl-font-lock-keywords-1))
+#+END_SRC
+
+* Functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/upgrade-packages ()
+  "Upgrades all packages to their latest version (using Straight.el) and updates the lockfile."
+  (interactive)
+  (straight-pull-all)
+  ;; KEY CHORD WORKING VERSION
+  ;; ("key-chord" . "fc75b1451759121601110da8ddfadcf5156318af")
+  (straight-freeze-versions))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/capitalize-previous-word ()
+  (interactive)
+  (save-excursion
+    (backward-word)
+    (capitalize-word 1)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/tab ()
+  (interactive)
+  (or (copilot-accept-completion)
+      (indent-for-tab-command)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/toggle-word-line-wrap ()
+  (interactive)
+  (toggle-truncate-lines))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-latex-preview-all ()
+  "Preview all LaTeX fragments in the current buffer."
+  (interactive)
+  (org-latex-preview '(16)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-images-increase ()
+  (interactive)
+  (when (equal org-image-actual-width t)
+    (setq org-image-actual-width 1200))
+  (setq org-image-actual-width (+ (or org-image-actual-width 1000) 250))
+  (kwrooijen/org-toggle-inline-images-refresh))
+
+(defun kwrooijen/org-images-decrease ()
+  (interactive)
+  (when (equal org-image-actual-width t)
+    (setq org-image-actual-width 1200))
+  (setq org-image-actual-width (- (or org-image-actual-width 1000) 250))
+  (kwrooijen/org-toggle-inline-images-refresh))
+
+(defun kwrooijen/org-toggle-inline-images-refresh ()
+  "Force refresh of inline images in the current buffer."
+  (interactive)
+  (org-remove-inline-images)
+  (org-display-inline-images))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-focus-this-heading ()
+  "Close all other Org headings except the current one."
+  (interactive)
+  (org-overview)
+  (org-reveal)
+  (org-show-subtree))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/indent-buffer ()
+  (interactive)
+  (indent-region (point-min) (point-max)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/load-secret-env ()
+  "Load environment variables from FILE-PATH into Emacs."
+  (interactive)
+  (let ((files '("~/.env.gpg" "~/.env-emacs.gpg")))
+    (dolist (file files)
+      (when (file-exists-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (goto-char (point-min))
+          (while (not (eobp))
+            (let ((line (buffer-substring-no-properties
+                         (line-beginning-position)
+                         (line-end-position))))
+              (when (string-match "^export \\([^=]+\\)=\\(.*\\)$" line)
+                (setenv (match-string 1 line)
+                        (match-string 2 line))))
+            (forward-line 1)))))))
+#+END_SRC
+
+#+REMOTE: (:host github :repo kwrooijen/test-org :file test.org :branch master)
+#+REMOTE: (:host github :repo kwrooijen/test-org :file test.org :branch master)
+
+#+BEGIN_SRC emacs-lisp
+(setq my-package-enabled nil)
+#+END_SRC
+
+* Magit
+:PROPERTIES:
+:PACKAGE: magit
+:STRAIGHT: t
+:END:
+
+* Helm
+:PROPERTIES:
+:PACKAGE: helm
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/my-helm-function ()
+  "My custom helm function."
+  (interactive)
+  (helm :sources '((name . "My Helm Source")
+                   (candidates . (lambda () (list "Option 1" "Option 2" "Option 3")))
+                   (action . (lambda (candidate) (message "You selected: %s" candidate))))))
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/test-hello ()
+  "docstring"
+  (interactive "P")
+  123)
+#+END_SRC
+
+* Helm
+:PROPERTIES:
+:PACKAGE: helm
+:STRAIGHT: t
+:END:
+
+** Improved helm colors
+Use the same colors are dired for Helm files.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/helm-colors-hook ()
+  (set-face-attribute 'helm-buffer-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
+  (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
+  (set-face-attribute 'helm-ff-prefix nil :foreground 'unspecified :background 'unspecified)
+  (set-face-attribute 'helm-ff-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
+  (set-face-attribute 'helm-ff-dotted-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
+  (set-face-attribute 'helm-ff-file nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
+  (set-face-attribute 'helm-ff-file-extension nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
+  (set-face-attribute 'helm-match nil  :foreground 'unspecified :background 'unspecified)
+  (set-face-attribute 'helm-header nil :foreground 'unspecified :background 'unspecified)
+  (set-face-attribute 'helm-helper nil :foreground 'unspecified :background 'unspecified)
+  (set-face-attribute 'helm-M-x-short-doc nil :box 'unspecified :foreground 'unspecified :background 'unspecified :inherit 'font-lock-comment-face))
+#+END_SRC
+
+** Remove help from modeline
+#+BEGIN_SRC emacs-lisp
+(defun doom-modeline-segment--helm-help () nil)
+#+END_SRC
+
+
+** Better next / previous function
+
+The functions `helm-next-line` and `helm-previous-line` don't jump to
+the next source. You have to use `helm-next-source`.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/helm-next-line-or-next-source ()
+  "Go to the next line in Helm buffer. If at the end of the source, go to the next source."
+  (interactive)
+  (condition-case err
+      (let ((pos (helm-get-selection nil nil t)))
+        (if (or (null pos) (equal pos (overlay-start helm-selection-overlay)))
+            (helm-next-source)
+          (helm-next-line)))
+    (error (helm-next-line))))
+
+(defun kwrooijen/helm-previous-line-or-previous-source ()
+  "Go to the previous line in Helm buffer. If at the beginning of the source, go to the previous source."
+  (interactive)
+  (condition-case err
+      (let ((pos (helm-get-selection nil nil t)))
+        (if (or (null pos) (equal pos (overlay-start helm-selection-overlay)))
+            (helm-previous-source)
+          (helm-previous-line)))
+    (error (helm-previous-line))))
+#+END_SRC
+
+** Custom Helm M-: (eval-expression)
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/helm-eval-history nil
+  "History for kwrooijen/helm-eval-expression.")
+
+(defun kwrooijen/helm-eval--history-push (expr)
+  "Push EXPR into history without duplicating."
+  (setq kwrooijen/helm-eval-history
+        (cons expr (delete expr kwrooijen/helm-eval-history))))
+
+(defun kwrooijen/helm-eval-expression ()
+  (interactive)
+  (let ((insert-fn
+         (lambda (candidate)
+           (helm-set-pattern candidate)
+           (helm-force-update))))
+
+    (helm :sources
+          (list
+           (helm-build-dummy-source "Enter expression"
+             :persistent-action insert-fn
+             :action (lambda (candidate)
+                       (kwrooijen/helm-eval--history-push candidate)
+                       (message "%s" (eval (read candidate)))))
+           (helm-build-sync-source "Eval history"
+             :candidates (lambda () kwrooijen/helm-eval-history)
+             :persistent-action insert-fn
+             :action (lambda (candidate)
+                       (kwrooijen/helm-eval--history-push candidate)
+                       (message "%s" (eval (read candidate))))))
+          :buffer "*helm eval*")))
+#+END_SRC
+
+
+** Custom :custom:
+
+Show 200 candidates instead of 50 in search results.
+
+#+BEGIN_SRC emacs-lisp
+(helm-candidate-number-limit 200)
+#+END_SRC
+
+Input in header instead of minibuffer
+
+#+BEGIN_SRC emacs-lisp
+(helm-echo-input-in-header-line t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(helm-find-files-doc-header nil)
+#+END_SRC
+
+Show docs when using helm-M-x
+
+#+BEGIN_SRC emacs-lisp
+(helm-M-x-show-short-doc t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(helm-minibuffer-history-key "M-p")
+#+END_SRC
+
+
+** Config :config:
+
+Use helm as default completion framework.
+
+#+BEGIN_SRC emacs-lisp
+(helm-mode 1)
+#+END_SRC
+
+Don't hide other windows when opening Helm. Open helm with full width
+at the bottom.
+
+~helm-split-window-inside-p~ will open the helm buffer in the current
+window. This isn't great if the window is small. It also changes the
+position of Helm depending on the context. To fix this, use shackle to
+always open helm with full width in the bottom.
+
+
+#+BEGIN_SRC emacs-lisp
+(setq helm-split-window-inside-p t)
+
+(push '("\\`\\*helm.*?\\*\\'" :regexp t :align t :ratio 0.3) shackle-rules)
+#+END_SRC
+
+Load helm-command to prevent errors
+
+#+BEGIN_SRC emacs-lisp
+(require 'helm-command)
+#+END_SRC
+
+Hide the cursor in the Helm buffer
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'helm-after-initialize-hook
+          (lambda ()
+            (with-helm-buffer
+              (setq-local evil-normal-state-cursor '(nil)))))
+#+END_SRC
+
+Remove helm header
+#+BEGIN_SRC emacs-lisp
+(defun helm-insert-header-from-source (source)
+  (let ((name (assoc-default 'name source)))
+    (helm-insert-header name "")))
+#+END_SRC
+
+
+
+** Hooks :hook:
+
+Add `kwrooijen/helm-colors-hook` to `helm-after-initialize` to prevent
+custom colors from being overwritten.
+
+#+BEGIN_SRC emacs-lisp
+((helm-after-initialize . kwrooijen/helm-colors-hook))
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("M-x" 'helm-M-x)
+("M-:" 'kwrooijen/helm-eval-expression)
+
+(:keymaps 'helm-find-files-map
+          "M-v" 'clipboard-yank
+          "C-l" nil)
+
+(:keymaps 'helm-map
+          "M-v" #'clipboard-yank
+          "C-f" #'helm-next-page
+          "C-b" #'helm-previous-page
+          "C-h" #'backward-char
+          "C-l" #'forward-char
+          "M-h" #'backward-word
+          "M-l" #'forward-word
+          "M-p" #'helm-previous-line
+          "M-b" #'backward-word
+          "M-l" #'forward-word
+          "C-j" #'kwrooijen/helm-next-line-or-next-source
+          "C-k" #'kwrooijen/helm-previous-line-or-previous-source
+          "TAB" #'helm-execute-persistent-action
+          "<tab>" #'helm-execute-persistent-action
+          "C-z" #'helm-select-action)
+
+(kwrooijen/leader
+  "r r" '(helm-resume :which-key "Helm resume")
+  "r y" '(helm-show-kill-ring :which-key "Show kill ring")
+  "f f" '(helm-find-files :which-key "Find files")
+  "b b" '(helm-buffers-list :which-key "Buffer list")
+  "b i" '(kwrooijen/indent-buffer :which-key "Indent Buffer"))
+#+END_SRC
+
+
+** Bingings :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "ss" '(helm-occur :which-key "Find in buffer"))
+#+END_SRC
+
+* Helm Projectile
+:PROPERTIES:
+:PACKAGE: helm-projectile
+:STRAIGHT: t
+:END:
+** Config :config:
+
+Useful helm projectile functions
+
+#+BEGIN_SRC emacs-lisp
+(defun helm-projectile-rg-with-input ()
+  (interactive)
+  (let ((helm-projectile-set-input-automatically t))
+    (helm-projectile-rg)))
+
+(defun helm-projectile-rg-full ()
+  (interactive)
+  (let ((default-directory (projectile-project-root)))
+    (helm-rg "")))
+
+(defun helm-projectile-rg-full-with-input ()
+  (interactive)
+  (let ((helm-projectile-set-input-automatically t)
+        (default-directory (projectile-project-root)))
+    (helm-rg (helm-projectile-rg--region-selection))))
+#+END_SRC
+
+
+Start projectile
+
+#+BEGIN_SRC emacs-lisp
+(helm-projectile-on)
+(projectile-mode +1)
+#+END_SRC
+
+*** TODO [PATCH] Overrides in order to add gitmodules as exclusions
+https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L1000
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/read-gitmodules-paths (file)
+ (when (file-exists-p file)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (let (paths)
+      (while (re-search-forward "^\\s-*path = \\(.*\\)$" nil t)
+        (push (match-string 1) paths))
+      (nreverse paths)))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun helm-projectile-rg ()
+  "Projectile version of `helm-rg'."
+  (interactive)
+  (if (require 'helm-rg nil t)
+      (if (projectile-project-p)
+          (let* ((helm-rg-prepend-file-name-line-at-top-of-matches nil)
+                 (helm-rg-include-file-on-every-match-line t)
+                 (ignored-files (mapcan (lambda (path)
+                                          (list "--glob" (concat "!" (glob-quote path))))
+                                        (cl-union (projectile-ignored-files-rel)  grep-find-ignored-files)))
+                 (ignored-directories (mapcan (lambda (path)
+                                                (list "--glob" (concat "!" (glob-quote path) "/**")))
+                                              (cl-union (mapcar 'directory-file-name (projectile-ignored-directories-rel))
+                                                        (append
+                                                         grep-find-ignored-directories
+                                                         (kwrooijen/read-gitmodules-paths
+                                                          (concat (projectile-project-root) "/.gitmodules"))))))
+                 (helm-rg--extra-args `(,@ignored-files ,@ignored-directories)))
+            (let ((default-directory (projectile-project-root)))
+              (helm-rg (helm-projectile-rg--region-selection)
+                       nil)))
+        (error "You're not in a project"))
+    (when (yes-or-no-p "`helm-rg' is not installed. Install? ")
+      (condition-case nil
+          (progn
+            (package-install 'helm-rg)
+            (helm-projectile-rg))
+        (error "`helm-rg' is not available.  Is MELPA in your `package-archives'?")))))
+#+END_SRC
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "p p" '(helm-projectile-switch-project :which-key "Switch to Project")
+  "p f" '(helm-projectile-find-file :which-key "Find Project file")
+  "p F" '(helm-projectile-find-file-in-known-projects :which-key "Find Project file+")
+  "s p" '(helm-projectile-rg :which-key "Project Grep")
+  "s P" '(helm-projectile-rg-with-input :which-key "Project Grep")
+  "s o" '(helm-projectile-rg-full :which-key "Project Grep")
+  "s O" '(helm-projectile-rg-full-with-input :which-key "Project Grep"))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(projectile-use-git-grep t)
+(helm-projectile-fuzzy-match nil)
+(helm-projectile-set-input-automatically nil)
+(helm-display-header-line nil))
+#+END_SRC
+
+* Helm descbinds
+:PROPERTIES:
+:PACKAGE: helm-descbinds
+:STRAIGHT: t
+:END:
+
+* Helm Make
+:PROPERTIES:
+:PACKAGE: helm-make
+:STRAIGHT: t
+:END:
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "c m" '(helm-make :which-key "Make"))
+#+END_SRC
+
+* Helm Company
+:PROPERTIES:
+:PACKAGE: helm-company
+:STRAIGHT: t
+:END:
+
+** Bindings :general:
+
+#+BEGIN_SRC emacs-lisp
+("C-;" 'helm-company)
+#+END_SRC
+
+* Helm RG
+:PROPERTIES:
+:PACKAGE: helm-rg
+:STRAIGHT: t
+:END:
+
+** Config :config:
+
+Some custom colors for helm-rg to make it less chaotic
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'helm-rg-title-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-error-message nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-extra-arg-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-match-text-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-file-match-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/salient-fg-face)
+(set-face-attribute 'helm-rg-active-arg-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-base-rg-cmd-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-inactive-arg-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-directory-cmd-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-directory-header-face nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-line-number-match-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/faded-fg-face)
+(set-face-attribute 'helm-rg-preview-line-highlight nil :background 'unspecified :foreground 'unspecified)
+(set-face-attribute 'helm-rg-colon-separator-ripgrep-output-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/faded-fg-face)
+#+END_SRC
+
+Fix M-b / M-d in helm-rg
+
+#+BEGIN_SRC emacs-lisp
+(define-key helm-rg-map (kbd "M-b") 'backward-word)
+(define-key helm-rg-map (kbd "M-d") 'kill-word)
+#+END_SRC
+
+
+*** TODO [PATCH] Overrides to remove header from helm-rg
+https://github.com/cosmicexplorer/helm-rg/blob/ee0a3c09da0c843715344919400ab0a0190cc9dc/helm-rg.el#L1132
+
+#+BEGIN_SRC emacs-lisp
+(defun helm-rg--make-process-from-argv (argv)
+  (let* ((real-proc (make-process
+                     :name helm-rg--process-name
+                     :buffer helm-rg--process-buffer-name
+                     :command argv
+                     :noquery t))
+         (helm-src-name
+          (format "argv: %s" (helm-rg--join " " argv))))
+    ;; TODO MAKE THIS OPTIONAL
+    ;; (helm-attrset 'name helm-src-name)
+    (set-process-query-on-exit-flag real-proc nil)
+    real-proc))
+#+END_SRC
+
+
+* Helm Bookmark
+:PROPERTIES:
+:PACKAGE:  helm-bookmark
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(bookmark-default-file (expand-file-name "~/.dotfiles/emacs/db/bookmark-default.el"))
+(bookmark-file (expand-file-name "~/.dotfiles/emacs/db/bookmark-default.el"))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "f b" '(helm-bookmarks :which-key "Bookmarks"))
+#+END_SRC
+
+* Video demo
+#+BEGIN_SRC emacs-lisp
+;; (/ 1 0)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setq video-demo t)
+#+END_SRC
+
+* Functions
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-table-current-line-columns ()
+  "Return the columns of the current line in an Org table as a list of plain strings."
+  (when (org-at-table-p)
+    (mapcar (lambda (s) (substring-no-properties (string-trim s)))
+            (org-split-string (buffer-substring-no-properties
+                               (line-beginning-position)
+                               (line-end-position))
+                              "|"))))
+
+(defun orgtbl-to-semicol (table params)
+  "Convert the `orgtbl-mode' TABLE to TAB separated material."
+  (orgtbl-to-generic table (org-combine-plists '(:sep ";") params)))
+
+(defun kwrooijen/org-table-export ()
+  (interactive)
+  (let* ((export-file (kwrooijen/org-table-get-export-file)))
+    (org-table-export (when export-file (expand-file-name export-file)) "orgtbl-to-semicol")))
+
+(defun kwrooijen/org-table-get-export-file ()
+  "Return the value of the #+EXPORT: keyword associated with the current table."
+  (interactive)
+  (unless (org-at-table-p) (user-error "Not in a table"))
+  (save-excursion
+    (let (export-file)
+      ;; Move to the line before the table
+      (goto-char (org-table-begin))
+      (forward-line -1)
+      (end-of-line)
+      ;; Search backward for #+EXPORT: within a reasonable range
+      (when (re-search-backward "^#\\+EXPORT:[ \t]*\\(.*\\)$" nil t)
+        (setq export-file (match-string 1)))
+      (if export-file
+          (string-trim export-file)  ; Remove leading/trailing whitespace
+        (user-error "No #+EXPORT: keyword found above the table")))))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-mode-setup ()
+    (interactive)
+    (setq-local evil-auto-indent nil)
+    (auto-fill-mode 0)
+    (electric-indent-mode -1))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-toggle-inline-image-at-point ()
+  (org-toggle-inline-images
+   nil
+   (org-element-begin (org-element-context))
+   (org-element-end (org-element-context))))
+
+(defun kwrooijen/file-path-from-URI (file-string)
+  (when (and file-string (string-match "file:\\(?://\\)?\\(.*\\)" file-string))
+    (string-trim (match-string 1 file-string))))
+
+(defun kwrooijen/org-code-open-link-file ()
+  (let ((link (org-element-context))
+        (value (plist-get (plist-get (org-element-context) 'fixed-width) :value)))
+    (when-let (file (kwrooijen/file-path-from-URI value))
+      (when (file-exists-p file)
+        (next-line)
+        (beginning-of-line)
+        (newline)
+        (previous-line)
+        (insert (format "[[%s]]" file))
+        (kwrooijen/org-toggle-inline-image-at-point)
+        (beginning-of-line)))))
+#+END_SRC
+#+BEGIN_SRC emacs-lisp
+(defun +org--toggle-inline-images-in-subtree (&optional beg end refresh)
+  "Refresh inline image previews in the current heading/tree."
+  (let* ((beg (or beg
+                  (if (org-before-first-heading-p)
+                      (save-excursion (point-min))
+                    (save-excursion (org-back-to-heading) (point)))))
+         (end (or end
+                  (if (org-before-first-heading-p)
+                      (save-excursion (org-next-visible-heading 1) (point))
+                    (save-excursion (org-end-of-subtree) (point)))))
+         (overlays (cl-remove-if-not (lambda (ov) (overlay-get ov 'org-image-overlay))
+                                     (ignore-errors (overlays-in beg end)))))
+    (dolist (ov overlays nil)
+      (delete-overlay ov)
+      (setq org-inline-image-overlays (delete ov org-inline-image-overlays)))
+    (when (or refresh (not overlays))
+      (org-display-inline-images t t beg end)
+      t)))
+
+(defun +org-get-todo-keywords-for (&optional keyword)
+  "Returns the list of todo keywords that KEYWORD belongs to."
+  (when keyword
+    (cl-loop for (type . keyword-spec)
+             in (cl-remove-if-not #'listp org-todo-keywords)
+             for keywords =
+             (mapcar (lambda (x) (if (string-match "^\\([^(]+\\)(" x)
+                                     (match-string 1 x)
+                                   x))
+                     keyword-spec)
+             if (eq type 'sequence)
+             if (member keyword keywords)
+             return keywords)))
+
+(defun +org/dwim-at-point (&optional arg)
+  "Do-what-I-mean at point.
+
+If on a:
+- checkbox list item or todo heading: toggle it.
+- citation: follow it
+- headline: cycle ARCHIVE subtrees, toggle latex fragments and inline images in
+  subtree; update statistics cookies/checkboxes and ToCs.
+- clock: update its time.
+- footnote reference: jump to the footnote's definition
+- footnote definition: jump to the first reference of this footnote
+- timestamp: open an agenda view for the time-stamp date/range at point.
+- table-row or a TBLFM: recalculate the table's formulas
+- table-cell: clear it and go into insert mode. If this is a formula cell,
+  recaluclate it instead.
+- babel-call: execute the source block
+- statistics-cookie: update it.
+- src block: execute it
+- latex fragment: toggle it.
+- link: follow it
+- otherwise, refresh all inline images in current tree."
+  (interactive "P")
+  (if (button-at (point))
+      (call-interactively #'push-button)
+    (let* ((context (org-element-context))
+           (type (org-element-type context)))
+      ;; skip over unimportant contexts
+      (while (and context (memq type '(verbatim code bold italic underline strike-through subscript superscript)))
+        (setq context (org-element-property :parent context)
+              type (org-element-type context)))
+      (pcase type
+        ((or `citation `citation-reference)
+         (org-cite-follow context arg))
+        (`fixed-width (kwrooijen/org-code-open-link-file))
+
+        (`headline
+         (cond ((memq (bound-and-true-p org-goto-map)
+                      (current-active-maps))
+                (org-goto-ret))
+               ((and (fboundp 'toc-org-insert-toc)
+                     (member "TOC" (org-get-tags)))
+                (toc-org-insert-toc)
+                (message "Updating table of contents"))
+               ((string= "ARCHIVE" (car-safe (org-get-tags)))
+                (org-force-cycle-archived))
+               ((or (org-element-property :todo-type context)
+                    (org-element-property :scheduled context))
+                (org-todo
+                 (if (eq (org-element-property :todo-type context) 'done)
+                     (or (car (+org-get-todo-keywords-for (org-element-property :todo-keyword context)))
+                         'todo)
+                   'done))))
+         ;; Update any metadata or inline previews in this subtree
+         (org-update-checkbox-count)
+         (org-update-parent-todo-statistics)
+         (when (and (fboundp 'toc-org-insert-toc)
+                    (member "TOC" (org-get-tags)))
+           (toc-org-insert-toc)
+           (message "Updating table of contents"))
+         (let* ((beg (if (org-before-first-heading-p)
+                         (line-beginning-position)
+                       (save-excursion (org-back-to-heading) (point))))
+                (end (if (org-before-first-heading-p)
+                         (line-end-position)
+                       (save-excursion (org-end-of-subtree) (point))))
+                (overlays (ignore-errors (overlays-in beg end)))
+                (latex-overlays
+                 (cl-find-if (lambda (o) (eq (overlay-get o 'org-overlay-type) 'org-latex-overlay))
+                             overlays))
+                (image-overlays
+                 (cl-find-if (lambda (o) (overlay-get o 'org-image-overlay))
+                             overlays)))
+           (+org--toggle-inline-images-in-subtree beg end)
+           (if (or image-overlays latex-overlays)
+               (org-clear-latex-preview beg end)
+             (org--latex-preview-region beg end))))
+
+        (`clock (org-clock-update-time-maybe))
+
+        (`footnote-reference
+         (org-footnote-goto-definition (org-element-property :label context)))
+
+        (`footnote-definition
+         (org-footnote-goto-previous-reference (org-element-property :label context)))
+
+        ((or `planning `timestamp)
+         (org-follow-timestamp-link))
+
+        ((or `table `table-row)
+         (if (org-at-TBLFM-p)
+             (org-table-calc-current-TBLFM)
+           (ignore-errors
+             (save-excursion
+               (goto-char (org-element-property :contents-begin context))
+               (org-call-with-arg 'org-table-recalculate (or arg t))))))
+
+        (`table-cell
+         (org-table-blank-field)
+         (org-table-recalculate arg)
+         (when (and (string-empty-p (string-trim (org-table-get-field)))
+                    (bound-and-true-p evil-local-mode))
+           (evil-change-state 'insert)))
+
+        (`babel-call
+         (org-babel-lob-execute-maybe))
+
+        (`statistics-cookie
+         (save-excursion (org-update-statistics-cookies arg)))
+
+        ((or `src-block `inline-src-block)
+         (org-babel-execute-src-block arg))
+
+        ((or `latex-fragment `latex-environment)
+         (org-latex-preview arg))
+
+        (`link
+         (let* ((lineage (org-element-lineage context '(link) t))
+                (path (org-element-property :path lineage)))
+           (if (or (equal (org-element-property :type lineage) "img")
+                   (and path (image-type-from-file-name path)))
+               (+org--toggle-inline-images-in-subtree
+                (org-element-property :begin lineage)
+                (org-element-property :end lineage))
+             (org-open-at-point arg))))
+
+        (`paragraph
+         (+org--toggle-inline-images-in-subtree))
+
+        ((guard (org-element-property :checkbox (org-element-lineage context '(item) t)))
+         (let ((match (and (org-at-item-checkbox-p) (match-string 1))))
+           (org-toggle-checkbox (if (equal match "[ ]") '(16)))))
+
+        (_
+         (if (or (org-in-regexp org-ts-regexp-both nil t)
+                 (org-in-regexp org-tsr-regexp-both nil  t)
+                 (org-in-regexp org-link-any-re nil t))
+             (call-interactively #'org-open-at-point)
+           (+org--toggle-inline-images-in-subtree
+            (org-element-property :begin context)
+            (org-element-property :end context))))))))
+#+END_SRC
+
+* Org Ox gfm
+:PROPERTIES:
+:PACKAGE: ox-gfm
+:STRAIGHT: t
+:END:
+
+** Init :init:
+
+Override org-gfm-inner-template so that it doesn't generate a ToC.
+
+#+BEGIN_SRC emacs-lisp
+(defun org-gfm-inner-template (contents info)
+  "Return body of document after converting it to Markdown syntax.
+CONTENTS is the transcoded contents string.  INFO is a plist
+holding export options."
+    (org-trim (concat contents "\n" (org-gfm-footnote-section info))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setq org-confirm-elisp-link-function nil)
+#+END_SRC
+
+* Wisdom
+:PROPERTIES:
+:PACKAGE: wisdom
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+   :keymaps 'org-mode-map
+   "c c" 'wisdom-reload-current-buffer
+   "c a" 'wisdom-reload)
+#+END_SRC
+
+* Org
+:PROPERTIES:
+:PACKAGE: org
+:STRAIGHT: t
+:AFTER: evil
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-confirm-babel-evaluate nil)
+
+(org-pretty-entities nil)
+
+  ;; Don't add space between heading and tags
+(org-tags-column 0)
+
+  ;; Fold (hide) blocks on startup
+(org-startup-folded t)
+(org-hide-emphasis-markers t)
+(org-image-actual-width nil)
+(org-src-fontify-natively t)
+(org-edit-src-persistent-message nil)
+(org-fontify-quote-and-verse-blocks nil)
+(org-src-tab-acts-natively t)
+(org-src-preserve-indentation t)
+(org-edit-src-content-indentation 2)
+(org-hide-block-startup nil)
+(org-cycle-separator-lines 2)
+(org-log-into-drawer t)
+(org-duration-format (quote h:mm))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'org-clock)
+(defun org-clock-get-clock-string ()
+  "Form a clock-string, that will be shown in the mode line.
+If an effort estimate was defined for the current item, use
+01:30/01:50 format (clocked/estimated).
+If not, show simply the clocked time like 01:50."
+  (let ((clocked-time (org-clock-get-clocked-time)))
+    (if org-clock-effort
+	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
+	       (work-done-str
+		(propertize (org-duration-from-minutes clocked-time)
+			    'face
+			    (if (and org-clock-task-overrun
+				     (not org-clock-task-overrun-text))
+				'org-mode-line-clock-overrun
+			      'org-mode-line-clock)))
+	       (effort-str (org-duration-from-minutes effort-in-minutes)))
+	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
+		  work-done-str effort-str))
+      (format (propertize "[%s]" 'face 'org-mode-line-clock)
+	      (org-duration-from-minutes clocked-time)))))
+
+(font-lock-add-keywords
+ 'org-mode
+ '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
+ 'append)
+
+(add-to-list 'org-emphasis-alist '("`" (:inherit font-lock-keyword-face )))
+
+  ;; Add backticks to font-lock-keyword-face
+(font-lock-add-keywords
+ 'org-mode
+ '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
+ 'append)
+
+(custom-set-faces
+ '(bold ((t (:foreground "#ffffff" :weight bold)))))
+
+(plist-put org-format-latex-options :scale 2.5)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'org-meta-line nil :italic t :inherit 'fixed-pitch)
+;; Get rid of the background on column views
+(set-face-attribute 'org-column nil :background 'unspecified)
+(set-face-attribute 'org-column-title nil :background 'unspecified)
+(set-face-attribute 'org-level-1 nil :bold t)
+(set-face-attribute 'org-level-2 nil :bold t)
+(set-face-attribute 'org-level-3 nil :bold t)
+(set-face-attribute 'org-level-4 nil :bold t)
+(set-face-attribute 'org-level-5 nil :bold t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(define-key org-mode-map (kbd "M-p") 'org-previous-block)
+(define-key org-mode-map (kbd "M-n") 'org-next-block)
+(evil-define-key 'normal org-mode-map (kbd "RET") #'+org/dwim-at-point)
+#+END_SRC
+
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . kwrooijen/org-mode-setup)
+ (org-mode . org-margin-mode)
+ (org-mode . prettify-symbols-mode)
+ (org-babel-after-execute . org-redisplay-inline-images)
+ (org-babel-after-execute . kwrooijen/jupyter-color-fix)
+ (org-src-mode . evil-normal-state))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/local-leader
+  :keymaps 'org-src-mode-map
+  "'" 'org-edit-src-exit
+  "a" 'org-edit-src-abort)
+
+(kwrooijen/local-leader
+  :keymaps 'org-mode-map
+  "'" 'org-edit-special
+  "i i" 'kwrooijen/org-images-increase
+  "i j" 'kwrooijen/org-images-decrease
+  "f b"  'org/toggle-bold
+  "f u"  'org/toggle-underline
+  "f i"  'org/toggle-italic
+  "t a"  'kwrooijen/org-focus-this-heading
+  "t i"  'org-toggle-inline-images
+  "t e" 'kwrooijen/org-table-export
+  "c t"  'org-clock-update-time-maybe
+  "c i"  'org-clock-in
+  "c o"  'org-clock-out
+  "c r"  'org-clock-report
+  "c c"  'org-clock-goto)
+#+END_SRC
+
+* Org Margin
+:PROPERTIES:
+:PACKAGE: org-margin
+:STRAIGHT: (org-margin :host github :repo "rougier/org-margin")
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(require 'face-remap)
+#+END_SRC
+
+* Org Roam
+:PROPERTIES:
+:PACKAGE: org-roam
+:STRAIGHT: t
+:AFTER: org
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(org-roam-db-autosync-mode)
+(require 'org-roam-protocol)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/org-roam-projects
+  '(("General" . "~/Documents/org/notes")
+    ("AI" . "~/Documents/org/ai"))
+  "List of org-roam projects.")
+
+(defun kwrooijen/org-roam-switch-project (project)
+  ;; Interactivelt select a project from list
+  (interactive
+   (list
+    (completing-read "Project: " kwrooijen/org-roam-projects)))
+  (setq org-roam-directory
+        (file-truename
+         (cdr (assoc project kwrooijen/org-roam-projects))))
+  (org-roam-db-sync)
+  (message "Switched to project: %s" project))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-roam-directory (file-truename "~/Documents/org/notes"))
+(org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+(org-roam-completion-everywhere t)
+(org-roam-completion-system 'helm)
+(org-roam-capture-templates '(("d" "default" plain "%?"
+                                      :target (file+head "${slug}.org" "#+title: ${title} ")
+                                      :unnarrowed t)
+                                     ("e" "encrypt" plain "%?"
+                                      :target (file+head "${slug}.org.gpg" "#+title: ${title} ")
+                                      :unnarrowed t)))
+#+END_SRC
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+    "f n" 'org-roam-node-find
+    "p o" 'kwrooijen/org-roam-switch-project)
+#+END_SRC
+
+* Prog Mode
+:PROPERTIES:
+:PACKAGE: prog-mode
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(prettify-symbols-alist '(("#+BEGIN_SRC" . "»")
+                          ("#+END_SRC" . "«")
+                          ("#+begin_src" . "»")
+                          ("#+end_src" . "«")
+                          ("#+begin_quote" . "“")
+                          ("#+end_quote" . "”")
+                          ("#+BEGIN_QUOTE" . "“")
+                          ("#+END_QUOTE" . "”")))
+#+END_SRC
+
+# * Org Src Keymap
+# :PROPERTIES:
+# :PACKAGE: org-src-keymap
+# :STRAIGHT: (:host github :repo "kwrooijen/org-src-keymap")
+# :END:
+
+# ** Custom :custom:
+# #+BEGIN_SRC emacs-lisp
+# (org-src-keymap-extra-maps '((emacs-lisp . (lispy-mode-map lispyville-mode-map))))
+# #+END_SRC
+
+# ** Hook :hook:
+# #+BEGIN_SRC emacs-lisp
+# (org-mode-hook . org-src-keymap-mode)
+# #+END_SRC
+
+#+PRIORITY: 0.1
+
+* Reload the frame
+
+Reload the frame to load the new frame options.
+
+#+BEGIN_SRC emacs-lisp
+(let ((old-frame (selected-frame))
+      (inhibit-message t)
+      (message-log-max nil))
+  ;(make-frame '((width . 80) (height . 45)))
+  ;(delete-frame old-frame)
+)
+
+;(push '(internal-border-width . 24) default-frame-alist)
+;(switch-to-buffer  (get-buffer-create "*Wisdom Loading*"))
+
+;; (insert-file-contents "~/.dotfiles/emacs/splash")
+#+END_SRC
+
+* Highlight TODO
+:PROPERTIES:
+:PACKAGE: hl-todo
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(hl-todo-keyword-faces
+ '(("TODO"   . "#FF0000")
+   ("FIXME"  . "#FF0000")
+   ("DEBUG"  . "#A020F0")
+   ("GOTCHA" . "#FF4500")
+   ("STUB"   . "#1E90FF")))
+#+END_SRC
+
+
+** hook :hook:
+#+BEGIN_SRC emacs-lisp
+(prog-mode . hl-todo-mode)
+#+END_SRC
+
+* Visual line mode
+:PROPERTIES:
+:PACKAGE: simple
+:END:
+
+** Init
+
+#+BEGIN_SRC emacs-lisp
+(global-visual-line-mode 1)
+#+END_SRC
+
+* Highlight numbers
+:PROPERTIES:
+:PACKAGE: highlight-numbers
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . highlight-numbers-mode)
+ (org-mode . highlight-numbers-mode))
+#+END_SRC
