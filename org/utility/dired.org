@@ -1,0 +1,110 @@
+* Dired
+:PROPERTIES:
+:PACKAGE: dired
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dired-listing-switches "-laoh")
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((dired-mode . hl-line-mode))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states 'normal
+ :keymaps 'dired-mode-map
+ ";" #'helm-find-files)
+#+END_SRC
+
+* Diredfl
+:PROPERTIES:
+:PACKAGE: diredfl
+:STRAIGHT: t
+:DEFER: t
+:END:
+
+** Init :init:
+
+Enable diredfl mode globally
+#+BEGIN_SRC emacs-lisp
+(diredfl-global-mode 1)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-owner
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the file owner field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-owner 'kwrooijen/diredfl-owner)
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-size
+  '((((background dark)) (:inherit kwrooijen/popout-fg-face))
+    (t                   (:inherit kwrooijen/popout-fg-face)))
+  "Face for the file group field in Dired."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-size 'kwrooijen/diredfl-size)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defface kwrooijen/diredfl-acl-flag
+  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
+    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  "Face for the ACL '+' flag in Dired permission strings."
+  :group 'diredfl)
+
+(defvar kwrooijen/diredfl-acl-flag 'kwrooijen/diredfl-acl-flag)
+#+END_SRC
+
+Add custom faces to diredfl-font-lock-keywords-1
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\([-bcdlps]\\([r-][w-][x-]\\)\\{3\\}\\)\\([+@]\\)"
+   (3 kwrooijen/diredfl-acl-flag)))
+
+(add-to-list
+ 'diredfl-font-lock-keywords-1
+ '("^..\\S-+ +[0-9]+ +\\([^ ]+\\) +\\([^ ]+\\) +"
+   (1 kwrooijen/diredfl-owner)
+   (2 kwrooijen/diredfl-size)))
+#+END_SRC
+
+Remove diredfl-match-ignored-extensions
+#+BEGIN_SRC emacs-lisp
+(setq diredfl-font-lock-keywords-1
+        (cl-remove-if
+         (lambda (entry)
+           (and (listp entry)
+                (eq (car entry) 'diredfl-match-ignored-extensions)))
+         diredfl-font-lock-keywords-1))
+#+END_SRC
+* Dired Preview
+:PROPERTIES:
+:PACKAGE:  dired-preview
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'dired-mode-map
+ :states 'normal
+"p" 'dired-preview-mode)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dired-preview-delay 0)
+#+END_SRC
