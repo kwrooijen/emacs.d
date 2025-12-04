@@ -95,11 +95,11 @@ M-x ~kwrooijen/hex-colors-enable~
 :STRAIGHT: (:host github :repo "nordtheme/emacs")
 :END:
 
-Install the Roboto font, Fira font
+Install the Roboto font
 
 #+BEGIN_SRC bash
 brew tap homebrew/cask-fonts
-brew install --cask font-roboto-mono font-fira-code
+brew install --cask font-roboto-mono
 #+END_SRC
 
 
@@ -107,7 +107,7 @@ brew install --cask font-roboto-mono font-fira-code
 #+BEGIN_SRC emacs-lisp
 (defvar kwrooijen/theme 'nord)
 
-(defvar kwrooijen/font "Fira Code")
+(defvar kwrooijen/font "Roboto Mono")
 
 (let ((inhibit-message t)
       (message-log-max nil))
