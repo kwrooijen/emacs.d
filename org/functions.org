@@ -1,3 +1,4 @@
+#+PRIORITY: 3
 * Functions
 
 #+BEGIN_SRC emacs-lisp
@@ -94,4 +95,11 @@
                 (setenv (match-string 1 line)
                         (match-string 2 line))))
             (forward-line 1)))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/read-file (file)
+  (with-temp-buffer
+    (insert-file-contents (expand-file-name file))
+    (buffer-string)))
 #+END_SRC
