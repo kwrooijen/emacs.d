@@ -91,6 +91,7 @@ Remove diredfl-match-ignored-extensions
                 (eq (car entry) 'diredfl-match-ignored-extensions)))
          diredfl-font-lock-keywords-1))
 #+END_SRC
+
 * Dired Preview
 :PROPERTIES:
 :PACKAGE:  dired-preview

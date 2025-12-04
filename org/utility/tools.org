@@ -96,6 +96,10 @@ ellama chatbot. This is more user friendly than using the minibuffer.
 :STRAIGHT: t
 :END:
 
+gptel is a simple Large Language Model chat client for Emacs, with
+support for multiple models and backends. It works in the spirit of
+Emacs, available at any time and uniformly in any buffer.
+
 ** Init :init:
 #+BEGIN_SRC emacs-lisp
 (require 'gptel)
@@ -249,3 +253,7 @@ ellama chatbot. This is more user friendly than using the minibuffer.
 :PACKAGE: glsl-mode
 :STRAIGHT: (:host github :repo "jimhourihan/glsl-mode" :files ("dist" "*.el"))
 :END:
+
+This is a major mode for Emacs providing editing conveniences for the
+OpenGL Shading Language (GLSL). It currently handles GLSL version 4.6,
+including many recent Vulkan extensions.
