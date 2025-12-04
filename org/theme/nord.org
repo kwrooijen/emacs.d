@@ -175,7 +175,14 @@ brew install --cask font-roboto-mono font-fira-code
 :background 'unspecified)
 
 (kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
+#+END_SRC
 
+** Subwindow
+
+Give subwindows (magit, repl, shell, helm, etc) a different
+style. Similar to Solaire mode, but more flexible.
+
+#+BEGIN_SRC emacs-lisp
 (defvar-local kwrooijen/subwindow-needs-style nil)
 
 (defun kwrooijen/subwindow-styling ()
@@ -188,31 +195,55 @@ brew install --cask font-roboto-mono font-fira-code
     (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
     (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
 
-(defun kwrooijen/subwindow-setup-after-display (&rest _)
-  (when-let ((win (or (helm-window) (get-buffer-window (current-buffer)))))
-    (with-current-buffer  (window-buffer win)
-      (setq kwrooijen/subwindow-needs-style t)
-      (kwrooijen/subwindow-styling))))
+
+(defun kwrooijen/subwindow-setup-hook ()
+  (setq kwrooijen/subwindow-needs-style t))
+
+(defun kwrooijen/subwindow-setup-hook-transient ()
+  ;; Transient has special needs when it comes to getting the proper
+  ;; buffer.
+  (when (get-buffer (or transient--buffer-name ""))
+    (with-current-buffer (get-buffer (or transient--buffer-name ""))
+      (setq kwrooijen/subwindow-needs-style t))))
+
+(defun kwrooijen/subwindow-setup-hook-helm ()
+  ;; Helm has special needs when it comes to getting the proper
+  ;; buffer.
+  (when (get-buffer (helm-buffer-get))
+    (with-current-buffer (get-buffer (helm-buffer-get))
+      (setq kwrooijen/subwindow-needs-style t))))
 
 (defun kwrooijen/subwindow-restyle ()
   (dolist (win (window-list))
-    (let ((buf (window-buffer win)))
-      (with-current-buffer buf
-      (kwrooijen/subwindow-styling)))))
+    (with-current-buffer (window-buffer win)
+      (kwrooijen/subwindow-styling))))
+#+END_SRC
 
-(defun kwrooijen/subwindow-setup-hook ()
-  (run-at-time
-   0 nil
-   #'kwrooijen/subwindow-setup-after-display
-   (current-buffer)))
-
-
-(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook)
-(add-hook 'magit-mode-hook #'kwrooijen/subwindow-setup-hook)
-(add-hook 'eshell-mode-hook #'kwrooijen/subwindow-setup-hook)
-(add-hook 'vterm-mode-hook #'kwrooijen/subwindow-setup-hook)
+#+BEGIN_SRC emacs-lisp
 (add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
 #+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/subwindow-hook-list
+  '(cider-repl-mode-hook
+    magit-mode-hook
+    dired-mode-hook
+    sql-interactive-mode-hook
+    eshell-mode-hook
+    inf-ruby-mode-hook)
+  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
+  :type '(repeat symbol)
+  :group 'kwrooijen)
+
+(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook-helm)
+(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
+
+
+(dolist (hook kwrooijen/subwindow-hook-list)
+  (add-hook hook #'kwrooijen/subwindow-setup-hook))
+#+END_SRC
+
+
 
 * Theme
 #+BEGIN_SRC emacs-lisp
