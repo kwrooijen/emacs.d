@@ -417,12 +417,3 @@ https://github.com/cosmicexplorer/helm-rg/blob/ee0a3c09da0c843715344919400ab0a01
 (kwrooijen/leader
   "f b" '(helm-bookmarks :which-key "Bookmarks"))
 #+END_SRC
-
-* Video demo
-#+BEGIN_SRC emacs-lisp
-;; (/ 1 0)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(setq video-demo t)
-#+END_SRC
