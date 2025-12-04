@@ -2,6 +2,7 @@
 :PROPERTIES:
 :PACKAGE: winum
 :STRAIGHT: t
+:DEMAND: t
 :END:
 
 Number your open windows and switch between them.
