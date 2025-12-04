@@ -174,6 +174,44 @@ brew install --cask font-roboto-mono font-fira-code
 (set-face-attribute 'fringe nil :inherit 'kwrooijen/background-bg-face
 :background 'unspecified)
 
+(kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
+
+(defvar-local kwrooijen/subwindow-needs-style nil)
+
+(defun kwrooijen/subwindow-styling ()
+  (when kwrooijen/subwindow-needs-style
+    (set-window-fringes win 24 24)
+    (unless (helm-window)
+      (setq header-line-format " "))
+    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
+    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
+    (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
+    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
+
+(defun kwrooijen/subwindow-setup-after-display (&rest _)
+  (when-let ((win (or (helm-window) (get-buffer-window (current-buffer)))))
+    (with-current-buffer  (window-buffer win)
+      (setq kwrooijen/subwindow-needs-style t)
+      (kwrooijen/subwindow-styling))))
+
+(defun kwrooijen/subwindow-restyle ()
+  (dolist (win (window-list))
+    (let ((buf (window-buffer win)))
+      (with-current-buffer buf
+      (kwrooijen/subwindow-styling)))))
+
+(defun kwrooijen/subwindow-setup-hook ()
+  (run-at-time
+   0 nil
+   #'kwrooijen/subwindow-setup-after-display
+   (current-buffer)))
+
+
+(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook)
+(add-hook 'magit-mode-hook #'kwrooijen/subwindow-setup-hook)
+(add-hook 'eshell-mode-hook #'kwrooijen/subwindow-setup-hook)
+(add-hook 'vterm-mode-hook #'kwrooijen/subwindow-setup-hook)
+(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
 #+END_SRC
 
 * Theme
@@ -410,8 +448,7 @@ Recenter screen when iedit is used.
  'mode-line           'kwrooijen/darken-bg-face
  'mode-line-active    'kwrooijen/darken-bg-face
  'mode-line-inactive  'kwrooijen/darken-bg-face
- 'mode-line-highlight 'unspecified
- 'header-line         'unspecified)
+ 'mode-line-highlight 'unspecified)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
