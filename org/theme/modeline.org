@@ -1,0 +1,141 @@
+#+Begin_SRC emacs-lisp
+(defface kwrooijen/modeline-border
+  '()
+  "Face for the active window border."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-border-inactive
+  '()
+  "Face for the inactive window border."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-evil
+  '((t (:height 1.0)))
+  "Face for evil state indicator."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-winum
+  '((t (:height 1.0)))
+  "Face for winum number."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-buffer
+  '((t (:height 1.0)))
+  "Face for buffer/file name."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-scroll
+  '((t (:height 1.0)))
+  "Face for scroll percentage indicator."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-git-branch
+  '((t (:height 1.0)))
+  "Face for Git branch."
+  :group 'kwrooijen/modeline)
+
+(defface kwrooijen/modeline-major-mode
+  '((t (:height 1.0)))
+  "Face for major mode text."
+  :group 'kwrooijen/modeline)
+
+(set-face-attribute 'kwrooijen/modeline-border nil :height 1.5)
+(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5)
+
+
+;; Border characters
+(defvar kwrooijen/modeline-active-border "▌")
+(defvar kwrooijen/modeline-inactive-border "▌")
+
+(defun kwrooijen/modeline-win-focus-border ()
+  "Show a border only when the window is active."
+  (if (eq (selected-window) kwrooijen/modeline-selected-window)
+      (propertize kwrooijen/modeline-active-border
+                  'face 'kwrooijen/modeline-border)
+    (propertize kwrooijen/modeline-inactive-border
+                'face 'kwrooijen/modeline-border-inactive)))
+
+;; Track active window
+(defun kwrooijen/modeline--set-selected-window (&rest _)
+  (when (not (minibuffer-window-active-p (selected-window)))
+    (setq kwrooijen/modeline-selected-window (selected-window))))
+
+(add-hook 'post-command-hook #'kwrooijen/modeline--set-selected-window)
+
+
+;; Evil tag
+(defun kwrooijen/modeline-evil-tag ()
+  (when (bound-and-true-p evil-local-mode)
+    (propertize
+     (let ((state evil-state))
+       (upcase
+        (pcase state
+          ('normal "N")
+          ('insert "I")
+          ('visual "V")
+          ('replace "R")
+          (_ (substring (symbol-name state) 0 1)))))
+     'face 'kwrooijen/modeline-evil)))
+
+;; Winum
+(defun kwrooijen/modeline-winum ()
+  (when (bound-and-true-p winum-mode)
+    (propertize (format "[%d]" (winum-get-number))
+                'face 'kwrooijen/modeline-winum)))
+
+;; Git branch
+(defun kwrooijen/modeline-git-branch ()
+  (when-let* ((branch (and vc-mode (substring-no-properties vc-mode))))
+    (propertize
+     (replace-regexp-in-string "^ Git-" "" branch)
+     'face 'kwrooijen/modeline-git-branch)))
+
+;; Scroll indicator
+(defun kwrooijen/modeline-scroll ()
+  (propertize
+   (cond
+    ((eq (point) (point-min)) "Top")
+    ((eq (point) (point-max)) "Bot")
+    (t (format "%d%%%%"
+               (/ (* 100 (1- (line-number-at-pos)))
+                  (count-lines (point-min) (point-max))))))
+   'face 'kwrooijen/modeline-scroll))
+
+
+(propertize "%b" 'face 'kwrooijen/modeline-buffer 'display '(raise 0.9))
+
+;; Build modeline
+(setq-default mode-line-format
+              '((:eval
+                 (let* ((left
+                         (list
+                          (kwrooijen/modeline-win-focus-border)
+                          " "
+                          (kwrooijen/modeline-winum)
+                          " "
+                          (kwrooijen/modeline-evil-tag)
+                          " "
+                          (propertize "%b" 'face 'kwrooijen/modeline-buffer)
+                          " "
+                          (kwrooijen/modeline-scroll)))
+
+                        (right
+                         (list
+                          (when-let ((branch (kwrooijen/modeline-git-branch)))
+                            (format " %s" branch))
+                          "  "
+                          (propertize "%m" 'face 'kwrooijen/modeline-major-mode))))
+
+                   (concat
+                    (format-mode-line left)
+                    (propertize
+                     " "
+                     'display
+                     `((space :align-to
+                              (- (+ right right-fringe right-margin)
+                                 ,(string-width (format-mode-line right))))))
+                    (format-mode-line right))))))
+
+
+
+#+END_SRC
