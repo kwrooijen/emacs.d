@@ -121,6 +121,17 @@ Show docs when using helm-M-x
 
 ** Config :config:
 
+
+kwrooijen/helm-exit-minibuffer is used to prevent the error "[Display
+not Ready]" when pressing return too fast.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/helm-exit-minibuffer ()
+  (interactive)
+  (helm-exit-minibuffer))
+#+END_SRC
+
+
 Use helm as default completion framework.
 
 #+BEGIN_SRC emacs-lisp
@@ -200,7 +211,8 @@ custom colors from being overwritten.
           "C-k" #'kwrooijen/helm-previous-line-or-previous-source
           "TAB" #'helm-execute-persistent-action
           "<tab>" #'helm-execute-persistent-action
-          "C-z" #'helm-select-action)
+          "C-z" #'helm-select-action
+          "<return>" #'kwrooijen/helm-exit-minibuffer)
 
 (kwrooijen/leader
   "r r" '(helm-resume :which-key "Helm resume")
