@@ -151,7 +151,12 @@
            (current-column))
    'kwrooijen/modeline-scroll)) ;; same style as scroll, adjust if you want
 
-
+(defun kwrooijen/modeline-buffer-name ()
+  (let* ((dirty? (buffer-modified-p))
+         (face   (if dirty?
+                     'warning
+                   'kwrooijen/modeline-buffer)))
+    (kwrooijen/modeline-r "%b" face)))
 #+END_SRC
 
 #+Begin_SRC emacs-lisp
@@ -168,7 +173,7 @@
            " "
            (kwrooijen/modeline-evil-tag)
            " "
-           (kwrooijen/modeline-r "%b" 'kwrooijen/modeline-buffer)
+           (kwrooijen/modeline-buffer-name)
            "  "
            (kwrooijen/modeline-line-col)
            " "
