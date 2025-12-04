@@ -94,6 +94,28 @@ When non-nil a bit of help text will be displayed on REPL start.
             "r j" 'cider-jack-in-clj
             "r c" 'cider-connect-clj
             "s j n" 'cider-jack-in-clj&cljs
+            "s j k" 'kwrooijen/cider-kill-all
             "b b" 'cider-switch-to-repl-buffer
             "e b" 'cider-eval-buffer)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/cider-kill-all ()
+  "Kill all CIDER-related buffers (REPLs, error buffers, connection buffers, etc.).
+Prompts for confirmation only once when called interactively."
+  (interactive)
+  (let ((cider-buffers
+         (seq-filter
+          (lambda (buf)
+            (string-prefix-p "*cider" (buffer-name buf)))
+          (buffer-list))))
+    (when cider-buffers
+      (when (or (not (called-interactively-p 'interactive))
+                (yes-or-no-p (format "Kill %d CIDER buffers? " (length cider-buffers))))
+        ;; Suppress ONLY the per-buffer process-kill prompts
+        (let ((kill-buffer-query-functions
+               (remq 'process-kill-buffer-query-function kill-buffer-query-functions)))
+          (mapc #'kill-buffer cider-buffers))
+        (message "Killed %d CIDER buffers." (length cider-buffers))))))
 #+END_SRC
