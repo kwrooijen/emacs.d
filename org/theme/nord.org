@@ -484,8 +484,8 @@ Recenter screen when iedit is used.
 
 #+BEGIN_SRC emacs-lisp
 (doom-modeline-def-modeline 'kwrooijen
-  '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info matches)
-  '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process vcs check time))
+  '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info)
+  '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding vcs major-mode process check time))
 
 (doom-modeline-set-modeline 'kwrooijen 'default)
 #+END_SRC
