@@ -34,7 +34,8 @@
   :group 'kwrooijen/modeline)
 
 (defface kwrooijen/modeline-git-branch
-  '((t (:height 1.0)))
+  '((t (:height 1.0
+        :inherit success)))
   "Face for Git branch."
   :group 'kwrooijen/modeline)
 
@@ -70,26 +71,14 @@
 ;; Border characters
 ;; ----------------------------------------
 
-;; (defvar kwrooijen/modeline-active-border "▌")
-;; (defvar kwrooijen/modeline-inactive-border "▌")
 (defvar kwrooijen/modeline-active-border "▎")
 (defvar kwrooijen/modeline-inactive-border "▎")
-
-;; (defun kwrooijen/modeline-win-focus-border ()
-;;   (if (eq (selected-window) kwrooijen/modeline-selected-window)
-;;       (kwrooijen/modeline-r-bar kwrooijen/modeline-active-border 'kwrooijen/modeline-border)
-;;     (kwrooijen/modeline-r-bar kwrooijen/modeline-inactive-border 'kwrooijen/modeline-border-inactive)))
 
 (defun kwrooijen/modeline-win-focus-border ()
   "Show a border only when the window is active."
   (if (eq (selected-window) kwrooijen/modeline-selected-window)
-      (propertize kwrooijen/modeline-active-border
-                  'face 'kwrooijen/modeline-border)
-    (propertize kwrooijen/modeline-inactive-border
-                'face 'kwrooijen/modeline-border-inactive)))
-
-
-
+      (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
+    (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
 
 ;; ----------------------------------------
 ;; Track active window
@@ -101,7 +90,6 @@
 
 (add-hook 'post-command-hook #'kwrooijen/modeline--set-selected-window)
 
-
 ;; ----------------------------------------
 ;; Segments
 ;; ----------------------------------------
@@ -109,23 +97,33 @@
 ;; Evil state
 (defun kwrooijen/modeline-evil-tag ()
   (when (bound-and-true-p evil-local-mode)
-    (kwrooijen/modeline-r
-     (let ((state evil-state))
-       (upcase
-        (pcase state
-          ('normal  " N ")
-          ('insert  " I ")
-          ('visual  " V ")
-          ('replace " R ")
-          (_ (substring (symbol-name state) 0 1)))))
-     'kwrooijen/modeline-evil)))
+    (let* ((state evil-state)
+           (tag
+            (upcase
+             (pcase state
+               ('normal  " N ")
+               ('insert  " I ")
+               ('visual  " V ")
+               ('replace " R ")
+               (_ (substring (symbol-name state) 0 1)))))
+           (face
+            (pcase state
+              ('normal  'success)
+              ('visual  'region)
+              ('insert  'warning)
+              ('replace 'error)
+              (_ 'kwrooijen/modeline-evil))))
+      (kwrooijen/modeline-r tag face))))
 
-;; Winum
+
+;; Winum (bold when active)
 (defun kwrooijen/modeline-winum ()
   (when (bound-and-true-p winum-mode)
-    (kwrooijen/modeline-r
-     (format "%d" (or (winum-get-number) 1))
-     'kwrooijen/modeline-winum)))
+    (let* ((num-str (format "%d" (or (winum-get-number) 1)))
+           (face (if (eq (selected-window) kwrooijen/modeline-selected-window)
+                     `(:inherit kwrooijen/modeline-winum :weight bold)
+                   'kwrooijen/modeline-winum)))
+      (kwrooijen/modeline-r num-str face))))
 
 ;; Git branch
 (defun kwrooijen/modeline-git-branch ()
@@ -146,76 +144,57 @@
                   (count-lines (point-min) (point-max))))))
    'kwrooijen/modeline-scroll))
 
+(defun kwrooijen/modeline-line-col ()
+  (kwrooijen/modeline-r
+   (format "%d:%d"
+           (line-number-at-pos)
+           (current-column))
+   'kwrooijen/modeline-scroll)) ;; same style as scroll, adjust if you want
+
+
+#+END_SRC
+
+#+Begin_SRC emacs-lisp
 ;; ----------------------------------------
 ;; Build modeline
 ;; ----------------------------------------
-#+END_SRC
-#+Begin_SRC emacs-lisp
-(defun kwrooijen/modeline-setup ()
-  "Setup custom modeline."
-  (interactive)
-  (setq mode-line-format
-        '((:eval
-           (let* ((left
-                   (list
-                    (kwrooijen/modeline-win-focus-border)
-                    " "
-                    (kwrooijen/modeline-winum)
-                    " "
-                    (kwrooijen/modeline-evil-tag)
-                    " "
-                    (kwrooijen/modeline-r "%b" 'kwrooijen/modeline-buffer)
-                    " "
-                    (kwrooijen/modeline-scroll)))
 
-                  (right
-                   (list
-                    (when-let ((branch (kwrooijen/modeline-git-branch)))
-                      (format " %s" branch))
-                    "  "
-                    (kwrooijen/modeline-r "%m  " 'kwrooijen/modeline-major-mode))))
+(defun kwrooijen/mode-line ( )
+  (let* ((left
+          (list
+           (kwrooijen/modeline-win-focus-border)
+           " "
+           (kwrooijen/modeline-winum)
+           " "
+           (kwrooijen/modeline-evil-tag)
+           " "
+           (kwrooijen/modeline-r "%b" 'kwrooijen/modeline-buffer)
+           "  "
+           (kwrooijen/modeline-line-col)
+           " "
+           (kwrooijen/modeline-scroll)))
 
-             (concat
-              (format-mode-line left)
-              (propertize
-               " "
-               'display
-               `((space :align-to
-                        (- (+ right right-fringe right-margin)
-                           ,(string-width (format-mode-line right))))))
-              (format-mode-line right)))))))
-#+END_SRC
+         (active? (eq (selected-window) kwrooijen/modeline-selected-window))
+         (mode-face (if active?
+                        `(:inherit kwrooijen/modeline-major-mode :weight bold)
+                      'kwrooijen/modeline-major-mode))
 
-#+BEGIN_SRC emacs-lisp
+         (right
+          (list
+           (kwrooijen/modeline-git-branch)
+           "  "
+           (kwrooijen/modeline-r "%m  " mode-face))))
+
+    (concat
+     (format-mode-line left)
+     (propertize
+      " "
+      'display
+      `((space :align-to
+               (- (+ right right-fringe right-margin)
+                  ,(string-width (format-mode-line right))))))
+     (format-mode-line right))))
+
 (setq-default mode-line-format
-              '((:eval
-                 (let* ((left
-                         (list
-                          (kwrooijen/modeline-win-focus-border)
-                          " "
-                          (kwrooijen/modeline-winum)
-                          " "
-                          (kwrooijen/modeline-evil-tag)
-                          " "
-                          (kwrooijen/modeline-r "%b" 'kwrooijen/modeline-buffer)
-                          " "
-                          (kwrooijen/modeline-scroll)))
-
-                        (right
-                         (list
-                          (kwrooijen/modeline-git-branch)
-
-
-                          "  "
-                          (kwrooijen/modeline-r "%m  " 'kwrooijen/modeline-major-mode))))
-
-                   (concat
-                    (format-mode-line left)
-                    (propertize
-                     " "
-                     'display
-                     `((space :align-to
-                              (- (+ right right-fringe right-margin)
-                                 ,(string-width (format-mode-line right))))))
-                    (format-mode-line right))))))
+              '((:eval (kwrooijen/mode-line))))
 #+END_SRC
