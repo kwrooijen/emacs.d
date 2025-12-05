@@ -378,52 +378,6 @@ Recenter screen when iedit is used.
  'org-todo                 'kwrooijen/salient-fg-face)
 #+END_SRC
 
-# * Doom Modeline
-# :PROPERTIES:
-# :PACKAGE: doom-modeline
-# :STRAIGHT: t
-# :END:
-
-# ** Custom :custom:
-# #+BEGIN_SRC emacs-lisp
-# (doom-modeline-height 40)
-# (doom-modeline-buffer-file-name-style 'relative-to-project)
-# (doom-modeline-major-mode-icon nil)
-# (doom-modeline-buffer-state-icon nil)
-# (doom-modeline-buffer-encoding nil)
-# #+END_SRC
-
-# ** Config :config:
-# #+BEGIN_SRC emacs-lisp
-# (doom-modeline-mode 1)
-
-# (kwrooijen/reset-inherit-face!
-#  'doom-modeline-urgent             'kwrooijen/error-fg-face
-#  'doom-modeline-overwrite          'kwrooijen/error-fg-face
-#  'doom-modeline-lsp-error          'kwrooijen/error-fg-face
-#  'doom-modeline-battery-error      'kwrooijen/error-fg-face
-#  'doom-modeline-battery-critical   'kwrooijen/error-fg-face
-#  'doom-modeline-evil-replace-state 'kwrooijen/error-fg-face
-#  'doom-modeline-buffer-modified    'kwrooijen/error-fg-face
-#  'doom-modeline-bar-inactive       'kwrooijen/darken-bg-face
-#  'doom-modeline-bar                'kwrooijen/strong-bg-face)
-
-# (kwrooijen/reset-inherit-face!
-#  'mode-line           'kwrooijen/darken-bg-face
-#  'mode-line-active    'kwrooijen/darken-bg-face
-#  'mode-line-inactive  'kwrooijen/darken-bg-face
-#  'mode-line-highlight 'unspecified)
-# #+END_SRC
-
-# #+BEGIN_SRC emacs-lisp
-# (doom-modeline-def-modeline 'kwrooijen
-#   '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info)
-#   '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding vcs major-mode process check time))
-
-# (doom-modeline-set-modeline 'kwrooijen 'default)
-# #+END_SRC
-
-
 * Company :config:
 :PROPERTIES:
 :PACKAGE: company
