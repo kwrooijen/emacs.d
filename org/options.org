@@ -83,6 +83,7 @@ Disable the default mode-line on startup
 (menu-bar-mode 0)
 (scroll-bar-mode 0)
 (blink-cursor-mode 0)
+(setq-default cursor-in-non-selected-windows nil)
 #+END_SRC
 
 Completely disable fringes
@@ -159,8 +160,9 @@ Add margins around the frame
 *** macOS
 Use Command as Meta (Alt).
 #+BEGIN_SRC emacs-lisp
-(setq mac-command-modifier 'meta)
-(setq mac-option-modifier 'meta)
+(when (eq system-type 'darwin)
+  (setq mac-command-modifier 'meta)
+  (setq mac-option-modifier 'meta))
 #+END_SRC
 
 *** GnuPG
