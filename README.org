@@ -1,7 +1,13 @@
 * Kwrooijen Emacs Configuration
 
-My personal Emacs configuration. This README is compiled using the [[https://github.com/kwrooijen/wisdom][Wisdom Emacs configuration framework]]. You can find all the separate org files in the org/ directory.
+My personal Emacs configuration. This README is compiled using the
+[[https://github.com/kwrooijen/wisdom][Wisdom Emacs configuration framework]]. You can find all the separate
+org files in the org/ directory. Visuals inspired by [[https://github.com/doomemacs/doomemacs][Doom Emacs]] and
+[[https://github.com/rougier/nano-emacs][Nano Emacs]].
 
+[[https://raw.githubusercontent.com/kwrooijen/emacs.d/refs/heads/master/emacs.png]]
+
+* Emacs Configuration Aggregation
 
 #+STARTUP: showeverything
 #+PRIORITY: 0
@@ -5867,4 +5873,3 @@ If not, show simply the clocked time like 01:50."
 ((prog-mode . highlight-numbers-mode)
  (org-mode . highlight-numbers-mode))
 #+END_SRC
-
