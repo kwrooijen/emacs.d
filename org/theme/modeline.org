@@ -160,6 +160,17 @@
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-org-clock ()
+  (when (and (org-clocking-p)
+           (org-clock-get-clocked-time))
+      (kwrooijen/modeline-r
+       (format "[%d:%02d]"
+               (/ (org-clock-get-clocked-time) 60)
+               (% (org-clock-get-clocked-time) 60))
+       'kwrooijen/faded-fg-face)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
 ;; ----------------------------------------
 ;; Build modeline
 ;; ----------------------------------------
@@ -186,10 +197,13 @@
 
          (right
           (list
+           (kwrooijen/modeline-org-clock)
+           "  "
            (kwrooijen/modeline-git-branch)
            "  "
-           (kwrooijen/modeline-r "%m  " mode-face))))
-
+           (kwrooijen/modeline-r "%m  " mode-face)))
+         (left (delq nil left))
+         (right (delq nil right)))
     (concat
      (format-mode-line left)
      (propertize

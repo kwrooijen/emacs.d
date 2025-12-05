@@ -9,7 +9,6 @@ Use the same colors are dired for Helm files.
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/helm-colors-hook ()
-
   (set-face-attribute 'helm-buffer-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
   (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
   (set-face-attribute 'helm-ff-prefix nil :foreground 'unspecified :background 'unspecified)
@@ -92,7 +91,6 @@ Instantly go to the match after navigating to the candidate.
 (helm-follow-input-idle-delay 0)
 #+END_SRC
 
-
 Show 200 candidates instead of 50 in search results.
 
 #+BEGIN_SRC emacs-lisp
@@ -139,11 +137,12 @@ Use helm as default completion framework.
 (helm-mode 1)
 #+END_SRC
 
+Set helm colors, some helm packages need to be required preemptively.
+
 #+BEGIN_SRC emacs-lisp
 (require 'helm-command)
 (kwrooijen/helm-colors-hook)
 #+END_SRC
-
 
 Don't hide other windows when opening Helm. Open helm with full width
 at the bottom.
@@ -160,23 +159,19 @@ always open helm with full width in the bottom.
 (push '("\\`\\*helm.*?\\*\\'" :regexp t :align t :ratio 0.3) shackle-rules)
 #+END_SRC
 
-Load helm-command to prevent errors
-
-#+BEGIN_SRC emacs-lisp
-(require 'helm-command)
-#+END_SRC
-
+FIXME: This is disabled, if there is no need to enable this, remove it.
 Hide the cursor in the Helm buffer
 
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-hide-cursor ()
-  (with-helm-buffer
-    (setq-local evil-normal-state-cursor '(nil))))
+;; (defun kwrooijen/helm-hide-cursor ()
+;;   (with-helm-buffer
+;;     (setq-local evil-normal-state-cursor '(nil))))
 
-(add-hook 'helm-after-initialize-hook #'kwrooijen/helm-hide-cursor)
+;; (remove-hook 'helm-after-initialize-hook #'kwrooijen/helm-hide-cursor)
 #+END_SRC
 
 Remove helm header
+
 #+BEGIN_SRC emacs-lisp
 (defun helm-insert-header-from-source (source)
   (let ((name (assoc-default 'name source)))
