@@ -1,4 +1,4 @@
-#+Begin_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp
 ;; ----------------------------------------
 ;; Faces
 ;; ----------------------------------------
@@ -155,7 +155,7 @@
     (kwrooijen/modeline-r "%b" face)))
 #+END_SRC
 
-#+Begin_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp
 ;; ----------------------------------------
 ;; Build modeline
 ;; ----------------------------------------
