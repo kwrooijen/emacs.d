@@ -10,26 +10,20 @@ Use the same colors are dired for Helm files.
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/helm-colors-hook ()
   (set-face-attribute 'helm-buffer-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
-  (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
+  (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
   (set-face-attribute 'helm-ff-prefix nil :foreground 'unspecified :background 'unspecified)
+  ;; (set-face-attribute 'helm-ff-executable nil :foreground 'unspecified :background 'unspecified)
   (set-face-attribute 'helm-ff-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
   (set-face-attribute 'helm-ff-dotted-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
-  (set-face-attribute 'helm-ff-file nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
-  (set-face-attribute 'helm-ff-file-extension nil :foreground 'unspecified :background 'unspecified :inherit 'dired-file)
+  (set-face-attribute 'helm-ff-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
+  (set-face-attribute 'helm-ff-file-extension nil :foreground 'unspecified :background 'unspecified :inherit 'default)
   (set-face-attribute 'helm-match nil  :foreground 'unspecified :background 'unspecified)
   (set-face-attribute 'helm-header nil :foreground 'unspecified :background 'unspecified)
   (set-face-attribute 'helm-helper nil :foreground 'unspecified :background 'unspecified)
   (set-face-attribute 'helm-M-x-short-doc nil :box 'unspecified :foreground 'unspecified :background 'unspecified :inherit 'font-lock-comment-face))
 #+END_SRC
 
-** Remove help from modeline
-#+BEGIN_SRC emacs-lisp
-(defun doom-modeline-segment--helm-help () nil)
-#+END_SRC
-
-
 ** Better next / previous function
-
 The functions `helm-next-line` and `helm-previous-line` don't jump to
 the next source. You have to use `helm-next-source`.
 
@@ -162,10 +156,11 @@ Load helm-command to prevent errors
 Hide the cursor in the Helm buffer
 
 #+BEGIN_SRC emacs-lisp
-(add-hook 'helm-after-initialize-hook
-          (lambda ()
-            (with-helm-buffer
-              (setq-local evil-normal-state-cursor '(nil)))))
+(defun kwrooijen/helm-hide-cursor ()
+  (with-helm-buffer
+    (setq-local evil-normal-state-cursor '(nil))))
+
+(add-hook 'helm-after-initialize-hook #'kwrooijen/helm-hide-cursor)
 #+END_SRC
 
 Remove helm header
@@ -428,4 +423,47 @@ https://github.com/cosmicexplorer/helm-rg/blob/ee0a3c09da0c843715344919400ab0a01
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "f b" '(helm-bookmarks :which-key "Bookmarks"))
+#+END_SRC
+
+
+* Helm Occur
+:PROPERTIES:
+:PACKAGE: helm-occur
+:END:
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+
+;; [PULL REQUEST]
+
+(defcustom helm-occur-lineno-format "%s:"
+"Helm occur line number format, displayed left of the candidate."
+:type 'string)
+
+(defun helm-occur-transformer (candidates source)
+  "Return CANDIDATES prefixed with line number."
+  (cl-loop with buf = (helm-get-attr 'buffer-name source)
+           for c in candidates
+           for bfname = (buffer-file-name (get-buffer buf))
+           for disp-linum = (when (string-match helm-occur--search-buffer-regexp c)
+                              (let ((linum (match-string 1 c))
+                                    (disp (match-string 2 c)))
+                                (list
+                                 linum
+                                 (format "%s%s"
+                                         (propertize
+                                          (format helm-occur-lineno-format  linum)
+                                          'face 'helm-grep-lineno
+                                          'help-echo bfname
+                                          'helm-grep-fname bfname)
+                                         disp))))
+           for linum = (car disp-linum)
+           for disp = (cadr disp-linum)
+           when (and disp (not (string= disp "")))
+           collect (cons disp (string-to-number linum))))
+
+;; Custom
+
+(setq helm-occur-lineno-format "%4s: ")
+
+(kwrooijen/reset-inherit-face! 'helm-grep-lineno 'kwrooijen/faded-fg-face)
 #+END_SRC

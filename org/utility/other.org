@@ -3,6 +3,14 @@
 :PACKAGE: anzu
 :STRAIGHT: t
 :END:
+** Custom :custom:
+
+Disable Anzu by default
+#+BEGIN_SRC emacs-lisp
+(anzu-mode-line-update-function #'anzu--update-modeline-noop)
+(anzu-mode-lighter "")
+#+END_SRC
+
 ** config :config:
 #+BEGIN_SRC emacs-lisp
 (global-anzu-mode +1)

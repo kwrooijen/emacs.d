@@ -1,3 +1,4 @@
+#+STARTUP: showeverything
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
@@ -39,4 +40,45 @@
 #+BEGIN_SRC emacs-lisp
 ((prog-mode . highlight-numbers-mode)
  (org-mode . highlight-numbers-mode))
+#+END_SRC
+
+
+* Dimmer
+:PROPERTIES:
+:PACKAGE: dimmer
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'dimmer)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dimmer-fraction 0.8)
+(dimmer-watch-frame-focus-events nil)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/helm-dim-all-initialize ()
+  "Dim all buffers except during `helm-occur'."
+  (dimmer-dim-all)
+  (when (string= helm-buffer "*helm occur*")
+    (dimmer-restore-buffer (current-buffer))))
+
+;;;###autoload
+(define-minor-mode kwrooijen/helm-dim-mode
+  "Toggle dimming adjustments for Helm."
+  :global t
+  (if kwrooijen/helm-dim-mode
+      (progn
+        (add-to-list 'dimmer-exclusion-regexp-list "^\\*[hH]elm.*\\*$")
+        (add-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
+        (add-hook 'helm-cleanup-hook #'dimmer-restore-all))
+    (remove-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
+    (remove-hook 'helm-cleanup-hook #'dimmer-restore-all)))
+
+(kwrooijen/helm-dim-mode)
 #+END_SRC

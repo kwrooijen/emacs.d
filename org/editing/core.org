@@ -109,5 +109,6 @@ Enable for all programming modes. Would this be ok for lisp modes?
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 ((prog-mode . hl-line-mode)
- (text-mode . hl-line-mode))
+ (text-mode . hl-line-mode)
+ (messages-buffer-mode . hl-line-mode))
 #+END_SRC

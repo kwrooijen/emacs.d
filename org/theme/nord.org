@@ -177,73 +177,6 @@ brew install --cask font-roboto-mono
 (kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
 #+END_SRC
 
-** Subwindow
-
-Give subwindows (magit, repl, shell, helm, etc) a different
-style. Similar to Solaire mode, but more flexible.
-
-#+BEGIN_SRC emacs-lisp
-(defvar-local kwrooijen/subwindow-needs-style nil)
-
-(defun kwrooijen/subwindow-styling ()
-  (when kwrooijen/subwindow-needs-style
-    (set-window-fringes win 24 24)
-    (unless (helm-window)
-      (setq header-line-format " "))
-    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
-    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
-    (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
-    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
-
-
-(defun kwrooijen/subwindow-setup-hook ()
-  (setq kwrooijen/subwindow-needs-style t))
-
-(defun kwrooijen/subwindow-setup-hook-transient ()
-  ;; Transient has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (or transient--buffer-name ""))
-    (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-setup-hook-helm ()
-  ;; Helm has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (helm-buffer-get))
-    (with-current-buffer (get-buffer (helm-buffer-get))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-restyle ()
-  (dolist (win (window-list))
-    (with-current-buffer (window-buffer win)
-      (kwrooijen/subwindow-styling))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/subwindow-hook-list
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook)
-  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
-  :type '(repeat symbol)
-  :group 'kwrooijen)
-
-(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook-helm)
-(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
-
-
-(dolist (hook kwrooijen/subwindow-hook-list)
-  (add-hook hook #'kwrooijen/subwindow-setup-hook))
-#+END_SRC
-
-
 
 * Theme
 #+BEGIN_SRC emacs-lisp
@@ -445,50 +378,50 @@ Recenter screen when iedit is used.
  'org-todo                 'kwrooijen/salient-fg-face)
 #+END_SRC
 
-* Doom Modeline
-:PROPERTIES:
-:PACKAGE: doom-modeline
-:STRAIGHT: t
-:END:
+# * Doom Modeline
+# :PROPERTIES:
+# :PACKAGE: doom-modeline
+# :STRAIGHT: t
+# :END:
 
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(doom-modeline-height 40)
-(doom-modeline-buffer-file-name-style 'relative-to-project)
-(doom-modeline-major-mode-icon nil)
-(doom-modeline-buffer-state-icon nil)
-(doom-modeline-buffer-encoding nil)
-#+END_SRC
+# ** Custom :custom:
+# #+BEGIN_SRC emacs-lisp
+# (doom-modeline-height 40)
+# (doom-modeline-buffer-file-name-style 'relative-to-project)
+# (doom-modeline-major-mode-icon nil)
+# (doom-modeline-buffer-state-icon nil)
+# (doom-modeline-buffer-encoding nil)
+# #+END_SRC
 
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(doom-modeline-mode 1)
+# ** Config :config:
+# #+BEGIN_SRC emacs-lisp
+# (doom-modeline-mode 1)
 
-(kwrooijen/reset-inherit-face!
- 'doom-modeline-urgent             'kwrooijen/error-fg-face
- 'doom-modeline-overwrite          'kwrooijen/error-fg-face
- 'doom-modeline-lsp-error          'kwrooijen/error-fg-face
- 'doom-modeline-battery-error      'kwrooijen/error-fg-face
- 'doom-modeline-battery-critical   'kwrooijen/error-fg-face
- 'doom-modeline-evil-replace-state 'kwrooijen/error-fg-face
- 'doom-modeline-buffer-modified    'kwrooijen/error-fg-face
- 'doom-modeline-bar-inactive       'kwrooijen/darken-bg-face
- 'doom-modeline-bar                'kwrooijen/strong-bg-face)
+# (kwrooijen/reset-inherit-face!
+#  'doom-modeline-urgent             'kwrooijen/error-fg-face
+#  'doom-modeline-overwrite          'kwrooijen/error-fg-face
+#  'doom-modeline-lsp-error          'kwrooijen/error-fg-face
+#  'doom-modeline-battery-error      'kwrooijen/error-fg-face
+#  'doom-modeline-battery-critical   'kwrooijen/error-fg-face
+#  'doom-modeline-evil-replace-state 'kwrooijen/error-fg-face
+#  'doom-modeline-buffer-modified    'kwrooijen/error-fg-face
+#  'doom-modeline-bar-inactive       'kwrooijen/darken-bg-face
+#  'doom-modeline-bar                'kwrooijen/strong-bg-face)
 
-(kwrooijen/reset-inherit-face!
- 'mode-line           'kwrooijen/darken-bg-face
- 'mode-line-active    'kwrooijen/darken-bg-face
- 'mode-line-inactive  'kwrooijen/darken-bg-face
- 'mode-line-highlight 'unspecified)
-#+END_SRC
+# (kwrooijen/reset-inherit-face!
+#  'mode-line           'kwrooijen/darken-bg-face
+#  'mode-line-active    'kwrooijen/darken-bg-face
+#  'mode-line-inactive  'kwrooijen/darken-bg-face
+#  'mode-line-highlight 'unspecified)
+# #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(doom-modeline-def-modeline 'kwrooijen
-  '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info)
-  '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding vcs major-mode process check time))
+# #+BEGIN_SRC emacs-lisp
+# (doom-modeline-def-modeline 'kwrooijen
+#   '(eldoc bar window-state workspace-name window-number modals follow buffer-info remote-host buffer-position word-count parrot selection-info)
+#   '(compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding vcs major-mode process check time))
 
-(doom-modeline-set-modeline 'kwrooijen 'default)
-#+END_SRC
+# (doom-modeline-set-modeline 'kwrooijen 'default)
+# #+END_SRC
 
 
 * Company :config:
@@ -591,8 +524,8 @@ Recenter screen when iedit is used.
 :DEFER: t
 :END:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'diredfl-file-name 'kwrooijen/fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-file-suffix 'kwrooijen/fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-file-name 'kwrooijen/foreground-fg-face)
+(kwrooijen/reset-inherit-face! 'diredfl-file-suffix 'kwrooijen/foreground-fg-face)
 (kwrooijen/reset-inherit-face! 'diredfl-dir-name 'kwrooijen/salient-fg-face)
 (kwrooijen/reset-inherit-face! 'diredfl-dir-heading 'kwrooijen/salient-fg-face)
 (kwrooijen/reset-inherit-face! 'diredfl-dir-priv 'kwrooijen/subtle-fg-face)
@@ -608,4 +541,69 @@ Recenter screen when iedit is used.
 (kwrooijen/reset-inherit-face! 'diredfl-compressed-file-name 'kwrooijen/faded-fg-face)
 (kwrooijen/reset-inherit-face! 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
 (kwrooijen/reset-face-attributes 'diredfl-ignored-file-name)
+#+END_SRC
+
+
+* Subwindow
+
+Give subwindows (magit, repl, shell, helm, etc) a different
+style. Similar to Solaire mode, but more flexible.
+
+#+BEGIN_SRC emacs-lisp
+(defvar-local kwrooijen/subwindow-needs-style nil)
+
+(defun kwrooijen/subwindow-styling ()
+  (when kwrooijen/subwindow-needs-style
+    (set-window-fringes win 24 24)
+    (unless (helm-window)
+      (setq header-line-format " "))
+    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
+    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
+    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
+
+(defun kwrooijen/subwindow-setup-hook ()
+  (setq kwrooijen/subwindow-needs-style t))
+
+(defun kwrooijen/subwindow-setup-hook-transient ()
+  ;; Transient has special needs when it comes to getting the proper
+  ;; buffer.
+  (when (get-buffer (or transient--buffer-name ""))
+    (with-current-buffer (get-buffer (or transient--buffer-name ""))
+      (setq kwrooijen/subwindow-needs-style t))))
+
+(defun kwrooijen/subwindow-setup-hook-helm ()
+  ;; Helm has special needs when it comes to getting the proper
+  ;; buffer.
+  (when (get-buffer (helm-buffer-get))
+    (with-current-buffer (get-buffer (helm-buffer-get))
+      (setq kwrooijen/subwindow-needs-style t))))
+
+(defun kwrooijen/subwindow-restyle ()
+  (dolist (win (window-list))
+    (with-current-buffer (window-buffer win)
+      (kwrooijen/subwindow-styling))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/subwindow-hook-list
+  '(cider-repl-mode-hook
+    magit-mode-hook
+    dired-mode-hook
+    sql-interactive-mode-hook
+    eshell-mode-hook
+    inf-ruby-mode-hook
+    messages-buffer-mode-hook)
+  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
+  :type '(repeat symbol)
+  :group 'kwrooijen)
+
+(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook-helm)
+(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
+
+(dolist (hook kwrooijen/subwindow-hook-list)
+  (add-hook hook #'kwrooijen/subwindow-setup-hook))
 #+END_SRC

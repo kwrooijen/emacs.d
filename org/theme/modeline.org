@@ -54,10 +54,6 @@
   "Apply face and vertical raise to a modeline string."
   (propertize s 'face face 'display `(raise ,kwrooijen/modeline-raise)))
 
-(defun kwrooijen/modeline-r-bar (s face)
-  "Apply face and vertical raise to a modeline string."
-  (propertize s 'face face 'display `(raise 0)))
-
 (kwrooijen/reset-inherit-face!
  'mode-line           'kwrooijen/darken-bg-face
  'mode-line-active    'kwrooijen/darken-bg-face
@@ -74,9 +70,9 @@
 (defvar kwrooijen/modeline-active-border "▎")
 (defvar kwrooijen/modeline-inactive-border "▎")
 
-(defun kwrooijen/modeline-win-focus-border ()
+(defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
-  (if (eq (selected-window) kwrooijen/modeline-selected-window)
+  (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
     (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
 
@@ -202,4 +198,60 @@
 
 (setq-default mode-line-format
               '((:eval (kwrooijen/mode-line))))
+#+END_SRC
+
+
+* Helm
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-helm-candidates()
+  (kwrooijen/modeline-r
+   (with-helm-buffer
+     (format "[%s/%s]"
+             (helm-candidate-number-at-point)
+             (helm-get-candidate-number 'in-current-source)))
+   'default))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/helm-buffer ()
+  (kwrooijen/modeline-r
+   (capitalize
+    (replace-regexp-in-string "-" " "
+                              (replace-regexp-in-string "\\*" "" (buffer-name))))
+   'warning))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'helm
+  (defun helm-display-mode-line (source &optional force)
+    "Fully custom Helm modeline."
+    ;; Override the whole mode-line-format
+    (setq mode-line-format
+          (let* ((left
+                  (list
+                   (kwrooijen/modeline-win-focus-border t)
+                   " "
+                   ;; (kwrooijen/buffer-capitalize (kwrooijen/modeline-buffer-name))
+                   (kwrooijen/helm-buffer)
+                   " "
+                   '(:eval
+                     (kwrooijen/modeline-helm-candidates)
+                     )))
+                 (active? (eq (selected-window) kwrooijen/modeline-selected-window))
+                 (mode-face (if active?
+                                `(:inherit kwrooijen/modeline-major-mode :weight bold)
+                              'kwrooijen/modeline-major-mode))
+                 (right
+                  (list)))
+            (concat
+             (format-mode-line left)
+             (propertize
+              " "
+              'display
+              `((space :align-to
+                       (- (+ right right-fringe right-margin)
+                          ,(string-width (format-mode-line right))))))
+             (format-mode-line right))))))
 #+END_SRC
