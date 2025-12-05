@@ -9,10 +9,11 @@ Use the same colors are dired for Helm files.
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/helm-colors-hook ()
+
   (set-face-attribute 'helm-buffer-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
   (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
   (set-face-attribute 'helm-ff-prefix nil :foreground 'unspecified :background 'unspecified)
-  ;; (set-face-attribute 'helm-ff-executable nil :foreground 'unspecified :background 'unspecified)
+  (set-face-attribute 'helm-ff-executable nil :foreground 'unspecified :background 'unspecified)
   (set-face-attribute 'helm-ff-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
   (set-face-attribute 'helm-ff-dotted-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
   (set-face-attribute 'helm-ff-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
@@ -86,6 +87,12 @@ the next source. You have to use `helm-next-source`.
 
 ** Custom :custom:
 
+Instantly go to the match after navigating to the candidate.
+#+BEGIN_SRC emacs-lisp
+(helm-follow-input-idle-delay 0)
+#+END_SRC
+
+
 Show 200 candidates instead of 50 in search results.
 
 #+BEGIN_SRC emacs-lisp
@@ -132,6 +139,12 @@ Use helm as default completion framework.
 (helm-mode 1)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(require 'helm-command)
+(kwrooijen/helm-colors-hook)
+#+END_SRC
+
+
 Don't hide other windows when opening Helm. Open helm with full width
 at the bottom.
 
@@ -168,17 +181,6 @@ Remove helm header
 (defun helm-insert-header-from-source (source)
   (let ((name (assoc-default 'name source)))
     (helm-insert-header name "")))
-#+END_SRC
-
-
-
-** Hooks :hook:
-
-Add `kwrooijen/helm-colors-hook` to `helm-after-initialize` to prevent
-custom colors from being overwritten.
-
-#+BEGIN_SRC emacs-lisp
-((helm-after-initialize . kwrooijen/helm-colors-hook))
 #+END_SRC
 
 ** Bindings :general:
@@ -366,6 +368,7 @@ https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae9
 Some custom colors for helm-rg to make it less chaotic
 
 #+BEGIN_SRC emacs-lisp
+
 (set-face-attribute 'helm-rg-title-face nil :background 'unspecified :foreground 'unspecified)
 (set-face-attribute 'helm-rg-error-message nil :background 'unspecified :foreground 'unspecified)
 (set-face-attribute 'helm-rg-extra-arg-face nil :background 'unspecified :foreground 'unspecified)

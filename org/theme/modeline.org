@@ -150,7 +150,7 @@
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
-                     'warning
+                     `(:foreground ,(face-attribute 'kwrooijen/warning-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
     (kwrooijen/modeline-r "%b" face)))
 #+END_SRC
@@ -208,7 +208,7 @@
   (kwrooijen/modeline-r
    (with-helm-buffer
      (format "[%s/%s]"
-             (helm-candidate-number-at-point)
+             (- (line-number-at-pos) 1)
              (helm-get-candidate-number 'in-current-source)))
    'default))
 #+END_SRC
