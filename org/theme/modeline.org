@@ -9,7 +9,9 @@
   :group 'kwrooijen/modeline)
 
 (defface kwrooijen/modeline-border-inactive
-  '((t (:inherit kwrooijen/darken-fb-face)))
+  `((t (:foreground ,(face-attribute 'kwrooijen/darken-fg-face :foreground)))
+    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+    (t (:height 1.5)))
   "Face for the inactive window border."
   :group 'kwrooijen/modeline)
 
@@ -74,7 +76,9 @@
   "Show a border only when the window is active."
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
-    (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
+    (propertize kwrooijen/modeline-inactive-border 'face
+                `(:foreground ,(face-attribute 'kwrooijen/modeline-border-inactive :foreground)
+                  :height ,(face-attribute 'kwrooijen/modeline-border-inactive :height)))))
 
 ;; ----------------------------------------
 ;; Track active window
