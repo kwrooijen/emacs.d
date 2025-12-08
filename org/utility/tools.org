@@ -257,3 +257,13 @@ Emacs, available at any time and uniformly in any buffer.
 This is a major mode for Emacs providing editing conveniences for the
 OpenGL Shading Language (GLSL). It currently handles GLSL version 4.6,
 including many recent Vulkan extensions.
+
+* Bookmark
+:PROPERTIES:
+:PACKAGE:  bookmark
+:END:
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "f b" '(bookmark-jump :which-key "Find Bookmark"))
+#+END_SRC

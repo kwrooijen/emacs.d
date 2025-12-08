@@ -7,8 +7,15 @@
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "pi" 'projectile-invalidate-cache
-  "pr" 'projectile-replace)
+  "p i" '(projectile-invalidate-cache :which-key "Invalidate Cache")
+  "p r" '(projectile-replace :which-key "Replace")
+  "p p" '(projectile-switch-project :which-key "Switch to Project")
+  "p f" '(projectile-find-file :which-key "Find Project file")
+  "p F" '(projectile-find-file-in-known-projects :which-key "Find Project file+")
+  "s p" '(projectile-rg :which-key "Project Grep")
+  "s P" '(projectile-rg-with-input :which-key "Project Grep")
+  "s o" '(projectile-rg-full :which-key "Project Grep")
+  "s O" '(projectile-rg-full-with-input :which-key "Project Grep")))
 #+END_SRC
 
 ** Init :init:

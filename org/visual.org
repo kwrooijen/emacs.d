@@ -42,7 +42,6 @@
  (org-mode . highlight-numbers-mode))
 #+END_SRC
 
-
 * Dimmer
 :PROPERTIES:
 :PACKAGE: dimmer
@@ -62,23 +61,34 @@
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-dim-all-initialize ()
-  "Dim all buffers except during `helm-occur'."
-  (dimmer-dim-all)
-  (when (string= helm-buffer "*helm occur*")
-    (dimmer-restore-buffer (current-buffer))))
+
+(defun kwrooijen/dimmer-dim-all ()
+  "Dim all buffers."
+  (mapc (lambda (buf)
+          (with-current-buffer buf
+(unless (minibufferp)
+          (dimmer-dim-buffer buf dimmer-fraction))))
+        (dimmer-visible-buffer-list)))
+
+(defun kwrooijen/minibuffer-dim-all-initialize ()
+  "Dim all buffers except during `minibuffer-occur'."
+  (kwrooijen/dimmer-dim-all)
+  (when (eq this-command 'consult-line)
+    (dimmer-restore-buffer (window-buffer (minibuffer-selected-window)))))
 
 ;;;###autoload
-(define-minor-mode kwrooijen/helm-dim-mode
-  "Toggle dimming adjustments for Helm."
+(define-minor-mode kwrooijen/minibuffer-dim-mode
+  "Toggle dimming adjustments for Minibuffer."
   :global t
-  (if kwrooijen/helm-dim-mode
+  (if kwrooijen/minibuffer-dim-mode
       (progn
-        (add-to-list 'dimmer-exclusion-regexp-list "^\\*[hH]elm.*\\*$")
-        (add-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
-        (add-hook 'helm-cleanup-hook #'dimmer-restore-all))
-    (remove-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
-    (remove-hook 'helm-cleanup-hook #'dimmer-restore-all)))
+        (add-to-list 'dimmer-exclusion-regexp-list ".*Minibuf.*")
 
-(kwrooijen/helm-dim-mode)
+        (add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (add-hook 'minibuffer-exit-hook #'dimmer-restore-all))
+
+        (remove-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (remove-hook 'minibuffer-exit-hook #'dimmer-restore-all)))
+
+(kwrooijen/minibuffer-dim-mode)
 #+END_SRC

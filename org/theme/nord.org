@@ -560,4 +560,11 @@ style. Similar to Solaire mode, but more flexible.
 
 (dolist (hook kwrooijen/subwindow-hook-list)
   (add-hook hook #'kwrooijen/subwindow-setup-hook))
+
+(defun minibuffer-subwindow-hook ()
+ (face-remap-add-relative 'default '(:background "#1e2030"))
+ (face-remap-add-relative 'minibuffer-prompt '(:background "#1e2030"))
+ (set-window-margins (minibuffer-window) 2 2))
+
+(add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)
 #+END_SRC

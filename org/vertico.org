@@ -1,0 +1,221 @@
+* Vertico
+:PROPERTIES:
+:PACKAGE:  vertico
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'minibuffer-local-map
+          "M-c" #'clipboard-kill-ring-save
+          "M-v" #'clipboard-yank
+
+          ;; Navigation
+          "C-f" #'scroll-up-command
+          "C-b" #'scroll-down-command
+          "C-h" #'backward-char
+          "C-l" #'forward-char
+          "C-j" #'next-line
+          "C-k" #'previous-line
+          "M-h" #'backward-word
+          "M-l" #'forward-word
+
+          ;; Deletion
+          "C-d" #'delete-char
+          "C-S-d" #'kill-line
+          "M-d" #'kill-word)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(vertico-mode)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/minibuffer-set-minimum-height ()
+  (let ((win (active-minibuffer-window)))
+    (when (window-live-p win)
+      (with-selected-window win
+        (let* ((target 17)
+               (delta (- target (window-height))))
+          (when (/= delta 0)
+            (enlarge-window delta)))))))
+
+(defun kwrooijen/vertico-add-bottom-padding (orig-func height)
+  "Add extra padding to Vertico completion window height."
+  (funcall orig-func (1+ height)))
+
+(defun kwrooijen/vertico-add-top-padding (orig-fun lines)
+  "Add an empty visual line above the Vertico candidate list."
+  (funcall
+   orig-fun
+   (if (or (null lines)
+           ;; Don’t mess with alternative UIs; just in case you use them.
+           (bound-and-true-p vertico-flat-mode)
+           (bound-and-true-p vertico-buffer-mode)
+           (bound-and-true-p vertico-grid-mode))
+       lines
+     ;; Prepend a blank line as an extra ‘candidate line’.
+     (cons "\n" lines))))
+
+(defun kwrooijen/hide-minibuffer-prompt ()
+  "Visually hide the minibuffer prompt (e.g. \"M-x\", \"Find file:\")."
+  (when (minibufferp)
+
+  (let ((inhibit-read-only t))
+    (add-text-properties (point-min) (minibuffer-prompt-end)
+                         '(display ">> ")))))
+
+(defun kwrooijen/hide-minibuffer-truncation-indicator ()
+  (let ((table (or buffer-display-table (make-display-table))))
+    (set-display-table-slot
+     table 'truncation
+     (make-glyph-code ?\  'kwrooijen/darken-fb-face))
+    (setq-local buffer-display-table table)))
+
+(advice-add #'vertico--display-candidates :around #'kwrooijen/vertico-add-top-padding)
+
+(advice-add #'vertico--resize-window :around #'kwrooijen/vertico-add-bottom-padding)
+
+(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
+
+(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-prompt)
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(vertico-count 17)
+(vertico-count-format '("%-9s " . "[%s/%s]"))
+#+END_SRC
+
+Don't resize minibuffer
+#+BEGIN_SRC emacs-lisp
+(resize-mini-windows nil)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
+#+END_SRC
+
+
+* Consult
+:PROPERTIES:
+:PACKAGE:  consult
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(completion-list-mode . consult-preview-at-point-mode)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+  (advice-add #'register-preview :override #'consult-register-window)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(consult-async-refresh-delay 0)
+(register-preview-delay nil)
+#+END_SRC
+
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+  ;; Optionally configure preview. The default value
+  ;; is 'any, such that any key triggers the preview.
+  ;; (setq consult-preview-key 'any)
+  (setq consult-preview-key "M-.")
+  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
+  ;; For some commands and buffer sources it is useful to configure the
+  ;; :preview-key on a per-command basis using the `consult-customize' macro.
+  (consult-customize
+   consult-theme :preview-key '(:debounce 0.2 any)
+   consult-ripgrep consult-git-grep consult-grep consult-man
+   consult-bookmark consult-recent-file consult-xref
+   consult-source-bookmark consult-source-file-register
+   consult-source-recent-file consult-source-project-recent-file
+   ;; :preview-key "M-."
+   :preview-key '(:debounce 0.4 any))
+
+  ;; Optionally configure the narrowing key.
+  ;; Both < and C-+ work reasonably well.
+  (setq consult-narrow-key "<") ;; "C-+"
+
+(set-face-attribute 'consult-highlight-match nil :inherit 'unspecified :foreground "#fffff" :weight 'bold)
+(set-face-attribute 'consult-preview-match nil :inherit 'unspecified :foreground "#fffff" :weight 'bold)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "ss" '(consult-line :which-key "Find in buffer")
+  "sp" '(consult-ripgrep :which-key "Grep in Project"))
+#+END_SRC
+
+* Orderless
+:PROPERTIES:
+:PACKAGE:  orderless
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(completion-styles '(orderless))
+(completion-category-defaults nil)
+(completion-category-overrides '((file (styles . (orderless)))))
+(orderless-matching-styles '(orderless-literal orderless-prefixes))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'orderless-match-face-0 nil :foreground "#ffffff" :weight 'bold)
+(set-face-attribute 'orderless-match-face-1 nil :foreground "#ffffff" :weight 'bold)
+(set-face-attribute 'orderless-match-face-2 nil :foreground "#ffffff" :weight 'bold)
+(set-face-attribute 'orderless-match-face-3 nil :foreground "#ffffff" :weight 'bold)
+#+END_SRC
+
+* Marginalia
+:PROPERTIES:
+:PACKAGE:  marginalia
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(marginalia-mode)
+#+END_SRC
+
+* Embark
+:PROPERTIES:
+:PACKAGE:  embark
+:STRAIGHT: t
+:END:
+
+# ** General :general:
+# #+BEGIN_SRC emacs-lisp
+# ("C-." . embark-act)         ;; pick some comfortable binding
+# ("C-;" . embark-dwim)        ;; good alternative: M-.
+# ("C-h B" . embark-bindings)
+# #+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none))))
+#+END_SRC
+
+* Embark Consult
+:PROPERTIES:
+:PACKAGE:  embark-consult
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(embark-collect-mode . consult-preview-at-point-mode)
+#+END_SRC
