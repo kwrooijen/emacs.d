@@ -487,9 +487,10 @@ style. Similar to Solaire mode, but more flexible.
 #+BEGIN_SRC emacs-lisp
 (defvar-local kwrooijen/subwindow-needs-style nil)
 
-(defun kwrooijen/subwindow-styling ()
+(defun kwrooijen/subwindow-styling (win)
   (when kwrooijen/subwindow-needs-style
     (set-window-fringes win 24 24)
+    (setq header-line-format " ")
     (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
     (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
     (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
@@ -507,7 +508,7 @@ style. Similar to Solaire mode, but more flexible.
 (defun kwrooijen/subwindow-restyle ()
   (dolist (win (window-list))
     (with-current-buffer (window-buffer win)
-      (kwrooijen/subwindow-styling))))
+      (kwrooijen/subwindow-styling win))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
