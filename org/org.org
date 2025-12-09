@@ -453,7 +453,6 @@ If not, show simply the clocked time like 01:50."
 (org-roam-directory (file-truename "~/Documents/org/notes"))
 (org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
 (org-roam-completion-everywhere t)
-(org-roam-completion-system 'helm)
 (org-roam-capture-templates '(("d" "default" plain "%?"
                                       :target (file+head "${slug}.org" "#+title: ${title} ")
                                       :unnarrowed t)

@@ -18,7 +18,7 @@
 (general-define-key
  :states 'normal
  :keymaps 'dired-mode-map
- ";" #'helm-find-files)
+ ";" #'find-file)
 #+END_SRC
 
 * Diredfl

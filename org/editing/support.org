@@ -154,7 +154,6 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
           "C-k" 'company-select-previous-or-abort
           "C-f" 'company-next-page
           "C-b" 'company-previous-page
-          "C-;" 'helm-company
           "<escape>" 'company-abort)
 
 ("M-;" 'company-complete)

@@ -197,7 +197,7 @@ Center spacing
    '(:eval (kwrooijen/modeline-buffer-name))
    '(:eval (kwrooijen/modeline-line-col))
    '(:eval (kwrooijen/modeline-scroll)))
-  "Left side of the Helm modeline."
+  "Left side of the modeline."
   :type 'list
   :group 'kwrooijen/modeline)
 
@@ -206,7 +206,7 @@ Center spacing
    '(:eval (kwrooijen/modeline-org-clock))
    '(:eval (kwrooijen/modeline-git-branch))
    '(:eval (kwrooijen/modeline-mode)))
-  "Right side of the Helm modeline."
+  "Right side of the modeline."
   :type 'list
   :group 'kwrooijen/modeline)
 
@@ -244,58 +244,4 @@ If not a file buffer, return the buffer name."
 
      ;; Not a file buffer
      (t (buffer-name)))))
-#+END_SRC
-
-
-* Helm
-
-** Segments
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/modeline-helm-candidates ()
-  (with-helm-buffer
-    (let* ((current (- (line-number-at-pos) 1))
-           (total (helm-get-candidate-number 'in-current-source))
-           (segment-string (format "  [%s/%s]" current total)))
-      (kwrooijen/modeline-r segment-string 'default))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-buffer ()
-  (let* ((buffer (format " %s" (buffer-name)))
-         (buffer (replace-regexp-in-string "\\*" "" buffer))
-         (buffer (replace-regexp-in-string "-" " " buffer))
-         (buffer (capitalize buffer)))
-    (kwrooijen/modeline-r buffer 'warning)))
-#+END_SRC
-
-** Helm modeline configuration
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/helm-modeline-left
-  (list
-   '(:eval (kwrooijen/modeline-win-focus-border t))
-   '(:eval (kwrooijen/helm-buffer))
-   '(:eval (kwrooijen/modeline-helm-candidates)))
-  "Left side of the Helm modeline."
-  :type 'list
-  :group 'kwrooijen/modeline)
-
-(defcustom kwrooijen/helm-modeline-right
-  (list)
-  "Right side of the Helm modeline."
-  :type 'list
-  :group 'kwrooijen/modeline)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(with-eval-after-load 'helm
-  (defun helm-display-mode-line (source &optional force)
-    (setq mode-line-format
-          (let* ((left kwrooijen/helm-modeline-left)
-                 (right kwrooijen/helm-modeline-right))
-            (concat
-             (format-mode-line left)
-             (kwrooijen/modeline-center-space right)
-             (format-mode-line right))))))
 #+END_SRC

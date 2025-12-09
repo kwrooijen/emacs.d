@@ -268,25 +268,6 @@ Recenter screen when iedit is used.
 #+END_SRC
 
 
-* Helm :config:
-:PROPERTIES:
-:PACKAGE: helm
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-face-attributes 'helm-source-header)
-#+END_SRC
-
-* Helm-rg :config:
-:PROPERTIES:
-:PACKAGE: helm-rg
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'helm-rg-file-match-face 'kwrooijen/faded-fg-face)
-#+END_SRC
-
 * Org :config:
 :PROPERTIES:
 :PACKAGE: org
@@ -500,7 +481,7 @@ Recenter screen when iedit is used.
 
 * Subwindow
 
-Give subwindows (magit, repl, shell, helm, etc) a different
+Give subwindows (magit, repl, shell, minibuffer, etc) a different
 style. Similar to Solaire mode, but more flexible.
 
 #+BEGIN_SRC emacs-lisp
@@ -509,8 +490,6 @@ style. Similar to Solaire mode, but more flexible.
 (defun kwrooijen/subwindow-styling ()
   (when kwrooijen/subwindow-needs-style
     (set-window-fringes win 24 24)
-    (unless (helm-window)
-      (setq header-line-format " "))
     (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
     (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
     (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
@@ -523,13 +502,6 @@ style. Similar to Solaire mode, but more flexible.
   ;; buffer.
   (when (get-buffer (or transient--buffer-name ""))
     (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-setup-hook-helm ()
-  ;; Helm has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (helm-buffer-get))
-    (with-current-buffer (get-buffer (helm-buffer-get))
       (setq kwrooijen/subwindow-needs-style t))))
 
 (defun kwrooijen/subwindow-restyle ()
@@ -555,7 +527,6 @@ style. Similar to Solaire mode, but more flexible.
   :type '(repeat symbol)
   :group 'kwrooijen)
 
-(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook-helm)
 (add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
 
 (dolist (hook kwrooijen/subwindow-hook-list)

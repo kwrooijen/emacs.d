@@ -98,27 +98,9 @@ in `projectile-find-file`. To "fix" this for now, we force
 (defun projectile-get-sub-projects-files (_ _) nil)
 #+END_SRC
 
-
-In order for ~grep-find-ignored-files~ to property ignore files in
-~helm-projectile-rg~, we need to override the ~glob-quote~ function. For
-some reason it messes up the askerisk.
-
-TODO: Create an issue
-https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L994-L997
-
-#+BEGIN_SRC emacs-lisp
-(defun glob-quote (string)
-  "Quote the special glob characters: *, ?, [, and ].
-STRING the string in which to escape special characters."
-  ;; (replace-regexp-in-string "[]*?[]" "\\\\\\&" string)
-  string)
-#+END_SRC
-
-
 Add any `projectile-globally-ignored-file-suffixes` to `grep-find-ignored-files`.
-This should work for `helm-projectile-rg`.
-(see: helm-projectile.el:helm-projectile-rg:ignored-files)
-
+This should work for `consult-ripgrep`.
+TODO: Check if this is still necessary
 #+BEGIN_SRC emacs-lisp
 (dolist (file projectile-globally-ignored-file-suffixes)
   (add-to-list 'grep-find-ignored-files (concat "*" file)))
