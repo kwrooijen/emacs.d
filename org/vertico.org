@@ -26,6 +26,11 @@
           "M-d" #'kill-word)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "rr" '(vertico-repeat :which-key "Repeat last search"))
+#+END_SRC
+
 ** Init :init:
 #+BEGIN_SRC emacs-lisp
 (vertico-mode)
@@ -97,6 +102,7 @@ Don't resize minibuffer
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 ('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
+('minibuffer-setup #'vertico-repeat-save)
 #+END_SRC
 
 
@@ -113,7 +119,9 @@ Don't resize minibuffer
 
 ** Init :init:
 #+BEGIN_SRC emacs-lisp
-  (advice-add #'register-preview :override #'consult-register-window)
+(advice-add #'register-preview :override #'consult-register-window)
+(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
+(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
 #+END_SRC
 
 ** Custom :custom:
@@ -122,31 +130,21 @@ Don't resize minibuffer
 (register-preview-delay nil)
 #+END_SRC
 
-
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-  ;; Optionally configure preview. The default value
-  ;; is 'any, such that any key triggers the preview.
-  ;; (setq consult-preview-key 'any)
-  (setq consult-preview-key "M-.")
-  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
-  ;; For some commands and buffer sources it is useful to configure the
-  ;; :preview-key on a per-command basis using the `consult-customize' macro.
   (consult-customize
-   consult-theme :preview-key '(:debounce 0.2 any)
+   consult-line :preview-key 'any)
+
+  (consult-customize
+   consult-theme
    consult-ripgrep consult-git-grep consult-grep consult-man
    consult-bookmark consult-recent-file consult-xref
    consult-source-bookmark consult-source-file-register
    consult-source-recent-file consult-source-project-recent-file
-   ;; :preview-key "M-."
-   :preview-key '(:debounce 0.4 any))
+   :preview-key "TAB")
 
-  ;; Optionally configure the narrowing key.
-  ;; Both < and C-+ work reasonably well.
-  (setq consult-narrow-key "<") ;; "C-+"
-
-(set-face-attribute 'consult-highlight-match nil :inherit 'unspecified :foreground "#fffff" :weight 'bold)
-(set-face-attribute 'consult-preview-match nil :inherit 'unspecified :foreground "#fffff" :weight 'bold)
+(set-face-attribute 'consult-highlight-match nil :inherit 'bold)
+(set-face-attribute 'consult-preview-match nil :inherit 'bold)
 #+END_SRC
 
 ** General :general:
@@ -172,10 +170,10 @@ Don't resize minibuffer
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'orderless-match-face-0 nil :foreground "#ffffff" :weight 'bold)
-(set-face-attribute 'orderless-match-face-1 nil :foreground "#ffffff" :weight 'bold)
-(set-face-attribute 'orderless-match-face-2 nil :foreground "#ffffff" :weight 'bold)
-(set-face-attribute 'orderless-match-face-3 nil :foreground "#ffffff" :weight 'bold)
+(set-face-attribute 'orderless-match-face-0 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-1 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-2 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-3 nil :inherit 'bold :foreground 'unspecified)
 #+END_SRC
 
 * Marginalia
