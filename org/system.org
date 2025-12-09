@@ -111,7 +111,8 @@ modes. These keys are configurable through the variables
   "f" '(:ignore t :which-key "Files")
   "p" '(:ignore t :which-key "Project")
   "w" '(:ignore t :which-key "Window")
-  "r" '(:ignore t :which-key "Resume"))
+  "r" '(:ignore t :which-key "Resume")
+  "h" '(:ignore t :which-key "Help"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
@@ -209,4 +210,32 @@ Buffer
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "b b" '(switch-to-buffer :which-key "Switch to Buffer"))
+#+END_SRC
+
+Help
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/describe-face ()
+  (interactive)
+  (let ((hl-line-p (bound-and-true-p hl-line-mode))
+        (buf (current-buffer)))
+    (when hl-line-p
+      (hl-line-mode -1))
+    (unwind-protect
+        (call-interactively #'describe-face)
+      (when hl-line-p
+        ;; Re-enable AFTER this command fully finishes
+        (run-at-time
+         0 nil
+         (lambda (b)
+           (when (buffer-live-p b)
+             (with-current-buffer b
+               (hl-line-mode 1))))
+         buf)))))
+
+(kwrooijen/leader
+  "h a" '(kwrooijen/describe-face :which-key "Describe face")
+  "h k" '(describe-key :which-key "Describe key")
+  "h f" '(describe-function :which-key "Describe function")
+  "h v" '(describe-variable :which-key "Describe variable"))
 #+END_SRC
