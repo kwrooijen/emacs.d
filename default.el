@@ -1,5 +1,4 @@
 (("ace-window" . "77115afc1b0b9f633084cf7479c767988106c196")
- ("aider.el" . "5c2c093f20e14ca5f47ebbb35d4e198550f9fffc")
  ("aidermacs" . "6d0c41d1cfd24821fb32933edf8c0c2a9bb8c847")
  ("all-the-icons.el" . "4778632b29c8c8d2b7cd9ce69535d0be01d846f9")
  ("annalist.el" . "e1ef5dad75fa502d761f70d9ddf1aeb1c423f41d")
@@ -10,7 +9,6 @@
  ("cider" . "fb7aa888125dfd5f174b6c208deca66d3fc129ab")
  ("clj-refactor.el" . "362cb46bf808dc42d2aaf022afe93048439680c4")
  ("clojure-mode" . "28dc02114ae70db6bb68d537ea77985f272120bc")
- ("combobulate" . "17c71802eed2df1a6b25199784806da6763fb90c")
  ("company-box" . "c4f2e243fba03c11e46b1600b124e036f2be7691")
  ("company-mode" . "4ff89f7369227fbb89fe721d1db707f1af74cd0f")
  ("compat" . "270528627f3545dda7865ead13183317434e9f57")
