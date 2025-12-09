@@ -253,3 +253,36 @@ Don't auto select the current selection
 (add-hook 'completion-at-point-functions #'cape-elisp-block)
 
 #+END_SRC
+
+* Flymake
+:PROPERTIES:
+:PACKAGE:  flymake
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'prog-mode-map
+"M-n" #'flymake-goto-next-error
+"M-p" #'flymake-goto-prev-error)
+#+END_SRC
+
+** Custom :custom:
+Don't show indicator. NOTE: This causes the marker (exclamation mark)
+to be displayed inside of the buffer, instead of the margin /
+fringe. To hotfix this, go to the `flymake--highlight-line` function
+and replace `"!"` with `""`. As of now there is no variable we can
+adjust to fix this.
+#+BEGIN_SRC emacs-lisp
+(flymake-indicator-type nil)
+(flymake-indicator-function #'ignore)
+#+END_SRC
+
+* Eglot
+:PROPERTIES:
+:PACKAGE:  eglot
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(eglot-semantic-tokens-enable nil)
+#+END_SRC
