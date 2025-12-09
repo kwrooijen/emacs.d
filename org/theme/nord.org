@@ -539,4 +539,8 @@ style. Similar to Solaire mode, but more flexible.
  (set-window-margins (minibuffer-window) 2 2))
 
 (add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)
+
+(when (buffer-live-p (get-buffer "*Messages*"))
+  (with-current-buffer "*Messages*"
+    (setq kwrooijen/subwindow-needs-style t)))
 #+END_SRC

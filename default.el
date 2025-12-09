@@ -100,7 +100,6 @@
  ("plz-media-type" . "c4c3dec115fb25214a76ac227f68c9ad242f66b6")
  ("poetry.el" . "1dff0d4a51ea8aff5f6ce97b154ea799902639ad")
  ("popwin" . "7adcffa7ae2adef81a9c6262bb05c6e4e2908b83")
- ("projectile" . "9325c45e0fd96d5421e75ad901a91ee5353e10ad")
  ("pyvenv" . "31ea715f2164dd611e7fc77b26390ef3ca93509b")
  ("queue" . "8df1334d54d4735d2f821790422a850dfaaa08ef")
  ("restclient" . "426507f8f7029347fbbc78ce3b963df718abc3ce")

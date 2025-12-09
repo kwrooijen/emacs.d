@@ -23,7 +23,10 @@
           ;; Deletion
           "C-d" #'delete-char
           "C-S-d" #'kill-line
-          "M-d" #'kill-word)
+          "M-d" #'kill-word
+
+          ;; Other
+          "M-]" (lambda() (interactive) (dimmer-restore-all)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -130,8 +133,12 @@ Don't resize minibuffer
 #+END_SRC
 
 ** Custom :custom:
+
+No delays
 #+BEGIN_SRC emacs-lisp
 (consult-async-refresh-delay 0)
+(consult-async-input-debounce 0)
+(consult-async-input-throttle 0)
 (register-preview-delay nil)
 #+END_SRC
 
@@ -142,12 +149,15 @@ Don't resize minibuffer
 
   (consult-customize
    consult-theme
+   consult-buffer
    consult-ripgrep consult-git-grep consult-grep consult-man
    consult-bookmark consult-recent-file consult-xref
    consult-source-bookmark consult-source-file-register
    consult-source-recent-file consult-source-project-recent-file
+   kwrooijen/consult-ripgrep-symbol-at-point
    :preview-key "TAB")
 
+(set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
 (set-face-attribute 'consult-highlight-match nil :inherit 'bold)
 (set-face-attribute 'consult-preview-match nil :inherit 'bold)
 
@@ -155,13 +165,34 @@ Don't resize minibuffer
 (set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-ripgrep-symbol-at-point ()
+  (interactive)
+  (consult-ripgrep nil (thing-at-point 'symbol t)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/minibuffer-disable-hl-line ()
+  (with-current-buffer (window-buffer (minibuffer-selected-window))
+    (hl-line-mode -1)))
+
+(defun kwrooijen/minibuffer-restore-hl-line ()
+  (with-current-buffer (window-buffer (minibuffer-selected-window))
+    (hl-line-mode 1)))
+
+(add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-disable-hl-line)
+(add-hook 'minibuffer-exit-hook #'kwrooijen/minibuffer-restore-hl-line)
+#+END_SRC
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "ss" '(consult-line :which-key "Find in buffer")
   "sp" '(consult-ripgrep :which-key "Grep in Project")
+  "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
   "bb" '(consult-buffer :which-key "Switch buffer")
-  "fb" '(consult-bookmark :which-key "Open bookmark"))
+  "fb" '(consult-bookmark :which-key "Open bookmark")
+  "ry" '(consult-yank-from-kill-ring :which-key "Kill ring"))
 #+END_SRC
 
 * Orderless
@@ -227,4 +258,16 @@ Don't resize minibuffer
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 (embark-collect-mode . consult-preview-at-point-mode)
+#+END_SRC
+
+* Wgrep
+:PROPERTIES:
+:PACKAGE:  wgrep
+:STRAIGHT: t
+:END:
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'wgrep-mode-map
+          "C-c C-c" #'wgrep-finish-edit
+          "C-c C-k" #'wgrep-abort-changes)
 #+END_SRC

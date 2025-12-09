@@ -147,6 +147,10 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 :STRAIGHT: t
 :END:
 
+TODO replace with
+https://github.com/minad/corfu
+https://github.com/minad/cape
+
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (:keymaps 'company-active-map
@@ -163,7 +167,6 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 #+BEGIN_SRC emacs-lisp
 ((after-init . global-company-mode))
 #+END_SRC
-
 
 * Company Box
 :PROPERTIES:
@@ -192,141 +195,7 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 :PACKAGE: aider
 :STRAIGHT: (:host github :repo "tninja/aider.el")
 :END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(aider-args '("--model" "openrouter/anthropic/claude-3.7-sonnet" "--no-auto-accept-architect" "--no-auto-commits"))
-(kwrooijen/aider-models '(("gemini 2.5-flash" . "openrouter/google/gemini-2.5-flash-preview")
-                          ("gpt-5-nano" . "openrouter/openai/gpt-5-nano")
-                          ("Claude 4.0" . "openrouter/anthropic/claude-3.7-sonnet")))
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-
-(defun kwrooijen/aider-run-aider ()
-  (interactive)
-  (let ((default-directory (or (projectile-project-root)
-                               default-directory)))
-    (aider-run-aider)))
-
-(defun kwrooijen/aider-switch-model ()
-  (interactive)
-  (let* ((model (completing-read "Select model: " (mapcar 'car kwrooijen/aider-models)))
-         (model-args (cdr (assoc model kwrooijen/aider-models))))
-    (setq aider-args `("--model" ,model-args "--no-auto-accept-architect"))
-    (message "Aider model set to: %s" model)))
-
-(defun kwrooijen/aider-switch-mode (mode)
-  "Either switch to Code Mode, Ask Mode, Architect Mode, or Help Mode"
-  (interactive
-   (list (completing-read "Select mode: " '("Code" "Ask" "Architect" "Help"))))
-  (cond
-   ((string= mode "Code")
-    (aider--send-command "/code")
-    (message "Switched to Code Mode"))
-   ((string= mode "Ask")
-    (aider--send-command "/ask")
-    (message "Switched to Ask Mode"))
-   ((string= mode "Architect")
-    (aider--send-command "/architect")
-    (message "Switched to Architect Mode"))
-   ((string= mode "Help")
-    (aider--send-command "/help")
-    (message "Switched to Help Mode"))))
-
-(defun kwrooijen/aider-clear-prompt ()
-  "Clear the user input at the current prompt in the Aider buffer."
-  (interactive)
-  (when (eq major-mode 'aider-comint-mode)
-    (let ((inhibit-read-only t))
-      (delete-region comint-last-input-start (point-max)))))
-
-(defun kwrooijen/aider-explain-error-at-point ()
-  "Explain the eglot error at point."
-  (interactive)
-  (let ((error-message (kwrooijen/eglot-error-at-point))
-        (line-number (line-number-at-pos))
-        (line (thing-at-point 'line t))
-        (file-name (buffer-file-name)))
-    (if error-message
-        (progn
-          (aider-switch-to-buffer)
-          (kwrooijen/aider-clear-prompt)
-          (aider--send-command "/ask")
-          (aider-add-current-file)
-          (aider--send-command (format "Explain the following error in %s:%s\nLine:%s\nError:%s" file-name line-number line error-message)))
-      (error "No error message at point"))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-;; Defcustom kwrooijen/aider-style-guides, List of style guides to use based on key
-;; (defcustom kwrooijen/aider-style-guides
-;;   '(("LangChain" . "You hare a coding assistent writing Python, LangChain code.
-;; Every node should have their own class, with the following format:
-
-;; ```python
-;; class State(BaseModel):
-;;     items: List[Any] = []
-
-;; class NodeFoobar:
-;;     def __init__(self, *args, **kwargs):
-;;         # Any initialization code goes here
-;;     def invoke(self, state):
-;;         # Any code to run the node goes here
-;;         return state
-
-;; class NodeBarbaz:
-;;     def __init__(self, *args, **kwargs):
-;;         # Any initialization code goes here
-;;     def invoke(self, state):
-;;         # Any code to run the node goes here
-;;         return state
-
-;; class GraphMyProject:
-;;     def add_sequence(self, sequence):
-;;         for i in range(len(sequence) - 1):
-;;             self.graph_builder.add_edge(sequence[i], sequence[i + 1])
-
-;;     def __init__(self):
-;;         self.graph_builder = StateGraph(state_schema=State, config_schema=RunnableConfig)
-;;         self.graph_builder.add_node(\"Foobar\" , NodeFoobar())
-;;         self.graph_builder.add_node(\"Barbaz\" , NodeBarBaz())
-
-
-;;         self.add_sequence([START, \"Foobar\", \"Barbaz\"])
-;;         self.graph = self.graph_builder.compile()
-
-;;     def invoke(self):
-;;         return self.graph.invoke(State(), {})
-
-;;     def ainvoke(self):
-;;         return self.graph.ainvoke(State(), {})
-
-;; ```
-;; ")))
-#+END_SRC
-
-
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "aa" 'kwrooijen/aider-run-aider
-  "af" 'aider-add-current-file
-  "ag" 'aider-go-ahead
-  "aq" 'aider-exit
-  "ac" 'aider-clear-buffer
-  "ak" 'aider-ask-question
-  "ao" 'aider-open-history
-  "au" 'aider-write-unit-test
-  "aK" 'aider-general-question
-  "al" 'aider-send-block-by-line
-  "as" 'aider-send-line-or-region
-  "aM" 'kwrooijen/aider-switch-model
-  "am" 'kwrooijen/aider-switch-mode
-  "ae" 'kwrooijen/aider-explain-error-at-point)
-#+END_SRC
+# TODO: Why does emacs break when I remove aider.el?
 
 
 * Combobulate
@@ -539,7 +408,10 @@ If NAMED is t, only include named nodes."
 #+BEGIN_SRC emacs-lisp
 (aidermacs-show-diff-after-change nil)
 (aidermacs-auto-commits nil)
+(aidermacs-default-chat-mode 'code)
 (aidermacs-extra-args '("--no-auto-commits"))
+(aidermacs-default-model "openrouter/anthropic/claude-sonnet-4.5")
+(aidermacs-weak-model "openrouter/x-ai/grok-code-fast-1")
 #+END_SRC
 
 ** Config :config:
@@ -555,3 +427,10 @@ If NAMED is t, only include named nodes."
 (kwrooijen/leader
 "a" 'aidermacs-transient-menu)
 #+END_SRC
+
+
+* Eca
+:PROPERTIES:
+:PACKAGE:  eca
+:STRAIGHT: t
+:END:

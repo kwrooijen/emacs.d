@@ -7,7 +7,7 @@
 
 Disable Anzu by default
 #+BEGIN_SRC emacs-lisp
-(anzu-mode-line-update-function #'anzu--update-modeline-noop)
+(anzu-mode-line-update-function (lambda(&rest _)))
 (anzu-mode-lighter "")
 #+END_SRC
 

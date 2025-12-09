@@ -65,6 +65,7 @@
 
 (defvar kwrooijen/modeline-active-border "▎")
 (defvar kwrooijen/modeline-inactive-border "▎")
+(defvar kwrooijen/modeline-selected-window nil)
 
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
@@ -90,10 +91,10 @@
            (tag
             (upcase
              (pcase state
-               ('normal  "  N ")
-               ('insert  "  I ")
-               ('visual  "  V ")
-               ('replace "  R ")
+               ('normal  " N ")
+               ('insert  " I ")
+               ('visual  " V ")
+               ('replace " R ")
                (_ (substring (symbol-name state) 0 1)))))
            (face
             (pcase state
@@ -108,7 +109,7 @@
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-winum ()
   (when (bound-and-true-p winum-mode)
-    (let* ((num-str (format "%d" (or (winum-get-number) 1)))
+    (let* ((num-str (format "%d " (or (winum-get-number) 1)))
            (face (if (eq (selected-window) kwrooijen/modeline-selected-window)
                      `(:inherit kwrooijen/modeline-winum :weight bold)
                    'kwrooijen/modeline-winum)))
@@ -128,8 +129,8 @@
 (defun kwrooijen/modeline-scroll ()
   (kwrooijen/modeline-r
    (cond
-    ((eq (point) (point-min)) "Top")
-    ((eq (point) (point-max)) "Bot")
+    ((eq (point) (point-min)) " Top")
+    ((eq (point) (point-max)) " Bot")
     (t (format " %d％"
                (/ (* 100 (1- (line-number-at-pos)))
                   (count-lines (point-min) (point-max))))))
@@ -220,6 +221,11 @@ Center spacing
 
 (setq-default mode-line-format
               '((:eval (kwrooijen/mode-line))))
+
+(when (buffer-live-p (get-buffer "*Messages*"))
+  (with-current-buffer "*Messages*"
+    (setq mode-line-format
+          '((:eval (kwrooijen/mode-line))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp

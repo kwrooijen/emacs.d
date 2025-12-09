@@ -103,3 +103,18 @@
     (insert-file-contents (expand-file-name file))
     (buffer-string)))
 #+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/project-root ()
+  (project-root (project-current)))
+
+(defun kwrooijen/project-name ()
+  (project-name (project-current)))
+
+;; TODO Remove Projectile dependency
+(defun projectile-project-root ()
+  (kwrooijen/project-root))
+
+(defun projectile-project-name ()
+  (kwrooijen/project-name))
+#+END_SRC

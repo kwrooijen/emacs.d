@@ -1,4 +1,3 @@
-#+STARTUP: showeverything
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
@@ -61,19 +60,34 @@
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
+(defgroup kwrooijen/minibuffer-dim nil
+  "Customization for minibuffer-aware dimming rules."
+  :group 'convenience)
+
+(defcustom kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    anzu-query-replace
+    kwrooijen/consult-ripgrep-symbol-at-point)
+
+  "Commands for which the original window should not be dimmed.
+When the minibuffer is activated by one of these commands,
+the selected window will be restored (not dimmed)."
+  :type '(repeat symbol))
 
 (defun kwrooijen/dimmer-dim-all ()
   "Dim all buffers."
   (mapc (lambda (buf)
           (with-current-buffer buf
-(unless (minibufferp)
-          (dimmer-dim-buffer buf dimmer-fraction))))
+            (unless (minibufferp)
+              (dimmer-dim-buffer buf dimmer-fraction))))
         (dimmer-visible-buffer-list)))
 
 (defun kwrooijen/minibuffer-dim-all-initialize ()
-  "Dim all buffers except during `minibuffer-occur'."
+  "Dim all buffers except for commands listed in `kwrooijen/minibuffer-dim-excluded-commands'."
   (kwrooijen/dimmer-dim-all)
-  (when (eq this-command 'consult-line)
+  (when (memq this-command kwrooijen/minibuffer-dim-excluded-commands)
     (dimmer-restore-buffer (window-buffer (minibuffer-selected-window)))))
 
 ;;;###autoload

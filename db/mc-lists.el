@@ -62,6 +62,7 @@
         lispy-brackets
         lispy-brackets-or-barf
         lispy-comment
+        lispy-convolute-sexp
         lispy-delete
         lispy-kill
         lispy-kill-word

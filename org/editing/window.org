@@ -43,7 +43,7 @@ Don't add window number to modeline
 
 Undo or redo changes in your window layout.
 
-** Config :config:
+** Init :init:
 
 #+BEGIN_SRC emacs-lisp
 (winner-mode 1)
@@ -80,17 +80,4 @@ Manage windows that pop up on your screen.
 (push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
-#+END_SRC
-
-
-* Shackle :config:
-:PROPERTIES:
-:PACKAGE: shackle
-:STRAIGHT: t
-:END:
-
-Package for managing window positions. Similar to popwin.
-
-#+BEGIN_SRC emacs-lisp
-(shackle-mode 1)
 #+END_SRC
