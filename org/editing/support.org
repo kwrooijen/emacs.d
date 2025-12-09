@@ -281,8 +281,3 @@ adjust to fix this.
 :PROPERTIES:
 :PACKAGE:  eglot
 :END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(eglot-semantic-tokens-enable nil)
-#+END_SRC
