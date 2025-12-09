@@ -267,7 +267,15 @@ No delays
 :END:
 ** General :general:
 #+BEGIN_SRC emacs-lisp
+(:keymaps 'grep-mode-map
+          :states 'normal
+          "i" #'wgrep-change-to-wgrep-mode)
+
 (:keymaps 'wgrep-mode-map
-          "C-c C-c" #'wgrep-finish-edit
-          "C-c C-k" #'wgrep-abort-changes)
+          "C-c C-c" #'wgrep-finish-edit)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
 #+END_SRC

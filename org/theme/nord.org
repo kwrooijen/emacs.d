@@ -164,6 +164,7 @@ brew install --cask font-roboto-mono
  'font-lock-type-face          'kwrooijen/salient-fg-face
  'font-lock-keyword-face       'kwrooijen/salient-fg-face)
 
+(kwrooijen/reset-inherit-face! 'match 'bold)
 (kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
 
 (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
