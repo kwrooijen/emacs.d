@@ -62,7 +62,8 @@ Require inf ruby
 If we enter Ruby mode, switch to ruby-ts-mode.
 
 #+BEGIN_SRC emacs-lisp
-(ruby-mode . ruby-ts-mode)
+((ruby-mode . ruby-ts-mode)
+ (ruby-ts-mode . eglot-ensure))
 #+END_SRC
 
 ** Init :init:
@@ -80,35 +81,6 @@ Remap ruby-mode to ruby-ts-mode to make use of Treesitter.
   (let ((search-string (read-string "Search string: ")))
     (async-shell-command (concat "rails routes | grep " search-string))))
 #+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/rails-create-stimulus-controller (name)
-  "Create a Stimulus controller in the current Rails project.
-Given a NAME, this function creates a new Stimulus controller in the
-app/javascript/controllers directory of the current Rails project.
-"
-  (interactive "sStimulus Controller name: ")
-  (let ((controller-name (concat name "_controller.js"))
-        (controller-dir (expand-file-name "app/javascript/controllers" (kwrooijen/project-root))))
-    (unless (file-directory-p controller-dir)
-      (make-directory controller-dir t))
-    (with-temp-file (expand-file-name controller-name controller-dir)
-      (insert "import { Controller } from \"@hotwired/stimulus\"
-
-export default class extends Controller {
-  static values = {}
-  static classes = [];
-  static targets = [];
-
-  connect() {
-  }
-
-  disconnect() {
-  }
-}"))
-    (find-file (expand-file-name controller-name controller-dir))))
-#+END_SRC
-
 
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
@@ -170,53 +142,18 @@ chaotic.
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 (inf-ruby-mode . kwrooijen/inf-ruby-remove-underline)
+(inf-ruby-mode . eglot-ensure)
 #+END_SRC
 
 
-* Ruby Robe
-:PROPERTIES:
-:PACKAGE: robe
-:STRAIGHT: t
-:END:
+# * Chruby
+# :PROPERTIES:
+# :PACKAGE: chruby
+# :STRAIGHT: t
+# :END:
 
-https://github.com/dgutov/robe
+# ** Hook :hook:
 
-Robe is a code assistance tool that uses a Ruby REPL subprocess with
-your application or gem code loaded, to provide information about
-loaded classes and modules, and where each method is defined.
-
-** Hook :hook:
-
-#+BEGIN_SRC emacs-lisp
-((ruby-mode-hook . 'robe-mode)
- (inf-ruby-mode-hook . 'robe-mode)
- (inf-ruby-mode-hook . 'robe-start))
-#+END_SRC
-
-** Config :config:
-
-Add Robe to company backends
-
-#+BEGIN_SRC emacs-lisp
-(eval-after-load 'company '(push 'company-robe company-backends))
-#+END_SRC
-
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-(:states 'normal
-         "s-<return>" 'robe-jump)
-#+END_SRC
-
-
-* Chruby
-:PROPERTIES:
-:PACKAGE: chruby
-:STRAIGHT: t
-:END:
-
-** Hook :hook:
-
-#+BEGIN_SRC emacs-lisp
-(ruby-mode-hook . 'chruby-use-corresponding)
-#+END_SRC
+# #+BEGIN_SRC emacs-lisp
+# (ruby-mode-hook . 'chruby-use-corresponding)
+# #+END_SRC
