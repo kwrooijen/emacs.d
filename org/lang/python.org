@@ -81,7 +81,7 @@ Otherwise, add a new import statement after existing imports."
 (defun kwrooijen/run-python-project ()
   (interactive)
   (let ((current-window (selected-window))
-        (default-directory (projectile-project-root)))
+        (default-directory (kwrooijen/project-root)))
     (run-python nil t t)
     (select-window current-window 'norecord)))
 #+END_SRC
@@ -408,11 +408,11 @@ if __name__ == \"__main__\":
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/python-workon-project-venv ()
-  "Activate the Python virtual environment in .venv at the Projectile project root.
+  "Activate the Python virtual environment in .venv at the project root.
 If .venv exists and is not already activated, activate it using pyvenv-activate.
 If the virtual environment is already activated, do nothing."
   (interactive)
-  (let* ((venv-dir (when-let (project-root (projectile-project-root))
+  (let* ((venv-dir (when-let (project-root (kwrooijen/project-root))
                      (expand-file-name ".venv" project-root))))
     (when (and venv-dir
                (file-directory-p venv-dir)

@@ -235,19 +235,14 @@ Center spacing
 If not a file buffer, return the buffer name."
   (interactive)
   (let* ((fname (buffer-file-name))
-         (proj-root (when (fboundp 'projectile-project-root)
-                      (projectile-project-root))))
+         (proj-root (when (fboundp 'kwrooijen/project-root)
+                      (kwrooijen/project-root))))
     (cond
-     ;; File inside a Projectile project
      ((and fname proj-root)
       (concat (file-name-nondirectory
                (directory-file-name proj-root))
               "/"
               (file-relative-name fname proj-root)))
-
-     ;; File not in a project: just the buffer file name (absolute)
      (fname (file-name-nondirectory fname))
-
-     ;; Not a file buffer
      (t (buffer-name)))))
 #+END_SRC

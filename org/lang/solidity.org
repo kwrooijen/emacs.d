@@ -72,7 +72,7 @@ forge inspect <CONTRACT> <FIELD>
 
 (defun kwrooijen/forge-test-file ()
   (interactive)
-  (let ((file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name))))
+  (let ((file (replace-regexp-in-string (kwrooijen/project-root) "" (buffer-file-name))))
     (async-shell-command (format "forge test -vvv --match-path %s" file))))
 #+END_SRC
 
@@ -102,8 +102,8 @@ forge inspect <CONTRACT> <FIELD>
   (interactive)
   (when (equal major-mode 'solidity-mode)
     (let* (;; (contract-name (kwrooijen/foundry-get-contract-name ))
-              (default-directory (or (projectile-project-root) default-directory))
-              (file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name)))
+              (default-directory (or (kwrooijen/project-root) default-directory))
+              (file (replace-regexp-in-string (kwrooijen/project-root) "" (buffer-file-name)))
               (command (format "forge script --broadcast --rpc-url %s --private-key %s %s"
                                kwrooijen/foundry-selected-rpc-url
                                (cdr kwrooijen/foundry-selected-account)
@@ -142,7 +142,7 @@ Forge fmt
   (when (not kwrooijen/foundry-selected-contract-address)
     (error "No contract selected"))
   (let ((window (selected-window))
-        (default-directory (or (projectile-project-root) default-directory))
+        (default-directory (or (kwrooijen/project-root) default-directory))
         (command (format "cast %s --rpc-url=%s" command kwrooijen/foundry-selected-rpc-url)))
     (when (member command '("send" "call"))
       (setq command
@@ -173,7 +173,7 @@ Forge fmt
 (defun kwrooijen/foundry-anvil-start ()
   (interactive)
   (let ((buffer (get-buffer "*anvil*"))
-        (default-directory (or (projectile-project-root) default-directory)))
+        (default-directory (or (kwrooijen/project-root) default-directory)))
     (if buffer
         (switch-to-buffer-other-window buffer)
       (async-shell-command "anvil" "*anvil*"))))
@@ -196,7 +196,7 @@ Forge fmt
   (interactive)
   (switch-to-buffer-other-window "*chisel*")
   (with-current-buffer "*chisel*"
-    (setq default-directory (or (projectile-project-root) default-directory))
+    (setq default-directory (or (kwrooijen/project-root) default-directory))
     (comint-run "chisel" (when kwrooijen/foundry-selected-rpc-url  (list "--fork-url" kwrooijen/foundry-selected-rpc-url)))))
 
 (defun kwrooijen/foundry-chisel-send-string (string)

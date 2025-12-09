@@ -418,7 +418,7 @@ If NAMED is t, only include named nodes."
 #+BEGIN_SRC emacs-lisp
 (define-advice aidermacs-run (:around (orig-fun &rest args) set-project-root)
   "Run aidermacs-run with default-directory set to project root."
-  (let ((default-directory (projectile-project-root)))
+  (let ((default-directory (kwrooijen/project-root)))
     (apply orig-fun args)))
 #+END_SRC
 

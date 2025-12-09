@@ -73,10 +73,10 @@ Use dired colors
       (delete-window)
     (vterm)))
 
-(defun kwrooijen/projectile-vterm ()
+(defun kwrooijen/project-vterm ()
   (interactive)
-  (let ((default-directory (projectile-project-root))
-        (vterm-buffer-name (concat "*vterm " (projectile-project-name) "*")))
+  (let ((default-directory (kwrooijen/project-root))
+        (vterm-buffer-name (concat "*vterm " (kwrooijen/project-name) "*")))
     (if (eq major-mode 'vterm-mode)
         (delete-window)
       (if (get-buffer vterm-buffer-name)
@@ -88,5 +88,5 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "e E" 'kwrooijen/toggle-vterm
-  "e P" 'kwrooijen/projectile-vterm)
+  "e P" 'kwrooijen/project-vterm)
 #+END_SRC

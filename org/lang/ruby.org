@@ -89,7 +89,7 @@ app/javascript/controllers directory of the current Rails project.
 "
   (interactive "sStimulus Controller name: ")
   (let ((controller-name (concat name "_controller.js"))
-        (controller-dir (expand-file-name "app/javascript/controllers" (projectile-project-root))))
+        (controller-dir (expand-file-name "app/javascript/controllers" (kwrooijen/project-root))))
     (unless (file-directory-p controller-dir)
       (make-directory controller-dir t))
     (with-temp-file (expand-file-name controller-name controller-dir)
@@ -143,7 +143,7 @@ Start the inf ruby console at the root of the rails project
 #+BEGIN_SRC emacs-lisp
 (defun inf-ruby-console-rails-from-project-root ()
   (interactive)
-  (inf-ruby-console-rails (projectile-project-root)))
+  (inf-ruby-console-rails (kwrooijen/project-root)))
 #+END_SRC
 
 Locally remove underlines from the Inf-Ruby buffers to make it less

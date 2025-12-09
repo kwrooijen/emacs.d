@@ -110,11 +110,4 @@
 
 (defun kwrooijen/project-name ()
   (project-name (project-current)))
-
-;; TODO Remove Projectile dependency
-(defun projectile-project-root ()
-  (kwrooijen/project-root))
-
-(defun projectile-project-name ()
-  (kwrooijen/project-name))
 #+END_SRC
