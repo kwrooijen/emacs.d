@@ -167,7 +167,14 @@ Window keys
   "w j" 'windmove-down
   "w k" 'windmove-up
   "w h" 'windmove-left
-  "w l" 'windmove-right)
+  "w l" 'windmove-right
+  "w t" '(transpose-window-layout :repeat t)
+  "w c" '(window-layout-rotate-clockwise :repeat t)
+  "w C" '(window-layout-rotate-anticlockwise :repeat t)
+  "w a" '(window-layout-flip-leftright)
+  "w d" '(window-layout-flip-leftright)
+  "w w" '(window-layout-flip-topdown)
+  "w s" '(window-layout-flip-topdown))
 #+END_SRC
 
 Resume keys
