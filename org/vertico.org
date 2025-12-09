@@ -34,6 +34,8 @@
 ** Init :init:
 #+BEGIN_SRC emacs-lisp
 (vertico-mode)
+(savehist-mode)
+(recentf-mode)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -84,7 +86,7 @@
 
 (add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
 
-(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-prompt)
+;; (add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-prompt)
 #+END_SRC
 
 
@@ -93,6 +95,12 @@
 (vertico-count 17)
 (vertico-count-format '("%-9s " . "[%s/%s]"))
 #+END_SRC
+
+Allow nested minibuffers
+#+BEGIN_SRC emacs-lisp
+(enable-recursive-minibuffers t)
+#+END_SRC
+
 
 Don't resize minibuffer
 #+BEGIN_SRC emacs-lisp
@@ -104,7 +112,6 @@ Don't resize minibuffer
 ('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
 ('minibuffer-setup #'vertico-repeat-save)
 #+END_SRC
-
 
 * Consult
 :PROPERTIES:
@@ -120,8 +127,6 @@ Don't resize minibuffer
 ** Init :init:
 #+BEGIN_SRC emacs-lisp
 (advice-add #'register-preview :override #'consult-register-window)
-(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
-(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
 #+END_SRC
 
 ** Custom :custom:
@@ -145,13 +150,18 @@ Don't resize minibuffer
 
 (set-face-attribute 'consult-highlight-match nil :inherit 'bold)
 (set-face-attribute 'consult-preview-match nil :inherit 'bold)
+
+(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
+(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
 #+END_SRC
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "ss" '(consult-line :which-key "Find in buffer")
-  "sp" '(consult-ripgrep :which-key "Grep in Project"))
+  "sp" '(consult-ripgrep :which-key "Grep in Project")
+  "bb" '(consult-buffer :which-key "Switch buffer")
+  "fb" '(consult-bookmark :which-key "Open bookmark"))
 #+END_SRC
 
 * Orderless
@@ -193,12 +203,13 @@ Don't resize minibuffer
 :STRAIGHT: t
 :END:
 
-# ** General :general:
-# #+BEGIN_SRC emacs-lisp
-# ("C-." . embark-act)         ;; pick some comfortable binding
-# ("C-;" . embark-dwim)        ;; good alternative: M-.
-# ("C-h B" . embark-bindings)
-# #+END_SRC
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps '(minibuffer-mode-map embark-collect-mode-map)
+ "M-e" 'embark-act
+ "M-b" 'embark-bindings)
+#+END_SRC
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
