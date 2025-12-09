@@ -103,17 +103,6 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
  "jj" 'kwrooijen/jinx-add-word-at-point)
 #+END_SRC
 
-* Flycheck
-:PROPERTIES:
-:PACKAGE: flycheck
-:STRAIGHT: t
-:END:
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
-(global-flycheck-mode 0)
-#+END_SRC
 * Copilot
 :PROPERTIES:
 :PACKAGE: copilot

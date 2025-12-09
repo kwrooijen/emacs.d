@@ -12,7 +12,7 @@
 ((clojure-mode . cider-mode)
  (clojure-mode . lispy-mode)
  (clojure-mode . clj-refactor-mode)
- (clojure-mode . flycheck-mode))
+ (clojure-mode . flymake-mode))
 #+END_SRC
 
 ** Custom :custom:

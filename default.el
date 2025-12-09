@@ -45,7 +45,6 @@
  ("exec-path-from-shell" . "7552abf032a383ff761e7d90e6b5cbb4658a728a")
  ("expand-region.el" . "351279272330cae6cecea941b0033a8dd8bcc4e8")
  ("f.el" . "931b6d0667fe03e7bf1c6c282d6d8d7006143c52")
- ("flycheck" . "62570fafbedb8fa3f7d75a50a9364feca3b294ef")
  ("frame-local" . "7ee1106c3bcd4022f48421f8cb1ef4f995da816e")
  ("gcmh" . "0089f9c3a6d4e9a310d0791cf6fa8f35642ecfd9")
  ("general.el" . "a48768f85a655fe77b5f45c2880b420da1b1b9c3")
