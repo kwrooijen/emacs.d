@@ -192,7 +192,9 @@ No delays
   "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
   "bb" '(consult-buffer :which-key "Switch buffer")
   "fb" '(consult-bookmark :which-key "Open bookmark")
-  "ry" '(consult-yank-from-kill-ring :which-key "Kill ring"))
+  "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
+  "pp" '(project-switch-project :which-key "Switch project")
+  "pf" '(project-find-file :which-key "Find file in project"))
 #+END_SRC
 
 * Orderless
@@ -203,9 +205,13 @@ No delays
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
-(completion-styles '(orderless))
+(completion-styles '(orderless basic))
 (completion-category-defaults nil)
-(completion-category-overrides '((file (styles . (orderless)))))
+;; (completion-category-overrides '((file (styles . (orderless)))))
+(completion-category-overrides '((file (styles partial-completion))))
+(completion-category-defaults nil)
+(completion-pcm-leading-wildcard t)
+
 (orderless-matching-styles '(orderless-literal orderless-prefixes))
 #+END_SRC
 
@@ -278,4 +284,14 @@ No delays
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
+#+END_SRC
+
+* Project
+:PROPERTIES:
+:PACKAGE:  project
+:STRAIGHT: t
+:END:
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(project-switch-commands 'project-find-file)
 #+END_SRC

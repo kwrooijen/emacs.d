@@ -109,6 +109,7 @@ Highlight the tags of the current element.
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (:states 'insert
+ :keymaps 'web-mode-map
          "C-j" 'emmet-expand-line)
 #+END_SRC
 
