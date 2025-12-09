@@ -245,7 +245,9 @@ No delays
 (general-define-key
  :keymaps '(minibuffer-mode-map embark-collect-mode-map)
  "M-e" 'embark-act
- "M-b" 'embark-bindings)
+ "M-a" 'embark-act-all
+ "M-b" 'embark-bindings
+ "M-i" 'embark-select)
 #+END_SRC
 
 ** Config :config:
