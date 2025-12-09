@@ -130,41 +130,19 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 ("M-O" 'copilot-mode)
 #+END_SRC
 
-* Company
-:PROPERTIES:
-:PACKAGE: company
-:STRAIGHT: t
-:END:
 
-TODO replace with
-https://github.com/minad/corfu
-https://github.com/minad/cape
-
-** Bindings :general:
+** Init :init:
 #+BEGIN_SRC emacs-lisp
-(:keymaps 'company-active-map
-          "C-j" 'company-select-next-or-abort
-          "C-k" 'company-select-previous-or-abort
-          "C-f" 'company-next-page
-          "C-b" 'company-previous-page
-          "<escape>" 'company-abort)
+(defun kwrooijen/copilot-disable ()
+  (when (bound-and-true-p copilot-mode)
+    (setq-local kwrooijen/copilot-was-enabled t)
+    (copilot-mode -1)))
 
-("M-;" 'company-complete)
-#+END_SRC
-
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-((after-init . global-company-mode))
-#+END_SRC
-
-* Company Box
-:PROPERTIES:
-:PACKAGE: company-box
-:STRAIGHT: t
-:END:
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-(company-mode . company-box-mode)
+(defun kwrooijen/copilot-maybe-enable ()
+  (when (and (bound-and-true-p kwrooijen/copilot-was-enabled)
+             (not (bound-and-true-p corfu--popup)))
+    (setq-local kwrooijen/copilot-was-enabled nil)
+    (copilot-mode +1)))
 #+END_SRC
 
 
@@ -203,3 +181,75 @@ https://github.com/minad/cape
 :PACKAGE:  eca
 :STRAIGHT: t
 :END:
+
+
+* Corfu
+:PROPERTIES:
+:PACKAGE:  corfu
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(global-corfu-mode)
+(corfu-popupinfo-mode)
+(corfu-echo-mode)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'corfu-default 'kwrooijen/darken-bg-face)
+(kwrooijen/reset-inherit-face! 'corfu-current 'hl-line)
+
+(add-hook 'corfu-mode-hook
+          (lambda ()
+            (add-hook 'corfu-popup-open-hook  #'kwrooijen/copilot-disable nil t)
+            (add-hook 'corfu-popup-close-hook #'kwrooijen/copilot-maybe-enable nil t)))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(corfu-auto t)
+(corfu-cycle t)
+(tab-always-indent 'complete)
+(text-mode-ispell-word-completion nil)
+(read-extended-command-predicate #'command-completion-default-include-p)
+(corfu-left-margin-width 24)
+(corfu-right-margin-width 24)
+#+END_SRC
+
+Don't auto select the current selection
+#+BEGIN_SRC emacs-lisp
+(corfu-preview-current nil)
+(corfu-on-exact-match nil)
+(corfu-quit-no-match 'separator)
+(corfu-quit-at-boundary t)
+#+END_SRC
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'corfu-map
+  "C-f" #'corfu-scroll-up
+  "C-b" #'corfu-scroll-down)
+#+END_SRC
+
+* Cape
+:PROPERTIES:
+:PACKAGE:  cape
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+("M-e" cape-prefix-map)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-hook 'completion-at-point-functions #'cape-dabbrev)
+(add-hook 'completion-at-point-functions #'cape-file)
+(add-hook 'completion-at-point-functions #'cape-elisp-block)
+
+#+END_SRC

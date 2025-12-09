@@ -360,18 +360,6 @@ Recenter screen when iedit is used.
  'org-todo                 'kwrooijen/salient-fg-face)
 #+END_SRC
 
-* Company :config:
-:PROPERTIES:
-:PACKAGE: company
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'company-preview-common 'kwrooijen/faded-bg-face
- 'company-preview-search 'kwrooijen/faded-bg-face)
-#+END_SRC
-
-
 * Paren :config:
 :PROPERTIES:
 :PACKAGE: paren

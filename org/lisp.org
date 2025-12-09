@@ -104,9 +104,6 @@
 
 (add-hook 'lispy-mode-hook
           (lambda ()
-            ;; This breaks company mode if not set to nil
-            (define-key lispy-mode-map (kbd "C-k") nil)
-
             (define-key lispy-mode-map (kbd "M-[") #'lispy-wrap-brackets)
             (define-key lispy-mode-map (kbd "M-{") #'lispy-wrap-braces)
             (define-key lispy-mode-map (kbd "M-(") #'lispy-wrap-round)

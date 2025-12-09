@@ -9,8 +9,6 @@
  ("cider" . "fb7aa888125dfd5f174b6c208deca66d3fc129ab")
  ("clj-refactor.el" . "362cb46bf808dc42d2aaf022afe93048439680c4")
  ("clojure-mode" . "28dc02114ae70db6bb68d537ea77985f272120bc")
- ("company-box" . "c4f2e243fba03c11e46b1600b124e036f2be7691")
- ("company-mode" . "4ff89f7369227fbb89fe721d1db707f1af74cd0f")
  ("compat" . "270528627f3545dda7865ead13183317434e9f57")
  ("cond-let" . "8f1661fc9f49cae699948992411d921216ddd4c0")
  ("copilot.el" . "8e43edf1f3efe094ea42a21863b3b742a339742c")
