@@ -117,14 +117,3 @@ Highlight the tags of the current element.
 ((sgml-mode-hook . emmet-mode)
  (css-mode-hook . emmet-mode))
 #+END_SRC
-
-* Tailwind
-:PROPERTIES:
-:PACKAGE:  lsp-tailwindcss
-:STRAIGHT: (:host github :repo "merrickluo/lsp-tailwindcss" :files ("dist" "*.el"))
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(lsp-tailwindcss-add-on-mode t)
-#+END_SRC

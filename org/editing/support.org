@@ -178,18 +178,6 @@ https://github.com/minad/cape
 (company-mode . company-box-mode)
 #+END_SRC
 
-* Lsp
-:PROPERTIES:
-:PACKAGE: lsp-mode
-:STRAIGHT: t
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(lsp-headerline-breadcrumb-enable nil)
-#+END_SRC
-
-
 * Aider.el
 :PROPERTIES:
 :PACKAGE: aider

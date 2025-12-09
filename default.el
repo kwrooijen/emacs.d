@@ -76,8 +76,6 @@
  ("lispyville" . "14ee8711d58b649aeac03581d22b10ab077f06bd")
  ("llama" . "472f5967f6684342d3c042d1ba12c3b3d6cefaba")
  ("llm" . "06f8057c108063df8661dbf0f5e4e515ae1fdb78")
- ("lsp-mode" . "f491974456ea7b0e33a3c2abc98483175a731334")
- ("lsp-tailwindcss" . "cdd0325a6a571e51f6c7d1cbc198c7a7ea4a194a")
  ("magit" . "3fe795e51af33c802dc3f00b91a503955777a002")
  ("map" . "04ebfe501a50f8a3d2d6b736b88fca93af053746")
  ("markdown-mode" . "b524618c3ed28906a7522482727f121428ce7e2e")
