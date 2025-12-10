@@ -127,23 +127,12 @@
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-scroll ()
-  (kwrooijen/modeline-r
-   (cond
-    ((eq (point) (point-min)) " Top")
-    ((eq (point) (point-max)) " Bot")
-    (t (format " %d％"
-               (/ (* 100 (1- (line-number-at-pos)))
-                  (count-lines (point-min) (point-max))))))
-   'kwrooijen/modeline-scroll))
+  (kwrooijen/modeline-r " %p%% " 'kwrooijen/modeline-scroll))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-line-col ()
-  (kwrooijen/modeline-r
-   (format " %d:%d"
-           (line-number-at-pos)
-           (current-column))
-   'kwrooijen/modeline-scroll))
+  (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
