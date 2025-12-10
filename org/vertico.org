@@ -153,6 +153,7 @@ No delays
    consult-source-bookmark consult-source-file-register
    consult-source-recent-file consult-source-project-recent-file
    kwrooijen/consult-ripgrep-symbol-at-point
+   consult-notes-search-in-all-notes
    :preview-key "TAB")
 
 (set-face-attribute 'consult-preview-line nil :inherit 'hl-line)

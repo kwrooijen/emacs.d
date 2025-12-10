@@ -465,7 +465,6 @@ If not, show simply the clocked time like 01:50."
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-    "f n" 'org-roam-node-find
     "p o" 'kwrooijen/org-roam-switch-project)
 #+END_SRC
 
@@ -485,3 +484,43 @@ If not, show simply the clocked time like 01:50."
                           ("#+BEGIN_QUOTE" . "“")
                           ("#+END_QUOTE" . "”")))
 #+END_SRC
+
+* Org Appear
+:PROPERTIES:
+:PACKAGE:  org-appear
+:STRAIGHT: (org-appear :type git :host github :repo "awth13/org-appear")
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . org-appear-mode))
+#+END_SRC
+
+* Consult Notes
+:PROPERTIES:
+:PACKAGE:  consult-notes
+:STRAIGHT: (consult-notes :type git :host github :repo "mclear-tools/consult-notes")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/org/notes/")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(consult-notes-org-roam-mode)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "fn" #'consult-notes
+  "fp" #'consult-notes-search-in-all-notes)
+#+END_SRC
+
+* Org Ai
+:PROPERTIES:
+:PACKAGE:  org-ai
+:STRAIGHT: t
+:END:

@@ -56,32 +56,6 @@ Use a custom version of multiple cursors which works with Evil.
 (multiple-cursors-mode t)
 #+END_SRC
 
-* Undo Tree
-:PROPERTIES:
-:PACKAGE: undo-tree
-:STRAIGHT: t
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(undo-tree-auto-save-history t)
-(undo-tree-history-directory-alist `((".*" . "~/.emacs.d/undo-tree-history/")))
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(global-undo-tree-mode 1)
-#+END_SRC
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(:states  'normal
-"U" 'undo-tree-redo
-"u" 'undo-tree-undo)
-
-("M-u" 'undo-tree-redo)
-#+END_SRC
-
 * Smart Parens
 :PROPERTIES:
 :PACKAGE: smartparens
@@ -111,4 +85,53 @@ Enable for all programming modes. Would this be ok for lisp modes?
 ((prog-mode . hl-line-mode)
  (text-mode . hl-line-mode)
  (messages-buffer-mode . hl-line-mode))
+#+END_SRC
+
+
+* Vundo
+:PROPERTIES:
+:PACKAGE:  vundo
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:states  'normal
+ "u" 'undo
+ "U" 'undo-redo)
+
+("M-u" 'vundo)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(vundo-window-max-height 6)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'vundo-default nil :height 250)
+#+END_SRC
+
+
+
+* Super Save
+:PROPERTIES:
+:PACKAGE:  super-save
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(super-save-mode +1)
+(add-to-list 'super-save-triggers 'winum-select-window-1)
+(add-to-list 'super-save-triggers 'winum-select-window-2)
+(add-to-list 'super-save-triggers 'winum-select-window-3)
+(add-to-list 'super-save-triggers 'winum-select-window-4)
+(add-to-list 'super-save-triggers 'winum-select-window-5)
+(add-to-list 'super-save-triggers 'winum-select-window-6)
+(add-to-list 'super-save-triggers 'winum-select-window-7)
+(add-to-list 'super-save-triggers 'winum-select-window-8)
+(add-to-list 'super-save-triggers 'winum-select-window-9)
+(add-to-list 'super-save-triggers 'winum-select-window-0)
 #+END_SRC
