@@ -86,12 +86,6 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (jinx-languages "en_US,nl")
-;(defun jinx--read-languages ()
-;; '("en_US" "nl")
-;"en_US,nl"
-;(jinx--table-with-metadata '("en_US" "nl") `((group-function . ,#'jinx--group)))
-;)
-
 #+END_SRC
 
 ** Bindings :general:
@@ -100,7 +94,18 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 ("C-M-$" 'jinx-languages)
 
 (kwrooijen/leader
- "jj" 'kwrooijen/jinx-add-word-at-point)
+ "jj" 'kwrooijen/jinx-add-word-at-point
+ "tt" '(jinx-mode :which-key "Jinx mode"))
+#+END_SRC
+
+** Hook :hook:
+
+Jinx only uses spell checking inside comments (and maybe doc
+strings?). Making it safe to enable in programming modes.
+
+#+BEGIN_SRC emacs-lisp
+((prog-mode . jinx-mode)
+ (org-mode . jinx-mode))
 #+END_SRC
 
 * Copilot
@@ -128,6 +133,9 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
   "C-o" 'copilot-next-completion)
 
 ("M-O" 'copilot-mode)
+
+(kwrooijen/leader
+ "to" '(copilot-mode :which-key "Copilot"))
 #+END_SRC
 
 

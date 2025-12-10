@@ -68,6 +68,7 @@
   '(consult-line
     consult-yank-from-kill-ring
     consult-ripgrep
+    magit-discard
     anzu-query-replace
     kwrooijen/consult-ripgrep-symbol-at-point)
 

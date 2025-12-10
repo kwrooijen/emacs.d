@@ -112,7 +112,8 @@ modes. These keys are configurable through the variables
   "p" '(:ignore t :which-key "Project")
   "w" '(:ignore t :which-key "Window")
   "r" '(:ignore t :which-key "Resume")
-  "h" '(:ignore t :which-key "Help"))
+  "h" '(:ignore t :which-key "Help")
+  "t" '(:ignore t :which-key "Toggle"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
