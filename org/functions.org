@@ -111,3 +111,14 @@
 (defun kwrooijen/project-name ()
   (project-name (project-current)))
 #+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defmacro comment (&rest _))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/dired-project-root ()
+  (interactive)
+  (let ((project-root (project-root (project-current t))))
+    (dired project-root)))
+#+END_SRC

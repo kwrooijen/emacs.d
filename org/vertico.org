@@ -29,6 +29,14 @@
           "M-]" (lambda() (interactive) (dimmer-restore-all)))
 #+END_SRC
 
+Remove vertico-map binding because otherwise Consult preview becomes
+buggy.
+
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'vertico-map
+  "TAB" #'ignore)
+#+END_SRC
+
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "rr" '(vertico-repeat :which-key "Repeat last search"))
@@ -187,6 +195,7 @@ No delays
   "pf" '(project-find-file :which-key "Find file in project"))
 #+END_SRC
 
+
 * Orderless
 :PROPERTIES:
 :PACKAGE:  orderless
@@ -213,6 +222,7 @@ No delays
 (set-face-attribute 'orderless-match-face-3 nil :inherit 'bold :foreground 'unspecified)
 #+END_SRC
 
+
 * Marginalia
 :PROPERTIES:
 :PACKAGE:  marginalia
@@ -223,6 +233,7 @@ No delays
 #+BEGIN_SRC emacs-lisp
 (marginalia-mode)
 #+END_SRC
+
 
 * Embark
 :PROPERTIES:
@@ -248,21 +259,25 @@ No delays
                  (window-parameters (mode-line-format . none))))
 #+END_SRC
 
+
 * Embark Consult
 :PROPERTIES:
 :PACKAGE:  embark-consult
 :STRAIGHT: t
 :END:
+
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 (embark-collect-mode . consult-preview-at-point-mode)
 #+END_SRC
+
 
 * Wgrep
 :PROPERTIES:
 :PACKAGE:  wgrep
 :STRAIGHT: t
 :END:
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (:keymaps 'grep-mode-map
@@ -278,11 +293,13 @@ No delays
 (set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
 #+END_SRC
 
+
 * Project
 :PROPERTIES:
 :PACKAGE:  project
 :STRAIGHT: t
 :END:
+
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (project-switch-commands 'project-find-file)

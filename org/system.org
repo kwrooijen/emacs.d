@@ -171,10 +171,10 @@ Window keys
   "w t" '(transpose-window-layout :repeat t)
   "w c" '(window-layout-rotate-clockwise :repeat t)
   "w C" '(window-layout-rotate-anticlockwise :repeat t)
-  "w a" '(window-layout-flip-leftright)
-  "w d" '(window-layout-flip-leftright)
-  "w w" '(window-layout-flip-topdown)
-  "w s" '(window-layout-flip-topdown))
+  "w a" 'window-layout-flip-leftright)
+  "w d" 'window-layout-flip-leftright)
+  "w w" 'window-layout-flip-topdown)
+  "w s" 'window-layout-flip-topdown))
 #+END_SRC
 
 Resume keys
@@ -208,6 +208,7 @@ Navigation
 
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
+  "f r" '(kwrooijen/dired-project-root :which-key "Open project root in Dired")
   "f f" '(find-file :which-key "Find File")
   "f d" '(dired-jump :which-key "Open current directory"))
 #+END_SRC
