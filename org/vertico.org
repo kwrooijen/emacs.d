@@ -68,14 +68,6 @@
      ;; Prepend a blank line as an extra ‘candidate line’.
      (cons "\n" lines))))
 
-(defun kwrooijen/hide-minibuffer-prompt ()
-  "Visually hide the minibuffer prompt (e.g. \"M-x\", \"Find file:\")."
-  (when (minibufferp)
-
-  (let ((inhibit-read-only t))
-    (add-text-properties (point-min) (minibuffer-prompt-end)
-                         '(display ">> ")))))
-
 (defun kwrooijen/hide-minibuffer-truncation-indicator ()
   (let ((table (or buffer-display-table (make-display-table))))
     (set-display-table-slot
@@ -88,8 +80,6 @@
 (advice-add #'vertico--resize-window :around #'kwrooijen/vertico-add-bottom-padding)
 
 (add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
-
-;; (add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-prompt)
 #+END_SRC
 
 
