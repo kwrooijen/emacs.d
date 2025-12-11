@@ -35,9 +35,10 @@ Don't add window number to modeline
 ("M-9" 'winum-select-window-9)
 #+END_SRC
 
-* Tab Bar
+* Winner
 :PROPERTIES:
-:PACKAGE:  tab-bar
+:PACKAGE: winner
+:STRAIGHT: t
 :END:
 
 Undo or redo changes in your window layout.
@@ -45,14 +46,14 @@ Undo or redo changes in your window layout.
 ** Init :init:
 
 #+BEGIN_SRC emacs-lisp
-(tab-bar-history-mode 1)
+(winner-mode 1)
 #+END_SRC
 
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "w u" '(tab-bar-history-back :which-key "Undo window layout")
-  "w U" '(tab-bar-history-forward :which-key "Redo window layout"))
+  "w u" '(winner-undo :which-key "Undo window layout")
+  "w U" '(winner-redo :which-key "Redo window layout"))
 #+END_SRC
 
 * Popwin
