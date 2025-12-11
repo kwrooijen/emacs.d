@@ -75,18 +75,6 @@ Enable for all programming modes. Would this be ok for lisp modes?
 ((prog-mode . smartparens-mode))
 #+END_SRC
 
-* Hl line mode
-:PROPERTIES:
-:PACKAGE: hl-line
-:END:
-
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-((prog-mode . hl-line-mode)
- (text-mode . hl-line-mode)
- (messages-buffer-mode . hl-line-mode))
-#+END_SRC
-
 
 * Vundo
 :PROPERTIES:
@@ -113,6 +101,18 @@ Enable for all programming modes. Would this be ok for lisp modes?
 (set-face-attribute 'vundo-default nil :height 250)
 #+END_SRC
 
+
+
+* Undo Fu Session
+:PROPERTIES:
+:PACKAGE:  undo-fu-session
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(undo-fu-session-global-mode)
+#+END_SRC
 
 
 * Super Save
