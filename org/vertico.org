@@ -183,6 +183,36 @@ No delays
 (add-hook 'minibuffer-exit-hook #'kwrooijen/minibuffer-restore-hl-line)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-peek-buffer ()
+  "Temporarily peek at another buffer using popwin, restoring layout on quit."
+  (interactive)
+  (let* ((selected (consult--multi consult-buffer-sources
+                                   :require-match
+                                   (confirm-nonexistent-file-or-buffer)
+                                   :prompt "Switch to: "
+                                   :history 'consult--buffer-history
+                                   :sort nil
+                                   :state (lambda (_action _match))))
+         (popwin-fn (lambda (buffer)
+                      (popwin:display-buffer-1
+                       buffer
+                       :default-config-keywords '(:position left :width 0.5))))
+         (type (when selected (plist-get (cdr selected) :name))))
+    (when selected
+      (pcase type
+        ("Buffer"
+         (funcall popwin-fn (car selected)))
+
+        ("Bookmark"
+         (let ((bookmark-buffer nil))
+           (bookmark-jump (car selected) popwin-fn)))
+
+        ("File"
+         (funcall popwin-fn (find-file-noselect (car selected))))))))
+#+END_SRC
+
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
@@ -190,6 +220,7 @@ No delays
   "sp" '(consult-ripgrep :which-key "Grep in Project")
   "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
   "bb" '(consult-buffer :which-key "Switch buffer")
+   "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
   "fb" '(consult-bookmark :which-key "Open bookmark")
   "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
   "pp" '(project-switch-project :which-key "Switch project")

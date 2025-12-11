@@ -81,18 +81,3 @@ Manage windows that pop up on your screen.
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
 #+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/peek-buffer ()
-  "Temporarily peek at another buffer using popwin, restoring layout on quit."
-  (interactive)
-  (popwin:display-buffer-1
-   (get-buffer (read-buffer "Peek buffer: "))
-   :default-config-keywords '(:position left :width 0.5)))
-#+END_SRC
-
-** General :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
- "bp" '(kwrooijen/peek-buffer :which-key "Peek buffer"))
-#+END_SRC
