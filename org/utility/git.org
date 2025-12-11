@@ -81,3 +81,16 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 "gl" '(smerge-keep-lower :which-key "Merge keep lower")
 "ga" '(smerge-keep-all :which-key "Merge keep all"))
 #+END_SRC
+
+* Magit Todos
+:PROPERTIES:
+:PACKAGE:  magit-todos
+:STRAIGHT: t
+:AFTER: magit
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+;; TODO Something
+(magit-todos-mode 1)
+#+END_SRC

@@ -109,3 +109,29 @@ Remove diredfl-match-ignored-extensions
 #+BEGIN_SRC emacs-lisp
 (dired-preview-delay 0)
 #+END_SRC
+
+* Casual
+:PROPERTIES:
+:PACKAGE:  casual
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'dired-mode-map
+  "'" #'casual-dired-tmenu)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'csv-mode-map
+  "'" #'casual-csv-tmenu)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(setq casual-dired-listing-switches '("--group-directories-first" "-laoh"))
+#+END_SRC

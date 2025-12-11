@@ -466,3 +466,18 @@ Recenter screen when iedit is used.
 (kwrooijen/reset-inherit-face! 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
 (kwrooijen/reset-face-attributes 'diredfl-ignored-file-name)
 #+END_SRC
+
+
+* Ediff
+:PROPERTIES:
+:PACKAGE:  ediff
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'ediff-even-diff-A 'default)
+(kwrooijen/reset-inherit-face! 'ediff-even-diff-B 'default)
+(kwrooijen/reset-inherit-face! 'ediff-odd-diff-A 'org-warning)
+(kwrooijen/reset-inherit-face! 'ediff-odd-diff-B 'org-warning)
+
+#+END_SRC

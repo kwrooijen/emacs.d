@@ -519,8 +519,12 @@ If not, show simply the clocked time like 01:50."
   "fp" #'consult-notes-search-in-all-notes)
 #+END_SRC
 
-* Org Ai
+* Org Fragtog
 :PROPERTIES:
-:PACKAGE:  org-ai
+:PACKAGE:  org-fragtog
 :STRAIGHT: t
 :END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . org-fragtog-mode))
+#+END_SRC
