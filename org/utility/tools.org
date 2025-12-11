@@ -214,7 +214,7 @@ Emacs, available at any time and uniformly in any buffer.
                 :endpoint "/openai/v1/chat/completions"
                 :stream t
                 :key #'read-groq-key
-                :models '("llama3-70b-8192"))))
+                :models '("llama3-70b-8192")))
 #+END_SRC
 
 ** Config :config:

@@ -273,6 +273,8 @@ holding export options."
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/local-leader
    :keymaps 'org-mode-map
+   "c p" 'wisdom-preview
+   "c P" 'wisdom-preview-mode
    "c c" 'wisdom-reload-current-buffer
    "c a" 'wisdom-reload)
 #+END_SRC

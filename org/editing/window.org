@@ -35,10 +35,9 @@ Don't add window number to modeline
 ("M-9" 'winum-select-window-9)
 #+END_SRC
 
-* Winner
+* Tab Bar
 :PROPERTIES:
-:PACKAGE: winner
-:STRAIGHT: t
+:PACKAGE:  tab-bar
 :END:
 
 Undo or redo changes in your window layout.
@@ -46,14 +45,14 @@ Undo or redo changes in your window layout.
 ** Init :init:
 
 #+BEGIN_SRC emacs-lisp
-(winner-mode 1)
+(tab-bar-history-mode 1)
 #+END_SRC
 
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "w u" '(winner-undo :which-key "Undo window layout")
-  "w U" '(winner-redo :which-key "Redo window layout"))
+  "w u" '(tab-bar-history-back :which-key "Undo window layout")
+  "w U" '(tab-bar-history-forward :which-key "Redo window layout"))
 #+END_SRC
 
 * Popwin
@@ -80,4 +79,19 @@ Manage windows that pop up on your screen.
 (push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/peek-buffer ()
+  "Temporarily peek at another buffer using popwin, restoring layout on quit."
+  (interactive)
+  (popwin:display-buffer-1
+   (get-buffer (read-buffer "Peek buffer: "))
+   :default-config-keywords '(:position left :width 0.5)))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "bp" '(kwrooijen/peek-buffer :which-key "Peek buffer"))
 #+END_SRC

@@ -481,3 +481,14 @@ Recenter screen when iedit is used.
 (kwrooijen/reset-inherit-face! 'ediff-odd-diff-B 'org-warning)
 
 #+END_SRC
+
+
+* Pulse :config:
+:PROPERTIES:
+:PACKAGE:  pulse
+:DEFER: t
+:END:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'pulse-highlight-face 'kwrooijen/salient-bg-face)
+(kwrooijen/reset-inherit-face! 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
+#+END_SRC

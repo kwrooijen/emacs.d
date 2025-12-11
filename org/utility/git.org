@@ -2,6 +2,7 @@
 :PROPERTIES:
 :PACKAGE:  magit
 :STRAIGHT: t
+:DEMAND: t
 :END:
 
 ** Options
@@ -91,6 +92,5 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-;; TODO Something
 (magit-todos-mode 1)
 #+END_SRC

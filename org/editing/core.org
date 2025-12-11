@@ -135,3 +135,17 @@ Enable for all programming modes. Would this be ok for lisp modes?
 (add-to-list 'super-save-triggers 'winum-select-window-9)
 (add-to-list 'super-save-triggers 'winum-select-window-0)
 #+END_SRC
+
+
+* Avy
+:PROPERTIES:
+:PACKAGE:  avy
+:STRAIGHT: t
+:END:
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states 'normal
+ :keymaps 'evil-normal-state-map
+ "]" #'avy-goto-char)
+#+END_SRC

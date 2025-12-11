@@ -119,7 +119,8 @@
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-git-branch ()
   ""
-  (when-let ((branch (magit-get-current-branch)))
+  (when-let ((branch (and (fboundp 'magit-get-current-branch)
+                          (magit-get-current-branch))))
     (kwrooijen/modeline-r
      (format "   %s" branch)
      'kwrooijen/modeline-git-branch)))

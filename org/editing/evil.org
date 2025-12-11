@@ -59,16 +59,6 @@ Recenter screen when searching forward / backwards
 ("M-/" 'evilnc-comment-or-uncomment-lines)
 #+END_SRC
 
-
-# (use-package evil-snipe
-#   :straight t
-#   :after evil
-#   :config
-#   (evil-define-key 'visual evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
-#   (evil-define-key 'normal evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
-#   (evil-snipe-mode +1))
-# #+END_SRC
-
 * Evil Highlight Persist
 :PROPERTIES:
 :PACKAGE: evil-search-highlight-persist
