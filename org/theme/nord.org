@@ -187,6 +187,12 @@ brew install --cask font-roboto-mono
   :type 'integer
   :group 'kwrooijen)
 
+(defcustom kwrooijen/font-step-size
+  20
+  "Font size step size."
+  :type 'integer
+  :group 'kwrooijen)
+
 (defun kwrooijen/font-size-set (size)
   "Adjust the global font size by DELTA."
   (let ((current-size (face-attribute 'default :height)))
@@ -195,12 +201,12 @@ brew install --cask font-roboto-mono
 (defun kwrooijen/font-size-increase ()
   "Increase global font size."
   (interactive)
-  (kwrooijen/font-size-set (+ (face-attribute 'default :height) 20)))
+  (kwrooijen/font-size-set (+ (face-attribute 'default :height) kwrooijen/font-step-size)))
 
 (defun kwrooijen/font-size-decrease ()
   "Decrease global font size."
   (interactive)
-  (kwrooijen/font-size-set (- (face-attribute 'default :height) 20)))
+  (kwrooijen/font-size-set (- (face-attribute 'default :height) kwrooijen/font-step-size)))
 
 (defun kwrooijen/font-size-reset ()
   "Decrease global font size."

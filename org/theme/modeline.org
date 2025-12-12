@@ -165,6 +165,17 @@
     (kwrooijen/modeline-r "  %m  " mode-face)))
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-zoom ()
+  (let* ((zoom (/ (- (face-attribute 'default :height)
+                     kwrooijen/default-font-size) kwrooijen/font-step-size))
+         (affix (if (> zoom 0) "+" "-")))
+    (unless (equal zoom 0)
+      (kwrooijen/modeline-r (format " %s%s" zoom affix)
+                            'kwrooijen/popout-fg-face))))
+#+END_SRC
+
+
 ** Build modeline
 
 Center spacing
@@ -195,6 +206,7 @@ Center spacing
 (defcustom kwrooijen/modeline-right
   (list
    '(:eval (kwrooijen/modeline-org-clock))
+   '(:eval (kwrooijen/modeline-zoom))
    '(:eval (kwrooijen/modeline-git-branch))
    '(:eval (kwrooijen/modeline-mode)))
   "Right side of the modeline."
