@@ -392,7 +392,9 @@ modes. These keys are configurable through the variables
   "f" '(:ignore t :which-key "Files")
   "p" '(:ignore t :which-key "Project")
   "w" '(:ignore t :which-key "Window")
-  "r" '(:ignore t :which-key "Resume"))
+  "r" '(:ignore t :which-key "Resume")
+  "h" '(:ignore t :which-key "Help")
+  "t" '(:ignore t :which-key "Toggle"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
@@ -447,7 +449,14 @@ Window keys
   "w j" 'windmove-down
   "w k" 'windmove-up
   "w h" 'windmove-left
-  "w l" 'windmove-right)
+  "w l" 'windmove-right
+  "w t" '(transpose-window-layout :repeat t)
+  "w c" '(window-layout-rotate-clockwise :repeat t)
+  "w C" '(window-layout-rotate-anticlockwise :repeat t)
+  "w a" 'window-layout-flip-leftright)
+  "w d" 'window-layout-flip-leftright)
+  "w w" 'window-layout-flip-topdown)
+  "w s" 'window-layout-flip-topdown))
 #+END_SRC
 
 Resume keys
@@ -481,7 +490,44 @@ Navigation
 
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
+  "f r" '(kwrooijen/dired-project-root :which-key "Open project root in Dired")
+  "f f" '(find-file :which-key "Find File")
   "f d" '(dired-jump :which-key "Open current directory"))
+#+END_SRC
+
+Buffer
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "b b" '(switch-to-buffer :which-key "Switch to Buffer"))
+#+END_SRC
+
+Help
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/describe-face ()
+  (interactive)
+  (let ((hl-line-p (bound-and-true-p hl-line-mode))
+        (buf (current-buffer)))
+    (when hl-line-p
+      (hl-line-mode -1))
+    (unwind-protect
+        (call-interactively #'describe-face)
+      (when hl-line-p
+        ;; Re-enable AFTER this command fully finishes
+        (run-at-time
+         0 nil
+         (lambda (b)
+           (when (buffer-live-p b)
+             (with-current-buffer b
+               (hl-line-mode 1))))
+         buf)))))
+
+(kwrooijen/leader
+  "h a" '(kwrooijen/describe-face :which-key "Describe face")
+  "h k" '(describe-key :which-key "Describe key")
+  "h f" '(describe-function :which-key "Describe function")
+  "h v" '(describe-variable :which-key "Describe variable"))
 #+END_SRC
 
 #+LEXICAL_BINDING: nil
@@ -650,6 +696,7 @@ brew install --cask font-roboto-mono
  'font-lock-type-face          'kwrooijen/salient-fg-face
  'font-lock-keyword-face       'kwrooijen/salient-fg-face)
 
+(kwrooijen/reset-inherit-face! 'match 'bold)
 (kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
 
 (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
@@ -672,6 +719,12 @@ brew install --cask font-roboto-mono
   :type 'integer
   :group 'kwrooijen)
 
+(defcustom kwrooijen/font-step-size
+  20
+  "Font size step size."
+  :type 'integer
+  :group 'kwrooijen)
+
 (defun kwrooijen/font-size-set (size)
   "Adjust the global font size by DELTA."
   (let ((current-size (face-attribute 'default :height)))
@@ -680,12 +733,12 @@ brew install --cask font-roboto-mono
 (defun kwrooijen/font-size-increase ()
   "Increase global font size."
   (interactive)
-  (kwrooijen/font-size-set (+ (face-attribute 'default :height) 20)))
+  (kwrooijen/font-size-set (+ (face-attribute 'default :height) kwrooijen/font-step-size)))
 
 (defun kwrooijen/font-size-decrease ()
   "Decrease global font size."
   (interactive)
-  (kwrooijen/font-size-set (- (face-attribute 'default :height) 20)))
+  (kwrooijen/font-size-set (- (face-attribute 'default :height) kwrooijen/font-step-size)))
 
 (defun kwrooijen/font-size-reset ()
   "Decrease global font size."
@@ -753,25 +806,6 @@ Recenter screen when iedit is used.
 (set-face-attribute 'magit-section-highlight nil :foreground 'unspecified :inherit 'highlight)
 #+END_SRC
 
-
-* Helm :config:
-:PROPERTIES:
-:PACKAGE: helm
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-face-attributes 'helm-source-header)
-#+END_SRC
-
-* Helm-rg :config:
-:PROPERTIES:
-:PACKAGE: helm-rg
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'helm-rg-file-match-face 'kwrooijen/faded-fg-face)
-#+END_SRC
 
 * Org :config:
 :PROPERTIES:
@@ -863,18 +897,6 @@ Recenter screen when iedit is used.
  'org-table                'kwrooijen/salient-fg-face
  'org-todo                 'kwrooijen/salient-fg-face)
 #+END_SRC
-
-* Company :config:
-:PROPERTIES:
-:PACKAGE: company
-:DEFER: t
-:END:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'company-preview-common 'kwrooijen/faded-bg-face
- 'company-preview-search 'kwrooijen/faded-bg-face)
-#+END_SRC
-
 
 * Paren :config:
 :PROPERTIES:
@@ -984,68 +1006,29 @@ Recenter screen when iedit is used.
 #+END_SRC
 
 
-* Subwindow
+* Ediff
+:PROPERTIES:
+:PACKAGE:  ediff
+:END:
 
-Give subwindows (magit, repl, shell, helm, etc) a different
-style. Similar to Solaire mode, but more flexible.
-
+** Config :config:
 #+BEGIN_SRC emacs-lisp
-(defvar-local kwrooijen/subwindow-needs-style nil)
+(kwrooijen/reset-inherit-face! 'ediff-even-diff-A 'default)
+(kwrooijen/reset-inherit-face! 'ediff-even-diff-B 'default)
+(kwrooijen/reset-inherit-face! 'ediff-odd-diff-A 'org-warning)
+(kwrooijen/reset-inherit-face! 'ediff-odd-diff-B 'org-warning)
 
-(defun kwrooijen/subwindow-styling ()
-  (when kwrooijen/subwindow-needs-style
-    (set-window-fringes win 24 24)
-    (unless (helm-window)
-      (setq header-line-format " "))
-    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
-    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
-    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
-
-(defun kwrooijen/subwindow-setup-hook ()
-  (setq kwrooijen/subwindow-needs-style t))
-
-(defun kwrooijen/subwindow-setup-hook-transient ()
-  ;; Transient has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (or transient--buffer-name ""))
-    (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-setup-hook-helm ()
-  ;; Helm has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (helm-buffer-get))
-    (with-current-buffer (get-buffer (helm-buffer-get))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-restyle ()
-  (dolist (win (window-list))
-    (with-current-buffer (window-buffer win)
-      (kwrooijen/subwindow-styling))))
 #+END_SRC
 
+
+* Pulse :config:
+:PROPERTIES:
+:PACKAGE:  pulse
+:DEFER: t
+:END:
 #+BEGIN_SRC emacs-lisp
-(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/subwindow-hook-list
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook
-    messages-buffer-mode-hook)
-  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
-  :type '(repeat symbol)
-  :group 'kwrooijen)
-
-(add-hook 'helm-after-initialize-hook #'kwrooijen/subwindow-setup-hook-helm)
-(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
-
-(dolist (hook kwrooijen/subwindow-hook-list)
-  (add-hook hook #'kwrooijen/subwindow-setup-hook))
+(kwrooijen/reset-inherit-face! 'pulse-highlight-face 'kwrooijen/salient-bg-face)
+(kwrooijen/reset-inherit-face! 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
 #+END_SRC
 
 #+STARTUP: showeverything
@@ -1222,6 +1205,25 @@ type (by default) `xs`. Configurable through
     (buffer-string)))
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/project-root ()
+  (project-root (project-current)))
+
+(defun kwrooijen/project-name ()
+  (project-name (project-current)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defmacro comment (&rest _))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/dired-project-root ()
+  (interactive)
+  (let ((project-root (project-root (project-current t))))
+    (dired project-root)))
+#+END_SRC
+
 #+PRIORITY: 4
 
 * Paredit
@@ -1328,9 +1330,6 @@ type (by default) `xs`. Configurable through
 
 (add-hook 'lispy-mode-hook
           (lambda ()
-            ;; This breaks company mode if not set to nil
-            (define-key lispy-mode-map (kbd "C-k") nil)
-
             (define-key lispy-mode-map (kbd "M-[") #'lispy-wrap-brackets)
             (define-key lispy-mode-map (kbd "M-{") #'lispy-wrap-braces)
             (define-key lispy-mode-map (kbd "M-(") #'lispy-wrap-round)
@@ -1462,32 +1461,6 @@ Use a custom version of multiple cursors which works with Evil.
 (multiple-cursors-mode t)
 #+END_SRC
 
-* Undo Tree
-:PROPERTIES:
-:PACKAGE: undo-tree
-:STRAIGHT: t
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(undo-tree-auto-save-history t)
-(undo-tree-history-directory-alist `((".*" . "~/.emacs.d/undo-tree-history/")))
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(global-undo-tree-mode 1)
-#+END_SRC
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(:states  'normal
-"U" 'undo-tree-redo
-"u" 'undo-tree-undo)
-
-("M-u" 'undo-tree-redo)
-#+END_SRC
-
 * Smart Parens
 :PROPERTIES:
 :PACKAGE: smartparens
@@ -1507,16 +1480,79 @@ Enable for all programming modes. Would this be ok for lisp modes?
 ((prog-mode . smartparens-mode))
 #+END_SRC
 
-* Hl line mode
+
+* Vundo
 :PROPERTIES:
-:PACKAGE: hl-line
+:PACKAGE:  vundo
+:STRAIGHT: t
 :END:
 
-** Hook :hook:
+** General :general:
 #+BEGIN_SRC emacs-lisp
-((prog-mode . hl-line-mode)
- (text-mode . hl-line-mode)
- (messages-buffer-mode . hl-line-mode))
+(:states  'normal
+ "u" 'undo
+ "U" 'undo-redo)
+
+("M-u" 'vundo)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(vundo-window-max-height 6)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'vundo-default nil :height 250)
+#+END_SRC
+
+
+
+* Undo Fu Session
+:PROPERTIES:
+:PACKAGE:  undo-fu-session
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(undo-fu-session-global-mode)
+#+END_SRC
+
+
+* Super Save
+:PROPERTIES:
+:PACKAGE:  super-save
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(super-save-mode +1)
+(add-to-list 'super-save-triggers 'winum-select-window-1)
+(add-to-list 'super-save-triggers 'winum-select-window-2)
+(add-to-list 'super-save-triggers 'winum-select-window-3)
+(add-to-list 'super-save-triggers 'winum-select-window-4)
+(add-to-list 'super-save-triggers 'winum-select-window-5)
+(add-to-list 'super-save-triggers 'winum-select-window-6)
+(add-to-list 'super-save-triggers 'winum-select-window-7)
+(add-to-list 'super-save-triggers 'winum-select-window-8)
+(add-to-list 'super-save-triggers 'winum-select-window-9)
+(add-to-list 'super-save-triggers 'winum-select-window-0)
+#+END_SRC
+
+
+* Avy
+:PROPERTIES:
+:PACKAGE:  avy
+:STRAIGHT: t
+:END:
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states 'normal
+ :keymaps 'evil-normal-state-map
+ "[" #'avy-goto-char)
 #+END_SRC
 
 #+STARTUP: showeverything
@@ -1563,7 +1599,25 @@ Recenter screen when searching forward / backwards
 
 ** Config :config:
 
+Evil collection makes it very hard to override the `[` key.
 #+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/intercept-mode-map (make-sparse-keymap))
+
+(define-minor-mode kwrooijen/intercept-mode
+  "Intercept evil keys before evil-collection."
+  :global t)
+
+(kwrooijen/intercept-mode)
+
+(dolist (state '(normal motion visual))
+  (evil-make-intercept-map
+   (evil-get-auxiliary-keymap kwrooijen/intercept-mode-map state t t)
+   state))
+
+(evil-define-key '(normal motion visual)
+  kwrooijen/intercept-mode-map
+  "[" #'avy-goto-char)
+
 (evil-collection-init)
 #+END_SRC
 
@@ -1579,16 +1633,6 @@ Recenter screen when searching forward / backwards
 #+BEGIN_SRC emacs-lisp
 ("M-/" 'evilnc-comment-or-uncomment-lines)
 #+END_SRC
-
-
-# (use-package evil-snipe
-#   :straight t
-#   :after evil
-#   :config
-#   (evil-define-key 'visual evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
-#   (evil-define-key 'normal evil-snipe-local-mode-map "f" 'evil-snipe-s "F" 'evil-snipe-S)
-#   (evil-snipe-mode +1))
-# #+END_SRC
 
 * Evil Highlight Persist
 :PROPERTIES:
@@ -2271,12 +2315,6 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (jinx-languages "en_US,nl")
-;(defun jinx--read-languages ()
-;; '("en_US" "nl")
-;"en_US,nl"
-;(jinx--table-with-metadata '("en_US" "nl") `((group-function . ,#'jinx--group)))
-;)
-
 #+END_SRC
 
 ** Bindings :general:
@@ -2285,20 +2323,20 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
 ("C-M-$" 'jinx-languages)
 
 (kwrooijen/leader
- "jj" 'kwrooijen/jinx-add-word-at-point)
+ "jj" 'kwrooijen/jinx-add-word-at-point
+ "tt" '(jinx-mode :which-key "Jinx mode"))
 #+END_SRC
 
-* Flycheck
-:PROPERTIES:
-:PACKAGE: flycheck
-:STRAIGHT: t
-:END:
+** Hook :hook:
 
-** Config :config:
+Jinx only uses spell checking inside comments (and maybe doc
+strings?). Making it safe to enable in programming modes.
+
 #+BEGIN_SRC emacs-lisp
-(setq-default flycheck-disabled-checkers '(emacs-lisp-checkdoc))
-(global-flycheck-mode 0)
+((prog-mode . jinx-mode)
+ (org-mode . jinx-mode))
 #+END_SRC
+
 * Copilot
 :PROPERTIES:
 :PACKAGE: copilot
@@ -2324,394 +2362,24 @@ TEMPLATES is an alist of (DISPLAY-NAME . SNIPPET-KEY) pairs."
   "C-o" 'copilot-next-completion)
 
 ("M-O" 'copilot-mode)
-#+END_SRC
 
-* Company
-:PROPERTIES:
-:PACKAGE: company
-:STRAIGHT: t
-:END:
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(:keymaps 'company-active-map
-          "C-j" 'company-select-next-or-abort
-          "C-k" 'company-select-previous-or-abort
-          "C-f" 'company-next-page
-          "C-b" 'company-previous-page
-          "C-;" 'helm-company
-          "<escape>" 'company-abort)
-
-("M-;" 'company-complete)
-#+END_SRC
-
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-((after-init . global-company-mode))
-#+END_SRC
-
-
-* Company Box
-:PROPERTIES:
-:PACKAGE: company-box
-:STRAIGHT: t
-:END:
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-(company-mode . company-box-mode)
-#+END_SRC
-
-* Lsp
-:PROPERTIES:
-:PACKAGE: lsp-mode
-:STRAIGHT: t
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(lsp-headerline-breadcrumb-enable nil)
-#+END_SRC
-
-
-* Aider.el
-:PROPERTIES:
-:PACKAGE: aider
-:STRAIGHT: (:host github :repo "tninja/aider.el")
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(aider-args '("--model" "openrouter/anthropic/claude-3.7-sonnet" "--no-auto-accept-architect" "--no-auto-commits"))
-(kwrooijen/aider-models '(("gemini 2.5-flash" . "openrouter/google/gemini-2.5-flash-preview")
-                          ("gpt-5-nano" . "openrouter/openai/gpt-5-nano")
-                          ("Claude 4.0" . "openrouter/anthropic/claude-3.7-sonnet")))
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-
-(defun kwrooijen/aider-run-aider ()
-  (interactive)
-  (let ((default-directory (or (projectile-project-root)
-                               default-directory)))
-    (aider-run-aider)))
-
-(defun kwrooijen/aider-switch-model ()
-  (interactive)
-  (let* ((model (completing-read "Select model: " (mapcar 'car kwrooijen/aider-models)))
-         (model-args (cdr (assoc model kwrooijen/aider-models))))
-    (setq aider-args `("--model" ,model-args "--no-auto-accept-architect"))
-    (message "Aider model set to: %s" model)))
-
-(defun kwrooijen/aider-switch-mode (mode)
-  "Either switch to Code Mode, Ask Mode, Architect Mode, or Help Mode"
-  (interactive
-   (list (completing-read "Select mode: " '("Code" "Ask" "Architect" "Help"))))
-  (cond
-   ((string= mode "Code")
-    (aider--send-command "/code")
-    (message "Switched to Code Mode"))
-   ((string= mode "Ask")
-    (aider--send-command "/ask")
-    (message "Switched to Ask Mode"))
-   ((string= mode "Architect")
-    (aider--send-command "/architect")
-    (message "Switched to Architect Mode"))
-   ((string= mode "Help")
-    (aider--send-command "/help")
-    (message "Switched to Help Mode"))))
-
-(defun kwrooijen/aider-clear-prompt ()
-  "Clear the user input at the current prompt in the Aider buffer."
-  (interactive)
-  (when (eq major-mode 'aider-comint-mode)
-    (let ((inhibit-read-only t))
-      (delete-region comint-last-input-start (point-max)))))
-
-(defun kwrooijen/aider-explain-error-at-point ()
-  "Explain the eglot error at point."
-  (interactive)
-  (let ((error-message (kwrooijen/eglot-error-at-point))
-        (line-number (line-number-at-pos))
-        (line (thing-at-point 'line t))
-        (file-name (buffer-file-name)))
-    (if error-message
-        (progn
-          (aider-switch-to-buffer)
-          (kwrooijen/aider-clear-prompt)
-          (aider--send-command "/ask")
-          (aider-add-current-file)
-          (aider--send-command (format "Explain the following error in %s:%s\nLine:%s\nError:%s" file-name line-number line error-message)))
-      (error "No error message at point"))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-;; Defcustom kwrooijen/aider-style-guides, List of style guides to use based on key
-;; (defcustom kwrooijen/aider-style-guides
-;;   '(("LangChain" . "You hare a coding assistent writing Python, LangChain code.
-;; Every node should have their own class, with the following format:
-
-;; ```python
-;; class State(BaseModel):
-;;     items: List[Any] = []
-
-;; class NodeFoobar:
-;;     def __init__(self, *args, **kwargs):
-;;         # Any initialization code goes here
-;;     def invoke(self, state):
-;;         # Any code to run the node goes here
-;;         return state
-
-;; class NodeBarbaz:
-;;     def __init__(self, *args, **kwargs):
-;;         # Any initialization code goes here
-;;     def invoke(self, state):
-;;         # Any code to run the node goes here
-;;         return state
-
-;; class GraphMyProject:
-;;     def add_sequence(self, sequence):
-;;         for i in range(len(sequence) - 1):
-;;             self.graph_builder.add_edge(sequence[i], sequence[i + 1])
-
-;;     def __init__(self):
-;;         self.graph_builder = StateGraph(state_schema=State, config_schema=RunnableConfig)
-;;         self.graph_builder.add_node(\"Foobar\" , NodeFoobar())
-;;         self.graph_builder.add_node(\"Barbaz\" , NodeBarBaz())
-
-
-;;         self.add_sequence([START, \"Foobar\", \"Barbaz\"])
-;;         self.graph = self.graph_builder.compile()
-
-;;     def invoke(self):
-;;         return self.graph.invoke(State(), {})
-
-;;     def ainvoke(self):
-;;         return self.graph.ainvoke(State(), {})
-
-;; ```
-;; ")))
-#+END_SRC
-
-
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "aa" 'kwrooijen/aider-run-aider
-  "af" 'aider-add-current-file
-  "ag" 'aider-go-ahead
-  "aq" 'aider-exit
-  "ac" 'aider-clear-buffer
-  "ak" 'aider-ask-question
-  "ao" 'aider-open-history
-  "au" 'aider-write-unit-test
-  "aK" 'aider-general-question
-  "al" 'aider-send-block-by-line
-  "as" 'aider-send-line-or-region
-  "aM" 'kwrooijen/aider-switch-model
-  "am" 'kwrooijen/aider-switch-mode
-  "ae" 'kwrooijen/aider-explain-error-at-point)
+ "to" '(copilot-mode :which-key "Copilot"))
 #+END_SRC
 
 
-* Combobulate
-:PROPERTIES:
-:PACKAGE: combobulate
-:STRAIGHT: (:host github :repo "mickeynp/combobulate" :branch "master")
-:END:
-
-** Custom :custom:
+** Init :init:
 #+BEGIN_SRC emacs-lisp
-(combobulate-flash-node nil)
-#+END_SRC
+(defun kwrooijen/copilot-disable ()
+  (when (bound-and-true-p copilot-mode)
+    (setq-local kwrooijen/copilot-was-enabled t)
+    (copilot-mode -1)))
 
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-;; (require 'evil)
-
-(evil-define-state combobulate
-  "My custom Evil mode, inheriting from normal mode."
-  :tag " <C> "
-  :enable (normal)
-  :cursor (bar . 2))
-
-(define-key evil-combobulate-state-map (kbd "h") 'combobulate-navigate-up)
-(define-key evil-combobulate-state-map (kbd "n") 'combobulate-navigate-down)
-(define-key evil-combobulate-state-map (kbd "j") 'combobulate-navigate-next)
-(define-key evil-combobulate-state-map (kbd "k") 'combobulate-navigate-previous)
-(define-key evil-combobulate-state-map (kbd "f") 'combobulate-navigate-forward)
-(define-key evil-combobulate-state-map (kbd "l") 'combobulate-navigate-logical-next)
-(define-key evil-combobulate-state-map (kbd "a") 'kwrooijen/treesit-jump)
-(define-key evil-combobulate-state-map (kbd "R") 'combobulate-splice-up)
-(define-key evil-combobulate-state-map (kbd "r") 'combobulate-splice-self)
-(define-key evil-combobulate-state-map (kbd "w") 'combobulate-drag-up)
-(define-key evil-combobulate-state-map (kbd "s") 'combobulate-drag-down)
-(define-key evil-combobulate-state-map (kbd "c") 'combobulate-clone-node-dwim)
-(define-key evil-combobulate-state-map (kbd "x") 'kwrooijen/combobulate-kill-node-dwim)
-(define-key evil-combobulate-state-map (kbd "d") 'kwrooijen/combobulate-different)
-(define-key evil-combobulate-state-map (kbd "RET") 'kwrooijen/combobulate-move-one-down)
-(define-key evil-combobulate-state-map (kbd "<backspace>") 'kwrooijen/combobulate-move-one-up)
-;; Python specific
-(define-key evil-combobulate-state-map (kbd "e") 'kwrooijen/python-combobulate-shell-send-block)
-(define-key evil-combobulate-state-map (kbd "TAB") 'combobulate-python-indent-for-tab-command)
-(define-key python-base-mode-map (kbd "M-a") 'kwrooijen/combobulate-left-state)
-(define-key python-base-mode-map (kbd "M-r") 'kwrooijen/combobulate-rise)
-
-(defun kwrooijen/combobulate-left-state ()
-  (interactive)
-  (while (looking-at-p "^[[:space:]]*$")
-    (forward-line -1)
-    (back-to-indentation))
-  (back-to-indentation)
-  (evil-combobulate-state))
-
-(defun kwrooijen/treesit-get-descendants (node &optional named)
-  "Return a list of all descendant nodes of NODE.
-If NAMED is t, only include named nodes."
-  (let (descendants)
-    (dolist (child (treesit-node-children node named))
-      (push child descendants)
-      (setq descendants (append descendants (kwrooijen/treesit-get-descendants child named))))
-    descendants))
-
-(defun kwrooijen/treesit-jump ()
-  "Jump to one of the descendant nodes' positions using avy."
-  (interactive)
-  (let* ((avy-keys '(?a ?b ?c ?d ?e ?f ?g ?h ?i ?j ?k ?l ?m ?n ?o ?p ?q ?r ?s ?t ?u ?v ?w ?x ?y ?z))
-         (parent (treesit-node-parent (treesit-node-at (point))))
-         (allowed-types '("false"
-                          "integer"
-                          "call"
-                          "identifier"
-                          "dictionary"
-                          "string_start"
-                          "string_content"))
-         (descendants (kwrooijen/treesit-get-descendants parent t))
-         ;; Debugging purposes
-         ;; (_ (message "DESC %s" (-distinct (mapcar 'treesit-node-type descendants)) ))
-         (descendants (-filter (lambda (node)
-                                 (member (treesit-node-type node) allowed-types))
-                               descendants))
-         (positions (mapcar 'treesit-node-start descendants))
-         (positions (sort (-remove (lambda (pos) (equal pos (point))) positions))))
-    (avy-with my-avy-jump
-      (avy-process positions))))
-
-(defun kwrooijen/combobulate-kill-node-dwim ()
-  (interactive)
-  (let ((at-indentation?
-         (save-excursion
-           (let ((p (point)))
-             (back-to-indentation)
-             (= p (point))))))
-    (combobulate-kill-node-dwim)
-    (when at-indentation?
-      (evil-delete-line
-       (save-excursion (beginning-of-line) (point))
-       (save-excursion (end-of-line) (1+ (point))))
-      (back-to-indentation))))
-
-(defun kwrooijen/combobulate-move-one-down ()
-  (interactive)
-  (save-excursion
-    (evil-open-above 0)
-    (evil-combobulate-state))
-  (if (bolp)
-      (forward-line 1)))
-
-(defun kwrooijen/combobulate-move-one-up ()
-  (interactive)
-  (save-excursion
-    (next-line -1)
-    (when (looking-at-p "^[[:space:]]*$")
-      (evil-delete-line
-       (save-excursion (beginning-of-line) (point))
-       (save-excursion (end-of-line) (1+ (point)))))))
-
-(defun kwrooijen/combobulate-rise ()
-  (interactive)
-  (combobulate-navigate-up)
-  (kwrooijen/combobulate-different))
-
-(defun kwrooijen/combobulate-different ()
-  (interactive)
-  (when kwrooijen/combobulate-current-node
-    (if (= (treesit-node-start kwrooijen/combobulate-current-node) (point))
-        (goto-char (treesit-node-end kwrooijen/combobulate-current-node))
-      (goto-char (treesit-node-start kwrooijen/combobulate-current-node)))))
-
-(defvar kwrooijen/combobulate-current-node nil
-  "The current node in the combobulate buffer.")
-
-(defvar kwrooijen/combobulate-visual-overlay nil
-  "")
-
-(defun kwrooijen/combobulate-start-visual (start end)
-  (when kwrooijen/combobulate-visual-overlay
-    (delete-overlay kwrooijen/combobulate-visual-overlay))
-  (setq kwrooijen/combobulate-visual-overlay (make-overlay start end))
-  (overlay-put kwrooijen/combobulate-visual-overlay 'face 'kwrooijen/combobulate-highlight))
-
-(defface kwrooijen/combobulate-highlight
-  '((((class color) (background light))
-     :background "#393c4c" :foreground unspecified)
-    (((class color) (background dark))
-     :background "#393c4c" :foreground unspecified))
-  ""
-  :group 'kwrooijen/combobulate-faces)
-
-(defun kwrooijen/combobulate-node-at-point ()
-  (let* ((nodes (combobulate-all-nodes-at-point)))
-    (if (= (length nodes) 1)
-        (car nodes)
-      (or (car (last (--remove (string= (combobulate-node-type it) "block") nodes)))
-          (car (last nodes))))))
-
-(defun kwrooijen/combobulate-highlight-current-node (&optional node)
-  (interactive)
-  (if (treesit-node-p node)
-      (setq kwrooijen/combobulate-current-node node)
-    (setq kwrooijen/combobulate-current-node (kwrooijen/combobulate-node-at-point)))
-  (kwrooijen/combobulate-start-visual
-   (treesit-node-start kwrooijen/combobulate-current-node)
-   (treesit-node-end kwrooijen/combobulate-current-node)))
-
-(defcustom kwrooijen/combobulate-navigate-functions
-  '(undo-tree-undo
-    undo-tree-redo
-    pop-global-mark
-    elpy-goto-definition
-    combobulate-navigate-next
-    combobulate-navigate-up
-    combobulate-navigate-down
-    combobulate-navigate-next
-    combobulate-navigate-previous
-    combobulate-navigate-forward
-    combobulate-navigate-logical-next
-    kwrooijen/treesit-jump
-    combobulate-splice-up
-    combobulate-splice-self
-    combobulate-drag-up
-    combobulate-drag-down
-    kwrooijen/combobulate-left-state
-    kwrooijen/combobulate-move-one-down
-    kwrooijen/combobulate-move-one-up)
-
-  ""
-  :type '()
-  :group 'kwrooijen/combobulate)
-
-(defun kwrooijen/combobulate-clear-highlight ()
-  (when kwrooijen/combobulate-visual-overlay
-    (delete-overlay kwrooijen/combobulate-visual-overlay)
-    (setq kwrooijen/combobulate-visual-overlay nil)))
-
-(add-hook 'evil-combobulate-state-exit-hook #'kwrooijen/combobulate-clear-highlight)
-
-(dolist (func kwrooijen/combobulate-navigate-functions)
-  (advice-add func :filter-return  'kwrooijen/combobulate-highlight-current-node))
+(defun kwrooijen/copilot-maybe-enable ()
+  (when (and (bound-and-true-p kwrooijen/copilot-was-enabled)
+             (not (bound-and-true-p corfu--popup)))
+    (setq-local kwrooijen/copilot-was-enabled nil)
+    (copilot-mode +1)))
 #+END_SRC
 
 
@@ -2725,14 +2393,17 @@ If NAMED is t, only include named nodes."
 #+BEGIN_SRC emacs-lisp
 (aidermacs-show-diff-after-change nil)
 (aidermacs-auto-commits nil)
+(aidermacs-default-chat-mode 'code)
 (aidermacs-extra-args '("--no-auto-commits"))
+(aidermacs-default-model "openrouter/anthropic/claude-sonnet-4.5")
+(aidermacs-weak-model "openrouter/x-ai/grok-code-fast-1")
 #+END_SRC
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (define-advice aidermacs-run (:around (orig-fun &rest args) set-project-root)
   "Run aidermacs-run with default-directory set to project root."
-  (let ((default-directory (projectile-project-root)))
+  (let ((default-directory (kwrooijen/project-root)))
     (apply orig-fun args)))
 #+END_SRC
 
@@ -2741,6 +2412,112 @@ If NAMED is t, only include named nodes."
 (kwrooijen/leader
 "a" 'aidermacs-transient-menu)
 #+END_SRC
+
+* Eca
+:PROPERTIES:
+:PACKAGE:  eca
+:STRAIGHT: t
+:END:
+
+
+* Corfu
+:PROPERTIES:
+:PACKAGE:  corfu
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(global-corfu-mode)
+(corfu-popupinfo-mode)
+(corfu-echo-mode)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'corfu-default 'kwrooijen/darken-bg-face)
+(kwrooijen/reset-inherit-face! 'corfu-current 'hl-line)
+
+(add-hook 'corfu-mode-hook
+          (lambda ()
+            (add-hook 'corfu-popup-open-hook  #'kwrooijen/copilot-disable nil t)
+            (add-hook 'corfu-popup-close-hook #'kwrooijen/copilot-maybe-enable nil t)))
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(corfu-auto t)
+(corfu-cycle t)
+(tab-always-indent 'complete)
+(text-mode-ispell-word-completion nil)
+(read-extended-command-predicate #'command-completion-default-include-p)
+(corfu-left-margin-width 24)
+(corfu-right-margin-width 24)
+#+END_SRC
+
+Don't auto select the current selection
+#+BEGIN_SRC emacs-lisp
+(corfu-preview-current nil)
+(corfu-on-exact-match nil)
+(corfu-quit-no-match 'separator)
+(corfu-quit-at-boundary t)
+#+END_SRC
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'corfu-map
+  "C-f" #'corfu-scroll-up
+  "C-b" #'corfu-scroll-down)
+#+END_SRC
+
+* Cape
+:PROPERTIES:
+:PACKAGE:  cape
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+("M-e" cape-prefix-map)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-hook 'completion-at-point-functions #'cape-dabbrev)
+(add-hook 'completion-at-point-functions #'cape-file)
+(add-hook 'completion-at-point-functions #'cape-elisp-block)
+
+#+END_SRC
+
+* Flymake
+:PROPERTIES:
+:PACKAGE:  flymake
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'prog-mode-map
+"M-n" #'flymake-goto-next-error
+"M-p" #'flymake-goto-prev-error)
+#+END_SRC
+
+** Custom :custom:
+Don't show indicator. NOTE: This causes the marker (exclamation mark)
+to be displayed inside of the buffer, instead of the margin /
+fringe. To hotfix this, go to the `flymake--highlight-line` function
+and replace `"!"` with `""`. As of now there is no variable we can
+adjust to fix this.
+#+BEGIN_SRC emacs-lisp
+(flymake-indicator-type nil)
+(flymake-indicator-function #'ignore)
+#+END_SRC
+
+* Eglot
+:PROPERTIES:
+:PACKAGE:  eglot
+:END:
 
 * Winum
 :PROPERTIES:
@@ -2787,7 +2564,7 @@ Don't add window number to modeline
 
 Undo or redo changes in your window layout.
 
-** Config :config:
+** Init :init:
 
 #+BEGIN_SRC emacs-lisp
 (winner-mode 1)
@@ -2826,19 +2603,6 @@ Manage windows that pop up on your screen.
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
 #+END_SRC
 
-
-* Shackle :config:
-:PROPERTIES:
-:PACKAGE: shackle
-:STRAIGHT: t
-:END:
-
-Package for managing window positions. Similar to popwin.
-
-#+BEGIN_SRC emacs-lisp
-(shackle-mode 1)
-#+END_SRC
-
 #+STARTUP: showeverthing
 
 * Clojure
@@ -2853,7 +2617,7 @@ Package for managing window positions. Similar to popwin.
 ((clojure-mode . cider-mode)
  (clojure-mode . lispy-mode)
  (clojure-mode . clj-refactor-mode)
- (clojure-mode . flycheck-mode))
+ (clojure-mode . flymake-mode))
 #+END_SRC
 
 ** Custom :custom:
@@ -3171,7 +2935,7 @@ Otherwise, add a new import statement after existing imports."
 (defun kwrooijen/run-python-project ()
   (interactive)
   (let ((current-window (selected-window))
-        (default-directory (projectile-project-root)))
+        (default-directory (kwrooijen/project-root)))
     (run-python nil t t)
     (select-window current-window 'norecord)))
 #+END_SRC
@@ -3498,11 +3262,11 @@ if __name__ == \"__main__\":
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/python-workon-project-venv ()
-  "Activate the Python virtual environment in .venv at the Projectile project root.
+  "Activate the Python virtual environment in .venv at the project root.
 If .venv exists and is not already activated, activate it using pyvenv-activate.
 If the virtual environment is already activated, do nothing."
   (interactive)
-  (let* ((venv-dir (when-let (project-root (projectile-project-root))
+  (let* ((venv-dir (when-let (project-root (kwrooijen/project-root))
                      (expand-file-name ".venv" project-root))))
     (when (and venv-dir
                (file-directory-p venv-dir)
@@ -3689,7 +3453,8 @@ Require inf ruby
 If we enter Ruby mode, switch to ruby-ts-mode.
 
 #+BEGIN_SRC emacs-lisp
-(ruby-mode . ruby-ts-mode)
+((ruby-mode . ruby-ts-mode)
+ (ruby-ts-mode . eglot-ensure))
 #+END_SRC
 
 ** Init :init:
@@ -3707,35 +3472,6 @@ Remap ruby-mode to ruby-ts-mode to make use of Treesitter.
   (let ((search-string (read-string "Search string: ")))
     (async-shell-command (concat "rails routes | grep " search-string))))
 #+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/rails-create-stimulus-controller (name)
-  "Create a Stimulus controller in the current Rails project.
-Given a NAME, this function creates a new Stimulus controller in the
-app/javascript/controllers directory of the current Rails project.
-"
-  (interactive "sStimulus Controller name: ")
-  (let ((controller-name (concat name "_controller.js"))
-        (controller-dir (expand-file-name "app/javascript/controllers" (projectile-project-root))))
-    (unless (file-directory-p controller-dir)
-      (make-directory controller-dir t))
-    (with-temp-file (expand-file-name controller-name controller-dir)
-      (insert "import { Controller } from \"@hotwired/stimulus\"
-
-export default class extends Controller {
-  static values = {}
-  static classes = [];
-  static targets = [];
-
-  connect() {
-  }
-
-  disconnect() {
-  }
-}"))
-    (find-file (expand-file-name controller-name controller-dir))))
-#+END_SRC
-
 
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
@@ -3770,7 +3506,7 @@ Start the inf ruby console at the root of the rails project
 #+BEGIN_SRC emacs-lisp
 (defun inf-ruby-console-rails-from-project-root ()
   (interactive)
-  (inf-ruby-console-rails (projectile-project-root)))
+  (inf-ruby-console-rails (kwrooijen/project-root)))
 #+END_SRC
 
 Locally remove underlines from the Inf-Ruby buffers to make it less
@@ -3797,56 +3533,21 @@ chaotic.
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 (inf-ruby-mode . kwrooijen/inf-ruby-remove-underline)
+(inf-ruby-mode . eglot-ensure)
 #+END_SRC
 
 
-* Ruby Robe
-:PROPERTIES:
-:PACKAGE: robe
-:STRAIGHT: t
-:END:
+# * Chruby
+# :PROPERTIES:
+# :PACKAGE: chruby
+# :STRAIGHT: t
+# :END:
 
-https://github.com/dgutov/robe
+# ** Hook :hook:
 
-Robe is a code assistance tool that uses a Ruby REPL subprocess with
-your application or gem code loaded, to provide information about
-loaded classes and modules, and where each method is defined.
-
-** Hook :hook:
-
-#+BEGIN_SRC emacs-lisp
-((ruby-mode-hook . 'robe-mode)
- (inf-ruby-mode-hook . 'robe-mode)
- (inf-ruby-mode-hook . 'robe-start))
-#+END_SRC
-
-** Config :config:
-
-Add Robe to company backends
-
-#+BEGIN_SRC emacs-lisp
-(eval-after-load 'company '(push 'company-robe company-backends))
-#+END_SRC
-
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-(:states 'normal
-         "s-<return>" 'robe-jump)
-#+END_SRC
-
-
-* Chruby
-:PROPERTIES:
-:PACKAGE: chruby
-:STRAIGHT: t
-:END:
-
-** Hook :hook:
-
-#+BEGIN_SRC emacs-lisp
-(ruby-mode-hook . 'chruby-use-corresponding)
-#+END_SRC
+# #+BEGIN_SRC emacs-lisp
+# (ruby-mode-hook . 'chruby-use-corresponding)
+# #+END_SRC
 
 * Rust
 :PROPERTIES:
@@ -3869,268 +3570,6 @@ Add Robe to company backends
 #+BEGIN_SRC emacs-lisp
 (rust-format-on-save t)
 #+END_SRC
-
-* Solidity
-:PROPERTIES:
-:PACKAGE: solidity-mode
-:STRAIGHT: t
-:END:
-
-** Hook :hook:
-
-# TODO
-Add "jump to definition" for solidity
-
-
-# TODO
-;; Ensure the custom face is defined
-
-** Forge Init :init:
-
-Configuration variables for forge. These are used to interact with the
-forge cli. Forge has 10 default user accounts that never change.
-
-#+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/foundry-selected-rpc-url "http://127.0.0.1:8545")
-(defvar kwrooijen/foundry-account-key-list
-  '(("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" . "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-    ("0x70997970C51812dc3A010C7d01b50e0d17dc79C8" . "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
-    ("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" . "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")
-    ("0x90F79bf6EB2c4f870365E785982E1f101E93b906" . "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6")
-    ("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" . "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a")
-    ("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc" . "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba")
-    ("0x976EA74026E726554dB657fA54763abd0C3a0aa9" . "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e")
-    ("0x14dC79964da2C08b23698B3D3cc7Ca32193d9955" . "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356")
-    ("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" . "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97")
-    ("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720" . "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")))
-(defvar kwrooijen/foundry-selected-account (car kwrooijen/foundry-account-key-list))
-(defvar kwrooijen/foundry-selected-contract-address nil)
-(defvar kwrooijen/foundry-contracts nil)
-#+END_SRC
-
-Functions to select a user and a contract.
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/foundry-select-user ()
-  (interactive)
-  (let ((user (completing-read "Select user: "
-                               (mapcar 'car kwrooijen/foundry-account-key-list)
-                               nil t nil nil nil nil)))
-    (setq kwrooijen/foundry-selected-account (assoc user kwrooijen/foundry-account-key-list))))
-
-(defun kwrooijen/foundry-register-contract (contract-name contract-address)
-  (interactive "sContract name: \nsContract address: ")
-  (add-to-list 'kwrooijen/foundry-contracts (cons contract-name contract-address)))
-
-(defun kwrooijen/foundry-select-contract ()
-  (interactive)
-  (let ((contract (completing-read "Select contract: "
-                                   (mapcar 'car kwrooijen/foundry-contracts)
-                                   nil t nil nil nil nil)))
-    (setq kwrooijen/foundry-selected-contract-address (assoc contract kwrooijen/foundry-contracts))))
-#+END_SRC
-
-# TODO
-forge inspect <CONTRACT> <FIELD>
-
-  <FIELD>: [abi, bytecode, deployedBytecode, assembly, assemblyOptimized, methodIdentifiers, gasEstimates, storageLayout, devdoc, ir, irOptimized, metadata, userdoc, ewasm, errors, events]
-
-** Forge :config:
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/forge-test ()
-  (interactive)
-  ;; save window excursion
- (async-shell-command "forge test -vvv"))
-
-(defun kwrooijen/forge-test-file ()
-  (interactive)
-  (let ((file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name))))
-    (async-shell-command (format "forge test -vvv --match-path %s" file))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-
-(defun kwrooijen/foundry-get-contract-name ()
-  (save-excursion
-    (re-search-backward "contract \\(.*\\) {" nil t)
-    (forward-word 2)
-    (word-at-point t)))
-
-(defun kwrooijen/foundry-forge-create-contract ()
-  (interactive)
-  (when (equal major-mode 'solidity-mode)
-    (let* ((contract-name (kwrooijen/foundry-get-contract-name))
-           (file (buffer-file-name))
-           (command (format "forge create --rpc-url %s --private-key %s %s:%s"
-                            kwrooijen/foundry-selected-rpc-url
-                            (cdr kwrooijen/foundry-selected-account)
-                            file
-                            contract-name))
-           (result (shell-command-to-string command)))
-      (string-match "Deployed to: \\(.*\\)" result)
-      (match-string 1 result))))
-
-(defun kwrooijen/foundry-forge-script-broadcast ()
-  (interactive)
-  (when (equal major-mode 'solidity-mode)
-    (let* (;; (contract-name (kwrooijen/foundry-get-contract-name ))
-              (default-directory (or (projectile-project-root) default-directory))
-              (file (replace-regexp-in-string (projectile-project-root) "" (buffer-file-name)))
-              (command (format "forge script --broadcast --rpc-url %s --private-key %s %s"
-                               kwrooijen/foundry-selected-rpc-url
-                               (cdr kwrooijen/foundry-selected-account)
-                               file)))
-              (message "#%s" command)
-              (async-shell-command command))))
-#+END_SRC
-
-Forge fmt
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/foundry-forge-fmt-buffer ()
-  (interactive)
-;; (let ((file (buffer-file-name)))
-;;     (when (and file (equal major-mode 'solidity-mode))
-;;       (save-excursion
-;;         (call-process "forge" nil nil nil "fmt" file)
-;;         (revert-buffer t t t))))
-  )
-#+END_SRC
-
-
-# ** Hook :hook:
-# #+BEGIN_SRC emacs-lisp
-# ;; ((solidity-mode . (lambda ()
-# ;;                    (remove-hook 'after-save-hook 'kwrooijen/foundry-forge-fmt-buffer nil t))))
-# #+END_SRC
-
-** Cast :init:
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/foundry-cast-generic (command args)
-  (when (not kwrooijen/foundry-selected-rpc-url)
-    (error "No rpc url selected"))
-  (when (not kwrooijen/foundry-selected-account)
-    (error "No user selected"))
-  (when (not kwrooijen/foundry-selected-contract-address)
-    (error "No contract selected"))
-  (let ((window (selected-window))
-        (default-directory (or (projectile-project-root) default-directory))
-        (command (format "cast %s --rpc-url=%s" command kwrooijen/foundry-selected-rpc-url)))
-    (when (member command '("send" "call"))
-      (setq command
-            (format "%s --private-key=%s" command (cdr kwrooijen/foundry-selected-account)))
-      (setq command
-            (format "%s %s" command (cdr kwrooijen/foundry-selected-contract-address))))
-    (async-shell-command (format "%s %s" command args))))
-
-(defun kwrooijen/foundry-cast-send (args)
-  (interactive "scast send ")
-  (kwrooijen/foundry-cast-generic "send" args))
-
-
-(defun kwrooijen/foundry-cast-call (args)
-  (interactive "scast call ")
-  (kwrooijen/foundry-cast-generic "call" args))
-
-(defun kwrooijen/foundry-cast-balance (args)
-  (interactive (list (read-string "cast balance: " (car kwrooijen/foundry-selected-account))))
-  (kwrooijen/foundry-cast-generic "balance" args))
-
-#+END_SRC
-
-
-
-** Anvil :config:
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/foundry-anvil-start ()
-  (interactive)
-  (let ((buffer (get-buffer "*anvil*"))
-        (default-directory (or (projectile-project-root) default-directory)))
-    (if buffer
-        (switch-to-buffer-other-window buffer)
-      (async-shell-command "anvil" "*anvil*"))))
-#+END_SRC
-
-
-** Chisel :config:
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/foundry-chisel-show-buffer ()
-  (interactive)
-  (when (not (get-buffer "*chisel*"))
-    (error "No chisel buffer found"))
-  (when (not (get-buffer-window "*chisel*"))
-    (let ((window (selected-window)))
-      (switch-to-buffer-other-window "*chisel*")
-      (select-window window))))
-
-(defun kwrooijen/foundry-chisel-start ()
-  (interactive)
-  (switch-to-buffer-other-window "*chisel*")
-  (with-current-buffer "*chisel*"
-    (setq default-directory (or (projectile-project-root) default-directory))
-    (comint-run "chisel" (when kwrooijen/foundry-selected-rpc-url  (list "--fork-url" kwrooijen/foundry-selected-rpc-url)))))
-
-(defun kwrooijen/foundry-chisel-send-string (string)
-  (interactive "sChisel command: ")
-  (kwrooijen/foundry-chisel-show-buffer)
-  (comint-send-string "*chisel*" (format "%s\n" string)))
-
-(defun kwrooijen/foundry-chisel-send-region (start end)
-  (interactive "r")
-  (kwrooijen/foundry-chisel-show-buffer)
-  (comint-send-region "*chisel*" start end)
-  (comint-send-string "*chisel*" "\n"))
-
-(defun kwrooijen/foundry-chisel-send-line ()
-  (interactive)
-  (kwrooijen/foundry-chisel-show-buffer)
-  (let ((start (line-beginning-position))
-        (end (line-end-position)))
-    (kwrooijen/foundry-chisel-send-region start end)))
-#+END_SRC
-
-** Keybindings :general:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/local-leader
-  :keymaps 'solidity-mode-map
-  "t a" 'kwrooijen/forge-test
-  "t t" 'kwrooijen/forge-test-file
-  "c u" 'kwrooijen/foundry-select-user
-  "c c" 'kwrooijen/foundry-select-contract
-  "c r" 'kwrooijen/foundry-register-contract
-  "'" 'kwrooijen/foundry-chisel-start
-  ";" 'kwrooijen/foundry-anvil-start)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(general-define-key
- :keymaps 'solidity-mode-map
- "C-x C-e" 'kwrooijen/foundry-chisel-send-line
- "C-c C-e" 'kwrooijen/foundry-chisel-send-region)
-#+END_SRC
-
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(solidity-comment-style 'slash)
-;; (setq solidity-solc-path "/home/lefteris/ew/cpp-ethereum/build/solc/solc")
-#+END_SRC
-
-* Solidity Flycheck
-:PROPERTIES:
-:PACKAGE: solidity-flycheck
-:AFTER: solidity-mode
-:STRAIGHT: t
-:END:
-
-* Solidity Company
-:PROPERTIES:
-:PACKAGE: company-solidity
-:AFTER: solidity-mode
-:STRAIGHT: t
-:END:
 
 * Web mode
 :PROPERTIES:
@@ -4243,6 +3682,7 @@ Highlight the tags of the current element.
 ** Bindings :general:
 #+BEGIN_SRC emacs-lisp
 (:states 'insert
+ :keymaps 'web-mode-map
          "C-j" 'emmet-expand-line)
 #+END_SRC
 
@@ -4252,35 +3692,24 @@ Highlight the tags of the current element.
  (css-mode-hook . emmet-mode))
 #+END_SRC
 
-* Tailwind
-:PROPERTIES:
-:PACKAGE:  lsp-tailwindcss
-:STRAIGHT: (:host github :repo "merrickluo/lsp-tailwindcss" :files ("dist" "*.el"))
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(lsp-tailwindcss-add-on-mode t)
-#+END_SRC
-
 * Yaml
 :PROPERTIES:
 :PACKAGE: yaml-mode
 :STRAIGHT: t
 :END:
 
-#+BEGIN_SRC emacs-lisp
-;; ----------------------------------------
-;; Faces
-;; ----------------------------------------
+** Mode line faces
 
+#+BEGIN_SRC emacs-lisp
 (defface kwrooijen/modeline-border
   '()
   "Face for the active window border."
   :group 'kwrooijen/modeline)
 
 (defface kwrooijen/modeline-border-inactive
-  '((t (:inherit kwrooijen/darken-fb-face)))
+  `((t (:foreground ,(face-attribute 'kwrooijen/darken-fg-face :foreground)))
+    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+    (t (:height 1.5)))
   "Face for the inactive window border."
   :group 'kwrooijen/modeline)
 
@@ -4315,16 +3744,6 @@ Highlight the tags of the current element.
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-;; ----------------------------------------
-;; Raise helper (core of vertical centering)
-;; ----------------------------------------
-
-(defvar kwrooijen/modeline-raise 0.20)
-
-(defun kwrooijen/modeline-r (s face)
-  "Apply face and vertical raise to a modeline string."
-  (propertize s 'face face 'display `(raise ,kwrooijen/modeline-raise)))
-
 (kwrooijen/reset-inherit-face!
  'mode-line           'kwrooijen/darken-bg-face
  'mode-line-active    'kwrooijen/darken-bg-face
@@ -4333,35 +3752,39 @@ Highlight the tags of the current element.
 
 (set-face-attribute 'kwrooijen/modeline-border nil :height 1.5)
 (set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5)
+#+END_SRC
 
-;; ----------------------------------------
-;; Border characters
-;; ----------------------------------------
+** Active bar
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/modeline-raise 0.20)
+
+(defun kwrooijen/modeline-r (s face)
+  "Apply face and vertical raise to a modeline string."
+  (propertize s 'face face 'display `(raise ,kwrooijen/modeline-raise)))
 
 (defvar kwrooijen/modeline-active-border "▎")
 (defvar kwrooijen/modeline-inactive-border "▎")
+(defvar kwrooijen/modeline-selected-window nil)
 
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
-    (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
-
-;; ----------------------------------------
-;; Track active window
-;; ----------------------------------------
+    (propertize kwrooijen/modeline-inactive-border 'face
+                `(:foreground ,(face-attribute 'kwrooijen/modeline-border-inactive :foreground)
+                  :height ,(face-attribute 'kwrooijen/modeline-border-inactive :height)))))
 
 (defun kwrooijen/modeline--set-selected-window (&rest _)
   (unless (minibuffer-window-active-p (selected-window))
     (setq kwrooijen/modeline-selected-window (selected-window))))
 
 (add-hook 'post-command-hook #'kwrooijen/modeline--set-selected-window)
+#+END_SRC
 
-;; ----------------------------------------
-;; Segments
-;; ----------------------------------------
+** Segments
 
-;; Evil state
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-evil-tag ()
   (when (bound-and-true-p evil-local-mode)
     (let* ((state evil-state)
@@ -4381,150 +3804,149 @@ Highlight the tags of the current element.
               ('replace 'error)
               (_ 'kwrooijen/modeline-evil))))
       (kwrooijen/modeline-r tag face))))
+#+END_SRC
 
-
-;; Winum (bold when active)
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-winum ()
   (when (bound-and-true-p winum-mode)
-    (let* ((num-str (format "%d" (or (winum-get-number) 1)))
+    (let* ((num-str (format "%d " (or (winum-get-number) 1)))
            (face (if (eq (selected-window) kwrooijen/modeline-selected-window)
                      `(:inherit kwrooijen/modeline-winum :weight bold)
                    'kwrooijen/modeline-winum)))
       (kwrooijen/modeline-r num-str face))))
+#+END_SRC
 
-;; Git branch
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-git-branch ()
   ""
-  (when-let ((branch (magit-get-current-branch)))
+  (when-let ((branch (and (fboundp 'magit-get-current-branch)
+                          (magit-get-current-branch))))
     (kwrooijen/modeline-r
-     (format " %s" branch)
+     (format "   %s" branch)
      'kwrooijen/modeline-git-branch)))
+#+END_SRC
 
-;; Scroll indicator
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-scroll ()
-  (kwrooijen/modeline-r
-   (cond
-    ((eq (point) (point-min)) "Top")
-    ((eq (point) (point-max)) "Bot")
-    (t (format "%d％"
-               (/ (* 100 (1- (line-number-at-pos)))
-                  (count-lines (point-min) (point-max))))))
-   'kwrooijen/modeline-scroll))
+  (kwrooijen/modeline-r " %p%% " 'kwrooijen/modeline-scroll))
+#+END_SRC
 
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-line-col ()
-  (kwrooijen/modeline-r
-   (format "%d:%d"
-           (line-number-at-pos)
-           (current-column))
-   'kwrooijen/modeline-scroll)) ;; same style as scroll, adjust if you want
+  (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll))
+#+END_SRC
 
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
                      `(:foreground ,(face-attribute 'kwrooijen/warning-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
-    (kwrooijen/modeline-r "%b" face)))
+    (kwrooijen/modeline-r " %b" face)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-;; ----------------------------------------
-;; Build modeline
-;; ----------------------------------------
+(defun kwrooijen/modeline-org-clock ()
+  (when (and (org-clocking-p)
+           (org-clock-get-clocked-time))
+      (kwrooijen/modeline-r
+       (format " [%d:%02d]"
+               (/ (org-clock-get-clocked-time) 60)
+               (% (org-clock-get-clocked-time) 60))
+       'kwrooijen/faded-fg-face)))
+#+END_SRC
 
-(defun kwrooijen/mode-line ( )
-  (let* ((left
-          (list
-           (kwrooijen/modeline-win-focus-border)
-           " "
-           (kwrooijen/modeline-winum)
-           " "
-           (kwrooijen/modeline-evil-tag)
-           " "
-           (kwrooijen/modeline-buffer-name)
-           "  "
-           (kwrooijen/modeline-line-col)
-           " "
-           (kwrooijen/modeline-scroll)))
-
-         (active? (eq (selected-window) kwrooijen/modeline-selected-window))
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-mode ()
+  (let* ((active? (eq (selected-window) kwrooijen/modeline-selected-window))
          (mode-face (if active?
                         `(:inherit kwrooijen/modeline-major-mode :weight bold)
-                      'kwrooijen/modeline-major-mode))
+                      'kwrooijen/modeline-major-mode)))
+    (kwrooijen/modeline-r "  %m  " mode-face)))
+#+END_SRC
 
-         (right
-          (list
-           (kwrooijen/modeline-git-branch)
-           "  "
-           (kwrooijen/modeline-r "%m  " mode-face))))
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-zoom ()
+  (let* ((zoom (/ (- (face-attribute 'default :height)
+                     kwrooijen/default-font-size) kwrooijen/font-step-size))
+         (affix (if (> zoom 0) "+" "-")))
+    (unless (equal zoom 0)
+      (kwrooijen/modeline-r (format " %s%s" zoom affix)
+                            'kwrooijen/popout-fg-face))))
+#+END_SRC
 
+
+** Build modeline
+
+Center spacing
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-center-space (right)
+  (propertize
+   " "
+   'display
+   `((space :align-to
+            (- (+ right right-fringe right-margin)
+               ,(string-width (format-mode-line right)))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/modeline-left
+  (list
+   '(:eval (kwrooijen/modeline-win-focus-border))
+   '(:eval (kwrooijen/modeline-winum))
+   '(:eval (kwrooijen/modeline-evil-tag))
+   '(:eval (kwrooijen/modeline-buffer-name))
+   '(:eval (kwrooijen/modeline-line-col))
+   '(:eval (kwrooijen/modeline-scroll)))
+  "Left side of the modeline."
+  :type 'list
+  :group 'kwrooijen/modeline)
+
+(defcustom kwrooijen/modeline-right
+  (list
+   '(:eval (kwrooijen/modeline-org-clock))
+   '(:eval (kwrooijen/modeline-zoom))
+   '(:eval (kwrooijen/modeline-git-branch))
+   '(:eval (kwrooijen/modeline-mode)))
+  "Right side of the modeline."
+  :type 'list
+  :group 'kwrooijen/modeline)
+
+(defun kwrooijen/mode-line ()
+  (let* ((left  (delq nil kwrooijen/modeline-left))
+         (right (delq nil kwrooijen/modeline-right)))
     (concat
      (format-mode-line left)
-     (propertize
-      " "
-      'display
-      `((space :align-to
-               (- (+ right right-fringe right-margin)
-                  ,(string-width (format-mode-line right))))))
+     (kwrooijen/modeline-center-space right)
      (format-mode-line right))))
 
 (setq-default mode-line-format
               '((:eval (kwrooijen/mode-line))))
-#+END_SRC
 
-
-* Helm
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/modeline-helm-candidates()
-  (kwrooijen/modeline-r
-   (with-helm-buffer
-     (format "[%s/%s]"
-             (- (line-number-at-pos) 1)
-             (helm-get-candidate-number 'in-current-source)))
-   'default))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-buffer ()
-  (kwrooijen/modeline-r
-   (capitalize
-    (replace-regexp-in-string "-" " "
-                              (replace-regexp-in-string "\\*" "" (buffer-name))))
-   'warning))
-#+END_SRC
-
-
-#+BEGIN_SRC emacs-lisp
-(with-eval-after-load 'helm
-  (defun helm-display-mode-line (source &optional force)
-    "Fully custom Helm modeline."
-    ;; Override the whole mode-line-format
+(when (buffer-live-p (get-buffer "*Messages*"))
+  (with-current-buffer "*Messages*"
     (setq mode-line-format
-          (let* ((left
-                  (list
-                   (kwrooijen/modeline-win-focus-border t)
-                   " "
-                   ;; (kwrooijen/buffer-capitalize (kwrooijen/modeline-buffer-name))
-                   (kwrooijen/helm-buffer)
-                   " "
-                   '(:eval
-                     (kwrooijen/modeline-helm-candidates)
-                     )))
-                 (active? (eq (selected-window) kwrooijen/modeline-selected-window))
-                 (mode-face (if active?
-                                `(:inherit kwrooijen/modeline-major-mode :weight bold)
-                              'kwrooijen/modeline-major-mode))
-                 (right
-                  (list)))
-            (concat
-             (format-mode-line left)
-             (propertize
-              " "
-              'display
-              `((space :align-to
-                       (- (+ right right-fringe right-margin)
-                          ,(string-width (format-mode-line right))))))
-             (format-mode-line right))))))
+          '((:eval (kwrooijen/mode-line))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+;; TODO implement project relative buffer name (with trimming)
+(defun kwrooijen/buffer-path-from-project-root ()
+  "Return path starting with the project root directory name.
+If not a file buffer, return the buffer name."
+  (interactive)
+  (let* ((fname (buffer-file-name))
+         (proj-root (when (fboundp 'kwrooijen/project-root)
+                      (kwrooijen/project-root))))
+    (cond
+     ((and fname proj-root)
+      (concat (file-name-nondirectory
+               (directory-file-name proj-root))
+              "/"
+              (file-relative-name fname proj-root)))
+     (fname (file-name-nondirectory fname))
+     (t (buffer-name)))))
 #+END_SRC
 
 * Dired
@@ -4547,7 +3969,7 @@ Highlight the tags of the current element.
 (general-define-key
  :states 'normal
  :keymaps 'dired-mode-map
- ";" #'helm-find-files)
+ ";" #'find-file)
 #+END_SRC
 
 * Diredfl
@@ -4639,10 +4061,37 @@ Remove diredfl-match-ignored-extensions
 (dired-preview-delay 0)
 #+END_SRC
 
+* Casual
+:PROPERTIES:
+:PACKAGE:  casual
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'dired-mode-map
+  "'" #'casual-dired-tmenu)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'csv-mode-map
+  "'" #'casual-csv-tmenu)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(setq casual-dired-listing-switches '("--group-directories-first" "-laoh"))
+#+END_SRC
+
 * Magit
 :PROPERTIES:
 :PACKAGE:  magit
 :STRAIGHT: t
+:DEMAND: t
 :END:
 
 ** Options
@@ -4723,6 +4172,18 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 "ga" '(smerge-keep-all :which-key "Merge keep all"))
 #+END_SRC
 
+* Magit Todos
+:PROPERTIES:
+:PACKAGE:  magit-todos
+:STRAIGHT: t
+:AFTER: magit
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(magit-todos-mode 1)
+#+END_SRC
+
 * Anzu
 :PROPERTIES:
 :PACKAGE: anzu
@@ -4732,7 +4193,7 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 
 Disable Anzu by default
 #+BEGIN_SRC emacs-lisp
-(anzu-mode-line-update-function #'anzu--update-modeline-noop)
+(anzu-mode-line-update-function (lambda(&rest _)))
 (anzu-mode-lighter "")
 #+END_SRC
 
@@ -4788,125 +4249,6 @@ Disable Anzu by default
 ("C-h v" #'helpful-variable)
 ("C-h k" #'helpful-key)
 ("C-h x" #'helpful-command)
-#+END_SRC
-
-* Projectile
-:PROPERTIES:
-:PACKAGE: projectile
-:STRAIGHT: t
-:END:
-
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "pi" 'projectile-invalidate-cache
-  "pr" 'projectile-replace)
-#+END_SRC
-
-** Init :init:
-#+BEGIN_SRC emacs-lisp
-(projectile-mode 1)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-;; --- Audio files ---
-(dolist (ext '("mp3" "wav" "flac" "aac" "ogg" "m4a" "aiff"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Video files ---
-(dolist (ext '("mp4" "mkv" "mov" "avi" "wmv" "flv" "mpeg" "mpg" "webm"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Images ---
-(dolist (ext '("jpg" "jpeg" "png" "gif" "bmp" "tiff" "svg" "heic" "webp"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- RAW / high-resolution photos ---
-(dolist (ext '("raw" "cr2" "nef" "arw" "dng"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- 3D / CAD ---
-(dolist (ext '("obj" "fbx" "stl" "blend" "dae"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Archives / compressed ---
-(dolist (ext '("zip" "tar" "gz" "7z" "rar" "xz" "bz2"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Disk images / installers ---
-(dolist (ext '("iso" "dmg" "img" "exe" "msi"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Misc large binaries ---
-(dolist (ext '("bin" "dat" "pak" "db" "sqlite" "db3"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-;; --- Project ---
-(dolist (ext '("output.css"))
-  (add-to-list 'projectile-globally-ignored-file-suffixes ext))
-
-#+END_SRC
-
-
-** Custom :custom:
-
-Don't use fd, use git-ls instead
-
-#+BEGIN_SRC emacs-lisp
-(projectile-git-use-fd nil)
-#+END_SRC
-
-Set indexing method to `hybrid`.
-If set to `alien`, indexing won't use `projectile-globally-ignored-file-suffixes`.
-If set to `native`, indexing will be very slow
-
-#+BEGIN_SRC emacs-lisp
-(projectile-indexing-method 'hybrid)
-#+END_SRC
-
-Ignore all images
-
-#+BEGIN_SRC emacs-lisp
-(setq projectile-globally-ignored-file-suffixes
- '(".gif" ".jpeg" ".jpg" ".png" ".svg" "eot" "ttf" "woff" "woff2" "min.js" "min.css"))
-#+END_SRC
-
-
-
-** Config :config:
-
-There doesn't seem to be an option in projectile to exclude submodules
-in `projectile-find-file`. To "fix" this for now, we force
-`projectile-get-sub-projects-files` to always return nil.
-
-#+BEGIN_SRC emacs-lisp
-(defun projectile-get-sub-projects-files (_ _) nil)
-#+END_SRC
-
-
-In order for ~grep-find-ignored-files~ to property ignore files in
-~helm-projectile-rg~, we need to override the ~glob-quote~ function. For
-some reason it messes up the askerisk.
-
-TODO: Create an issue
-https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L994-L997
-
-#+BEGIN_SRC emacs-lisp
-(defun glob-quote (string)
-  "Quote the special glob characters: *, ?, [, and ].
-STRING the string in which to escape special characters."
-  ;; (replace-regexp-in-string "[]*?[]" "\\\\\\&" string)
-  string)
-#+END_SRC
-
-
-Add any `projectile-globally-ignored-file-suffixes` to `grep-find-ignored-files`.
-This should work for `helm-projectile-rg`.
-(see: helm-projectile.el:helm-projectile-rg:ignored-files)
-
-#+BEGIN_SRC emacs-lisp
-(dolist (file projectile-globally-ignored-file-suffixes)
-  (add-to-list 'grep-find-ignored-files (concat "*" file)))
 #+END_SRC
 
 * Eshell
@@ -4984,10 +4326,10 @@ Use dired colors
       (delete-window)
     (vterm)))
 
-(defun kwrooijen/projectile-vterm ()
+(defun kwrooijen/project-vterm ()
   (interactive)
-  (let ((default-directory (projectile-project-root))
-        (vterm-buffer-name (concat "*vterm " (projectile-project-name) "*")))
+  (let ((default-directory (kwrooijen/project-root))
+        (vterm-buffer-name (concat "*vterm " (kwrooijen/project-name) "*")))
     (if (eq major-mode 'vterm-mode)
         (delete-window)
       (if (get-buffer vterm-buffer-name)
@@ -4999,7 +4341,7 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "e E" 'kwrooijen/toggle-vterm
-  "e P" 'kwrooijen/projectile-vterm)
+  "e P" 'kwrooijen/project-vterm)
 #+END_SRC
 
 * Restclient
@@ -5218,7 +4560,7 @@ Emacs, available at any time and uniformly in any buffer.
                 :endpoint "/openai/v1/chat/completions"
                 :stream t
                 :key #'read-groq-key
-                :models '("llama3-70b-8192"))))
+                :models '("llama3-70b-8192")))
 #+END_SRC
 
 ** Config :config:
@@ -5262,478 +4604,6 @@ This is a major mode for Emacs providing editing conveniences for the
 OpenGL Shading Language (GLSL). It currently handles GLSL version 4.6,
 including many recent Vulkan extensions.
 
-* Helm
-:PROPERTIES:
-:PACKAGE: helm
-:STRAIGHT: t
-:END:
-
-** Improved helm colors
-Use the same colors are dired for Helm files.
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-colors-hook ()
-
-  (set-face-attribute 'helm-buffer-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
-  (set-face-attribute 'helm-buffer-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
-  (set-face-attribute 'helm-ff-prefix nil :foreground 'unspecified :background 'unspecified)
-  (set-face-attribute 'helm-ff-executable nil :foreground 'unspecified :background 'unspecified)
-  (set-face-attribute 'helm-ff-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
-  (set-face-attribute 'helm-ff-dotted-directory nil :foreground 'unspecified :background 'unspecified :inherit 'dired-directory)
-  (set-face-attribute 'helm-ff-file nil :foreground 'unspecified :background 'unspecified :inherit 'default)
-  (set-face-attribute 'helm-ff-file-extension nil :foreground 'unspecified :background 'unspecified :inherit 'default)
-  (set-face-attribute 'helm-match nil  :foreground 'unspecified :background 'unspecified)
-  (set-face-attribute 'helm-header nil :foreground 'unspecified :background 'unspecified)
-  (set-face-attribute 'helm-helper nil :foreground 'unspecified :background 'unspecified)
-  (set-face-attribute 'helm-M-x-short-doc nil :box 'unspecified :foreground 'unspecified :background 'unspecified :inherit 'font-lock-comment-face))
-#+END_SRC
-
-** Better next / previous function
-The functions `helm-next-line` and `helm-previous-line` don't jump to
-the next source. You have to use `helm-next-source`.
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-next-line-or-next-source ()
-  "Go to the next line in Helm buffer. If at the end of the source, go to the next source."
-  (interactive)
-  (condition-case err
-      (let ((pos (helm-get-selection nil nil t)))
-        (if (or (null pos) (equal pos (overlay-start helm-selection-overlay)))
-            (helm-next-source)
-          (helm-next-line)))
-    (error (helm-next-line))))
-
-(defun kwrooijen/helm-previous-line-or-previous-source ()
-  "Go to the previous line in Helm buffer. If at the beginning of the source, go to the previous source."
-  (interactive)
-  (condition-case err
-      (let ((pos (helm-get-selection nil nil t)))
-        (if (or (null pos) (equal pos (overlay-start helm-selection-overlay)))
-            (helm-previous-source)
-          (helm-previous-line)))
-    (error (helm-previous-line))))
-#+END_SRC
-
-** Custom Helm M-: (eval-expression)
-
-#+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/helm-eval-history nil
-  "History for kwrooijen/helm-eval-expression.")
-
-(defun kwrooijen/helm-eval--history-push (expr)
-  "Push EXPR into history without duplicating."
-  (setq kwrooijen/helm-eval-history
-        (cons expr (delete expr kwrooijen/helm-eval-history))))
-
-(defun kwrooijen/helm-eval-expression ()
-  (interactive)
-  (let ((insert-fn
-         (lambda (candidate)
-           (helm-set-pattern candidate)
-           (helm-force-update))))
-
-    (helm :sources
-          (list
-           (helm-build-dummy-source "Enter expression"
-             :persistent-action insert-fn
-             :action (lambda (candidate)
-                       (kwrooijen/helm-eval--history-push candidate)
-                       (message "%s" (eval (read candidate)))))
-           (helm-build-sync-source "Eval history"
-             :candidates (lambda () kwrooijen/helm-eval-history)
-             :persistent-action insert-fn
-             :action (lambda (candidate)
-                       (kwrooijen/helm-eval--history-push candidate)
-                       (message "%s" (eval (read candidate))))))
-          :buffer "*helm eval*")))
-#+END_SRC
-
-
-** Custom :custom:
-
-Instantly go to the match after navigating to the candidate.
-#+BEGIN_SRC emacs-lisp
-(helm-follow-input-idle-delay 0)
-#+END_SRC
-
-
-Show 200 candidates instead of 50 in search results.
-
-#+BEGIN_SRC emacs-lisp
-(helm-candidate-number-limit 200)
-#+END_SRC
-
-Input in header instead of minibuffer
-
-#+BEGIN_SRC emacs-lisp
-(helm-echo-input-in-header-line t)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(helm-find-files-doc-header nil)
-#+END_SRC
-
-Show docs when using helm-M-x
-
-#+BEGIN_SRC emacs-lisp
-(helm-M-x-show-short-doc t)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(helm-minibuffer-history-key "M-p")
-#+END_SRC
-
-
-** Config :config:
-
-
-kwrooijen/helm-exit-minibuffer is used to prevent the error "[Display
-not Ready]" when pressing return too fast.
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-exit-minibuffer ()
-  (interactive)
-  (helm-exit-minibuffer))
-#+END_SRC
-
-
-Use helm as default completion framework.
-
-#+BEGIN_SRC emacs-lisp
-(helm-mode 1)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(require 'helm-command)
-(kwrooijen/helm-colors-hook)
-#+END_SRC
-
-
-Don't hide other windows when opening Helm. Open helm with full width
-at the bottom.
-
-~helm-split-window-inside-p~ will open the helm buffer in the current
-window. This isn't great if the window is small. It also changes the
-position of Helm depending on the context. To fix this, use shackle to
-always open helm with full width in the bottom.
-
-
-#+BEGIN_SRC emacs-lisp
-(setq helm-split-window-inside-p t)
-
-(push '("\\`\\*helm.*?\\*\\'" :regexp t :align t :ratio 0.3) shackle-rules)
-#+END_SRC
-
-Load helm-command to prevent errors
-
-#+BEGIN_SRC emacs-lisp
-(require 'helm-command)
-#+END_SRC
-
-Hide the cursor in the Helm buffer
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-hide-cursor ()
-  (with-helm-buffer
-    (setq-local evil-normal-state-cursor '(nil))))
-
-(add-hook 'helm-after-initialize-hook #'kwrooijen/helm-hide-cursor)
-#+END_SRC
-
-Remove helm header
-#+BEGIN_SRC emacs-lisp
-(defun helm-insert-header-from-source (source)
-  (let ((name (assoc-default 'name source)))
-    (helm-insert-header name "")))
-#+END_SRC
-
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-("M-x" 'helm-M-x)
-("M-:" 'kwrooijen/helm-eval-expression)
-
-(:keymaps 'helm-find-files-map
-          "M-v" 'clipboard-yank
-          "C-l" nil)
-
-(:keymaps 'helm-map
-          "M-v" #'clipboard-yank
-          "C-f" #'helm-next-page
-          "C-b" #'helm-previous-page
-          "C-h" #'backward-char
-          "C-l" #'forward-char
-          "M-h" #'backward-word
-          "M-l" #'forward-word
-          "M-p" #'helm-previous-line
-          "M-b" #'backward-word
-          "M-l" #'forward-word
-          "C-j" #'kwrooijen/helm-next-line-or-next-source
-          "C-k" #'kwrooijen/helm-previous-line-or-previous-source
-          "TAB" #'helm-execute-persistent-action
-          "<tab>" #'helm-execute-persistent-action
-          "C-z" #'helm-select-action
-          "<return>" #'kwrooijen/helm-exit-minibuffer)
-
-(kwrooijen/leader
-  "r r" '(helm-resume :which-key "Helm resume")
-  "r y" '(helm-show-kill-ring :which-key "Show kill ring")
-  "f f" '(helm-find-files :which-key "Find files")
-  "b b" '(helm-buffers-list :which-key "Buffer list")
-  "b i" '(kwrooijen/indent-buffer :which-key "Indent Buffer"))
-#+END_SRC
-
-
-** Bingings :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "ss" '(helm-occur :which-key "Find in buffer"))
-#+END_SRC
-
-* Helm Projectile
-:PROPERTIES:
-:PACKAGE: helm-projectile
-:STRAIGHT: t
-:END:
-** Config :config:
-
-Useful helm projectile functions
-
-#+BEGIN_SRC emacs-lisp
-(defun helm-projectile-rg-with-input ()
-  (interactive)
-  (let ((helm-projectile-set-input-automatically t))
-    (helm-projectile-rg)))
-
-(defun helm-projectile-rg-full ()
-  (interactive)
-  (let ((default-directory (projectile-project-root)))
-    (helm-rg "")))
-
-(defun helm-projectile-rg-full-with-input ()
-  (interactive)
-  (let ((helm-projectile-set-input-automatically t)
-        (default-directory (projectile-project-root)))
-    (helm-rg (helm-projectile-rg--region-selection))))
-#+END_SRC
-
-
-Start projectile
-
-#+BEGIN_SRC emacs-lisp
-(helm-projectile-on)
-(projectile-mode +1)
-#+END_SRC
-
-*** TODO [PATCH] Overrides in order to add gitmodules as exclusions
-https://github.com/bbatsov/helm-projectile/blob/e2e38825c975269a4971df25e79b2ae98929624e/helm-projectile.el#L1000
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/read-gitmodules-paths (file)
- (when (file-exists-p file)
-  (with-temp-buffer
-    (insert-file-contents file)
-    (let (paths)
-      (while (re-search-forward "^\\s-*path = \\(.*\\)$" nil t)
-        (push (match-string 1) paths))
-      (nreverse paths)))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defun helm-projectile-rg ()
-  "Projectile version of `helm-rg'."
-  (interactive)
-  (if (require 'helm-rg nil t)
-      (if (projectile-project-p)
-          (let* ((helm-rg-prepend-file-name-line-at-top-of-matches nil)
-                 (helm-rg-include-file-on-every-match-line t)
-                 (ignored-files (mapcan (lambda (path)
-                                          (list "--glob" (concat "!" (glob-quote path))))
-                                        (cl-union (projectile-ignored-files-rel)  grep-find-ignored-files)))
-                 (ignored-directories (mapcan (lambda (path)
-                                                (list "--glob" (concat "!" (glob-quote path) "/**")))
-                                              (cl-union (mapcar 'directory-file-name (projectile-ignored-directories-rel))
-                                                        (append
-                                                         grep-find-ignored-directories
-                                                         (kwrooijen/read-gitmodules-paths
-                                                          (concat (projectile-project-root) "/.gitmodules"))))))
-                 (helm-rg--extra-args `(,@ignored-files ,@ignored-directories)))
-            (let ((default-directory (projectile-project-root)))
-              (helm-rg (helm-projectile-rg--region-selection)
-                       nil)))
-        (error "You're not in a project"))
-    (when (yes-or-no-p "`helm-rg' is not installed. Install? ")
-      (condition-case nil
-          (progn
-            (package-install 'helm-rg)
-            (helm-projectile-rg))
-        (error "`helm-rg' is not available.  Is MELPA in your `package-archives'?")))))
-#+END_SRC
-
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "p p" '(helm-projectile-switch-project :which-key "Switch to Project")
-  "p f" '(helm-projectile-find-file :which-key "Find Project file")
-  "p F" '(helm-projectile-find-file-in-known-projects :which-key "Find Project file+")
-  "s p" '(helm-projectile-rg :which-key "Project Grep")
-  "s P" '(helm-projectile-rg-with-input :which-key "Project Grep")
-  "s o" '(helm-projectile-rg-full :which-key "Project Grep")
-  "s O" '(helm-projectile-rg-full-with-input :which-key "Project Grep"))
-#+END_SRC
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(projectile-use-git-grep t)
-(helm-projectile-fuzzy-match nil)
-(helm-projectile-set-input-automatically nil)
-(helm-display-header-line nil))
-#+END_SRC
-
-* Helm descbinds
-:PROPERTIES:
-:PACKAGE: helm-descbinds
-:STRAIGHT: t
-:END:
-
-* Helm Make
-:PROPERTIES:
-:PACKAGE: helm-make
-:STRAIGHT: t
-:END:
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "c m" '(helm-make :which-key "Make"))
-#+END_SRC
-
-* Helm Company
-:PROPERTIES:
-:PACKAGE: helm-company
-:STRAIGHT: t
-:END:
-
-** Bindings :general:
-
-#+BEGIN_SRC emacs-lisp
-("C-;" 'helm-company)
-#+END_SRC
-
-* Helm RG
-:PROPERTIES:
-:PACKAGE: helm-rg
-:STRAIGHT: t
-:END:
-
-** Config :config:
-
-Some custom colors for helm-rg to make it less chaotic
-
-#+BEGIN_SRC emacs-lisp
-
-(set-face-attribute 'helm-rg-title-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-error-message nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-extra-arg-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-match-text-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-file-match-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/salient-fg-face)
-(set-face-attribute 'helm-rg-active-arg-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-base-rg-cmd-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-inactive-arg-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-directory-cmd-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-directory-header-face nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-line-number-match-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/faded-fg-face)
-(set-face-attribute 'helm-rg-preview-line-highlight nil :background 'unspecified :foreground 'unspecified)
-(set-face-attribute 'helm-rg-colon-separator-ripgrep-output-face nil :background 'unspecified :foreground 'unspecified :underline 'unspecified :inherit 'kwrooijen/faded-fg-face)
-#+END_SRC
-
-Fix M-b / M-d in helm-rg
-
-#+BEGIN_SRC emacs-lisp
-(define-key helm-rg-map (kbd "M-b") 'backward-word)
-(define-key helm-rg-map (kbd "M-d") 'kill-word)
-#+END_SRC
-
-
-*** TODO [PATCH] Overrides to remove header from helm-rg
-https://github.com/cosmicexplorer/helm-rg/blob/ee0a3c09da0c843715344919400ab0a0190cc9dc/helm-rg.el#L1132
-
-#+BEGIN_SRC emacs-lisp
-(defun helm-rg--make-process-from-argv (argv)
-  (let* ((real-proc (make-process
-                     :name helm-rg--process-name
-                     :buffer helm-rg--process-buffer-name
-                     :command argv
-                     :noquery t))
-         (helm-src-name
-          (format "argv: %s" (helm-rg--join " " argv))))
-    ;; TODO MAKE THIS OPTIONAL
-    ;; (helm-attrset 'name helm-src-name)
-    (set-process-query-on-exit-flag real-proc nil)
-    real-proc))
-#+END_SRC
-
-
-* Helm Bookmark
-:PROPERTIES:
-:PACKAGE:  helm-bookmark
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(bookmark-default-file (file-name-concat kwrooijen/emacs-directory "db/bookmark-default.el")))
-(bookmark-file (file-name-concat kwrooijen/emacs-directory "db/bookmark-default.el")))
-#+END_SRC
-
-** General :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "f b" '(helm-bookmarks :which-key "Bookmarks"))
-#+END_SRC
-
-
-* Helm Occur
-:PROPERTIES:
-:PACKAGE: helm-occur
-:END:
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-
-;; [PULL REQUEST]
-
-(defcustom helm-occur-lineno-format "%s:"
-"Helm occur line number format, displayed left of the candidate."
-:type 'string)
-
-(defun helm-occur-transformer (candidates source)
-  "Return CANDIDATES prefixed with line number."
-  (cl-loop with buf = (helm-get-attr 'buffer-name source)
-           for c in candidates
-           for bfname = (buffer-file-name (get-buffer buf))
-           for disp-linum = (when (string-match helm-occur--search-buffer-regexp c)
-                              (let ((linum (match-string 1 c))
-                                    (disp (match-string 2 c)))
-                                (list
-                                 linum
-                                 (format "%s%s"
-                                         (propertize
-                                          (format helm-occur-lineno-format  linum)
-                                          'face 'helm-grep-lineno
-                                          'help-echo bfname
-                                          'helm-grep-fname bfname)
-                                         disp))))
-           for linum = (car disp-linum)
-           for disp = (cadr disp-linum)
-           when (and disp (not (string= disp "")))
-           collect (cons disp (string-to-number linum))))
-
-;; Custom
-
-(setq helm-occur-lineno-format "%4s: ")
-
-(kwrooijen/reset-inherit-face! 'helm-grep-lineno 'kwrooijen/faded-fg-face)
-#+END_SRC
 
 * Functions
 #+BEGIN_SRC emacs-lisp
@@ -6010,6 +4880,8 @@ holding export options."
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/local-leader
    :keymaps 'org-mode-map
+   "c p" 'wisdom-preview
+   "c P" 'wisdom-preview-mode
    "c c" 'wisdom-reload-current-buffer
    "c a" 'wisdom-reload)
 #+END_SRC
@@ -6047,28 +4919,45 @@ holding export options."
 #+END_SRC
 
 ** Config :config:
+
 #+BEGIN_SRC emacs-lisp
-(require 'org-clock)
-(defun org-clock-get-clock-string ()
-  "Form a clock-string, that will be shown in the mode line.
-If an effort estimate was defined for the current item, use
-01:30/01:50 format (clocked/estimated).
-If not, show simply the clocked time like 01:50."
-  (let ((clocked-time (org-clock-get-clocked-time)))
-    (if org-clock-effort
-	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
-	       (work-done-str
-		(propertize (org-duration-from-minutes clocked-time)
-			    'face
-			    (if (and org-clock-task-overrun
-				     (not org-clock-task-overrun-text))
-				'org-mode-line-clock-overrun
-			      'org-mode-line-clock)))
-	       (effort-str (org-duration-from-minutes effort-in-minutes)))
-	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
-		  work-done-str effort-str))
-      (format (propertize "[%s]" 'face 'org-mode-line-clock)
-	      (org-duration-from-minutes clocked-time)))))
+(defun kwrooijen/org-heading-1-next ()
+  (interactive)
+    (org-next-visible-heading 1)
+    (recenter-top-bottom 2))
+
+(defun kwrooijen/org-heading-1-prev ()
+  (interactive)
+    (org-next-visible-heading -1)
+    (recenter-top-bottom 2))
+
+(define-key org-mode-map (kbd "M-n") #'kwrooijen/org-heading-1-next)
+(define-key org-mode-map (kbd "M-p") #'kwrooijen/org-heading-1-prev)
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+;; (require 'org-clock)
+;; (defun org-clock-get-clock-string ()
+;;   "Form a clock-string, that will be shown in the mode line.
+;; If an effort estimate was defined for the current item, use
+;; 01:30/01:50 format (clocked/estimated).
+;; If not, show simply the clocked time like 01:50."
+;;   (let ((clocked-time (org-clock-get-clocked-time)))
+;;     (if org-clock-effort
+;; 	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
+;; 	       (work-done-str
+;; 		(propertize (org-duration-from-minutes clocked-time)
+;; 			    'face
+;; 			    (if (and org-clock-task-overrun
+;; 				     (not org-clock-task-overrun-text))
+;; 				'org-mode-line-clock-overrun
+;; 			      'org-mode-line-clock)))
+;; 	       (effort-str (org-duration-from-minutes effort-in-minutes)))
+;; 	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
+;; 		  work-done-str effort-str))
+;;       (format (propertize "[%s]" 'face 'org-mode-line-clock)
+;; 	      (org-duration-from-minutes clocked-time)))))
 
 (font-lock-add-keywords
  'org-mode
@@ -6153,7 +5042,6 @@ If not, show simply the clocked time like 01:50."
 #+BEGIN_SRC emacs-lisp
 (require 'face-remap)
 #+END_SRC
-
 * Org Roam
 :PROPERTIES:
 :PACKAGE: org-roam
@@ -6190,7 +5078,6 @@ If not, show simply the clocked time like 01:50."
 (org-roam-directory (file-truename "~/Documents/org/notes"))
 (org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
 (org-roam-completion-everywhere t)
-(org-roam-completion-system 'helm)
 (org-roam-capture-templates '(("d" "default" plain "%?"
                                       :target (file+head "${slug}.org" "#+title: ${title} ")
                                       :unnarrowed t)
@@ -6203,7 +5090,6 @@ If not, show simply the clocked time like 01:50."
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-    "f n" 'org-roam-node-find
     "p o" 'kwrooijen/org-roam-switch-project)
 #+END_SRC
 
@@ -6224,7 +5110,387 @@ If not, show simply the clocked time like 01:50."
                           ("#+END_QUOTE" . "”")))
 #+END_SRC
 
-#+STARTUP: showeverything
+* Org Appear
+:PROPERTIES:
+:PACKAGE:  org-appear
+:STRAIGHT: (org-appear :type git :host github :repo "awth13/org-appear")
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . org-appear-mode))
+#+END_SRC
+
+* Consult Notes
+:PROPERTIES:
+:PACKAGE:  consult-notes
+:STRAIGHT: (consult-notes :type git :host github :repo "mclear-tools/consult-notes")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/org/notes/")))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(consult-notes-org-roam-mode)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "fn" #'consult-notes
+  "fp" #'consult-notes-search-in-all-notes)
+#+END_SRC
+
+* Org Fragtog
+:PROPERTIES:
+:PACKAGE:  org-fragtog
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((org-mode . org-fragtog-mode))
+#+END_SRC
+
+* Vertico
+:PROPERTIES:
+:PACKAGE:  vertico
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'minibuffer-local-map
+          "M-c" #'clipboard-kill-ring-save
+          "M-v" #'clipboard-yank
+
+          ;; Navigation
+          "C-f" #'scroll-up-command
+          "C-b" #'scroll-down-command
+          "C-h" #'backward-char
+          "C-l" #'forward-char
+          "C-j" #'next-line
+          "C-k" #'previous-line
+          "M-h" #'backward-word
+          "M-l" #'forward-word
+
+          ;; Deletion
+          "C-d" #'delete-char
+          "C-S-d" #'kill-line
+          "M-d" #'kill-word
+
+          ;; Other
+          "M-]" (lambda() (interactive) (dimmer-restore-all)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "rr" '(vertico-repeat :which-key "Repeat last search"))
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(vertico-mode)
+(savehist-mode)
+(recentf-mode)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/minibuffer-set-minimum-height ()
+  (let ((win (active-minibuffer-window)))
+    (when (window-live-p win)
+      (with-selected-window win
+        (let* ((target 17)
+               (delta (- target (window-height))))
+          (when (/= delta 0)
+            (enlarge-window delta)))))))
+
+(defun kwrooijen/vertico-add-bottom-padding (orig-func height)
+  "Add extra padding to Vertico completion window height."
+  (funcall orig-func (1+ height)))
+
+(defun kwrooijen/vertico-add-top-padding (orig-fun lines)
+  "Add an empty visual line above the Vertico candidate list."
+  (funcall
+   orig-fun
+   (if (or (null lines)
+           ;; Don’t mess with alternative UIs; just in case you use them.
+           (bound-and-true-p vertico-flat-mode)
+           (bound-and-true-p vertico-buffer-mode)
+           (bound-and-true-p vertico-grid-mode))
+       lines
+     ;; Prepend a blank line as an extra ‘candidate line’.
+     (cons "\n" lines))))
+
+(defun kwrooijen/hide-minibuffer-truncation-indicator ()
+  (let ((table (or buffer-display-table (make-display-table))))
+    (set-display-table-slot
+     table 'truncation
+     (make-glyph-code ?\  'kwrooijen/darken-fb-face))
+    (setq-local buffer-display-table table)))
+
+(advice-add #'vertico--display-candidates :around #'kwrooijen/vertico-add-top-padding)
+
+(advice-add #'vertico--resize-window :around #'kwrooijen/vertico-add-bottom-padding)
+
+(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
+#+END_SRC
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(vertico-count 17)
+(vertico-count-format '("%-9s " . "[%s/%s]"))
+#+END_SRC
+
+Allow nested minibuffers
+#+BEGIN_SRC emacs-lisp
+(enable-recursive-minibuffers t)
+#+END_SRC
+
+Don't resize minibuffer
+#+BEGIN_SRC emacs-lisp
+(resize-mini-windows nil)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
+('minibuffer-setup #'vertico-repeat-save)
+#+END_SRC
+
+* Consult
+:PROPERTIES:
+:PACKAGE:  consult
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(completion-list-mode . consult-preview-at-point-mode)
+#+END_SRC
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(advice-add #'register-preview :override #'consult-register-window)
+#+END_SRC
+
+** Custom :custom:
+
+No delays
+#+BEGIN_SRC emacs-lisp
+(consult-async-refresh-delay 0)
+(consult-async-input-debounce 0)
+(consult-async-input-throttle 0)
+(register-preview-delay nil)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(consult-customize
+ consult-line :preview-key 'any)
+
+(consult-customize
+ consult-theme
+ consult-buffer
+ consult-ripgrep consult-git-grep consult-grep consult-man
+ consult-bookmark consult-recent-file consult-xref
+ consult-source-bookmark consult-source-file-register
+ consult-source-recent-file consult-source-project-recent-file
+ kwrooijen/consult-ripgrep-symbol-at-point
+ consult-notes-search-in-all-notes
+ :preview-key "TAB")
+
+(set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
+(set-face-attribute 'consult-highlight-match nil :inherit 'bold)
+(set-face-attribute 'consult-preview-match nil :inherit 'bold)
+
+(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
+(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-ripgrep-symbol-at-point ()
+  (interactive)
+  (consult-ripgrep nil (thing-at-point 'symbol t)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/minibuffer-disable-hl-line ()
+  (with-current-buffer (window-buffer (minibuffer-selected-window))
+    (hl-line-mode -1)))
+
+(defun kwrooijen/minibuffer-restore-hl-line ()
+  (with-current-buffer (window-buffer (minibuffer-selected-window))
+    (hl-line-mode 1)))
+
+(add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-disable-hl-line)
+(add-hook 'minibuffer-exit-hook #'kwrooijen/minibuffer-restore-hl-line)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-peek-buffer ()
+  "Temporarily peek at another buffer using popwin, restoring layout on quit."
+  (interactive)
+  (let* ((selected (consult--multi consult-buffer-sources
+                                   :require-match
+                                   (confirm-nonexistent-file-or-buffer)
+                                   :prompt "Switch to: "
+                                   :history 'consult--buffer-history
+                                   :sort nil
+                                   :state (lambda (_action _match))))
+         (popwin-fn (lambda (buffer)
+                      (popwin:display-buffer-1
+                       buffer
+                       :default-config-keywords '(:position left :width 0.5))))
+         (type (when selected (plist-get (cdr selected) :name))))
+    (when selected
+      (pcase type
+        ("Buffer"
+         (funcall popwin-fn (car selected)))
+
+        ("Bookmark"
+         (let ((bookmark-buffer nil))
+           (bookmark-jump (car selected) popwin-fn)))
+
+        ("File"
+         (funcall popwin-fn (find-file-noselect (car selected))))))))
+#+END_SRC
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "ss" '(consult-line :which-key "Find in buffer")
+  "sp" '(consult-ripgrep :which-key "Grep in Project")
+  "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
+  "bb" '(consult-buffer :which-key "Switch buffer")
+   "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
+  "fb" '(consult-bookmark :which-key "Open bookmark")
+  "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
+  "pp" '(project-switch-project :which-key "Switch project")
+  "pf" '(project-find-file :which-key "Find file in project"))
+#+END_SRC
+
+Remove consult-map binding because otherwise Consult preview becomes
+buggy.
+
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'consult-map
+  "TAB" #'ignore)
+#+END_SRC
+
+* Orderless
+:PROPERTIES:
+:PACKAGE:  orderless
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(completion-styles '(orderless basic))
+(completion-category-defaults nil)
+;; (completion-category-overrides '((file (styles . (orderless)))))
+(completion-category-overrides '((file (styles partial-completion))))
+(completion-category-defaults nil)
+(completion-pcm-leading-wildcard t)
+
+(orderless-matching-styles '(orderless-literal orderless-prefixes))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'orderless-match-face-0 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-1 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-2 nil :inherit 'bold :foreground 'unspecified)
+(set-face-attribute 'orderless-match-face-3 nil :inherit 'bold :foreground 'unspecified)
+#+END_SRC
+
+
+* Marginalia
+:PROPERTIES:
+:PACKAGE:  marginalia
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(marginalia-mode)
+#+END_SRC
+
+
+* Embark
+:PROPERTIES:
+:PACKAGE:  embark
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps '(minibuffer-mode-map embark-collect-mode-map)
+ "M-e" 'embark-act
+ "M-a" 'embark-act-all
+ "M-b" 'embark-bindings
+ "M-i" 'embark-select)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none))))
+#+END_SRC
+
+
+* Embark Consult
+:PROPERTIES:
+:PACKAGE:  embark-consult
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(embark-collect-mode . consult-preview-at-point-mode)
+#+END_SRC
+
+
+* Wgrep
+:PROPERTIES:
+:PACKAGE:  wgrep
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(:keymaps 'grep-mode-map
+          :states 'normal
+          "i" #'wgrep-change-to-wgrep-mode)
+
+(:keymaps 'wgrep-mode-map
+          "C-c C-c" #'wgrep-finish-edit)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
+#+END_SRC
+
+
+* Project
+:PROPERTIES:
+:PACKAGE:  project
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(project-switch-commands 'project-find-file)
+#+END_SRC
+
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
@@ -6251,6 +5517,12 @@ If not, show simply the clocked time like 01:50."
 :PACKAGE: simple
 :END:
 
+When Visual Line mode is enabled, `word-wrap` is turned on, and simple
+editing commands are redefined to act on visual lines, not logical
+lines.  See Info node `Visual Line Mode` for details.  Turning on this
+mode disables line truncation set up by variables `truncate-lines` and
+`truncate-partial-width-windows'.
+
 ** Init
 
 #+BEGIN_SRC emacs-lisp
@@ -6267,7 +5539,6 @@ If not, show simply the clocked time like 01:50."
 ((prog-mode . highlight-numbers-mode)
  (org-mode . highlight-numbers-mode))
 #+END_SRC
-
 
 * Dimmer
 :PROPERTIES:
@@ -6288,24 +5559,129 @@ If not, show simply the clocked time like 01:50."
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/helm-dim-all-initialize ()
-  "Dim all buffers except during `helm-occur'."
-  (dimmer-dim-all)
-  (when (string= helm-buffer "*helm occur*")
-    (dimmer-restore-buffer (current-buffer))))
+(defgroup kwrooijen/minibuffer-dim nil
+  "Customization for minibuffer-aware dimming rules."
+  :group 'convenience)
+
+(defcustom kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    magit-discard
+    anzu-query-replace
+    kwrooijen/consult-ripgrep-symbol-at-point)
+
+  "Commands for which the original window should not be dimmed.
+When the minibuffer is activated by one of these commands,
+the selected window will be restored (not dimmed)."
+  :type '(repeat symbol))
+
+(defun kwrooijen/dimmer-dim-all ()
+  "Dim all buffers."
+  (mapc (lambda (buf)
+          (with-current-buffer buf
+            (unless (minibufferp)
+              (dimmer-dim-buffer buf dimmer-fraction))))
+        (dimmer-visible-buffer-list)))
+
+(defun kwrooijen/minibuffer-dim-all-initialize ()
+  "Dim all buffers except for commands listed in `kwrooijen/minibuffer-dim-excluded-commands'."
+  (kwrooijen/dimmer-dim-all)
+  (when (memq this-command kwrooijen/minibuffer-dim-excluded-commands)
+    (dimmer-restore-buffer (window-buffer (minibuffer-selected-window)))))
 
 ;;;###autoload
-(define-minor-mode kwrooijen/helm-dim-mode
-  "Toggle dimming adjustments for Helm."
+(define-minor-mode kwrooijen/minibuffer-dim-mode
+  "Toggle dimming adjustments for Minibuffer."
   :global t
-  (if kwrooijen/helm-dim-mode
+  (if kwrooijen/minibuffer-dim-mode
       (progn
-        (add-to-list 'dimmer-exclusion-regexp-list "^\\*[hH]elm.*\\*$")
-        (add-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
-        (add-hook 'helm-cleanup-hook #'dimmer-restore-all))
-    (remove-hook 'helm-after-initialize-hook #'kwrooijen/helm-dim-all-initialize)
-    (remove-hook 'helm-cleanup-hook #'dimmer-restore-all)))
+        (add-to-list 'dimmer-exclusion-regexp-list ".*Minibuf.*")
 
-(kwrooijen/helm-dim-mode)
+        (add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (add-hook 'minibuffer-exit-hook #'dimmer-restore-all))
+
+        (remove-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (remove-hook 'minibuffer-exit-hook #'dimmer-restore-all)))
+
+(kwrooijen/minibuffer-dim-mode)
+#+END_SRC
+* Hl line mode
+:PROPERTIES:
+:PACKAGE: hl-line
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . hl-line-mode)
+ (text-mode . hl-line-mode)
+ (messages-buffer-mode . hl-line-mode))
+#+END_SRC
+
+
+* Subwindow
+
+Give subwindows (magit, repl, shell, minibuffer, etc) a different
+style. Similar to Solaire mode, but more flexible.
+
+#+BEGIN_SRC emacs-lisp
+(defvar-local kwrooijen/subwindow-needs-style nil)
+
+(defun kwrooijen/subwindow-styling (win)
+  (when kwrooijen/subwindow-needs-style
+    (set-window-fringes win 24 24)
+    (setq header-line-format " ")
+    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
+    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
+    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
+
+(defun kwrooijen/subwindow-setup-hook ()
+  (setq kwrooijen/subwindow-needs-style t))
+
+(defun kwrooijen/subwindow-setup-hook-transient ()
+  ;; Transient has special needs when it comes to getting the proper
+  ;; buffer.
+  (when (get-buffer (or transient--buffer-name ""))
+    (with-current-buffer (get-buffer (or transient--buffer-name ""))
+      (setq kwrooijen/subwindow-needs-style t))))
+
+(defun kwrooijen/subwindow-restyle ()
+  (dolist (win (window-list))
+    (with-current-buffer (window-buffer win)
+      (kwrooijen/subwindow-styling win))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defcustom kwrooijen/subwindow-hook-list
+  '(cider-repl-mode-hook
+    magit-mode-hook
+    dired-mode-hook
+    sql-interactive-mode-hook
+    eshell-mode-hook
+    inf-ruby-mode-hook
+    messages-buffer-mode-hook)
+  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
+  :type '(repeat symbol)
+  :group 'kwrooijen)
+
+(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
+
+(dolist (hook kwrooijen/subwindow-hook-list)
+  (add-hook hook #'kwrooijen/subwindow-setup-hook))
+
+(defun minibuffer-subwindow-hook ()
+ (face-remap-add-relative 'default '(:background "#1e2030"))
+ (face-remap-add-relative 'minibuffer-prompt '(:background "#1e2030"))
+ (set-window-margins (minibuffer-window) 2 2))
+
+(add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)
+
+(when (buffer-live-p (get-buffer "*Messages*"))
+  (with-current-buffer "*Messages*"
+    (setq kwrooijen/subwindow-needs-style t)))
 #+END_SRC
 
