@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: kwrooijen/leader
+# key: kl
+# --
+(kwrooijen/leader
+  "$1" '($2 :which-key "$0"))

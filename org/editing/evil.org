@@ -42,7 +42,25 @@ Recenter screen when searching forward / backwards
 
 ** Config :config:
 
+Evil collection makes it very hard to override the `[` key.
 #+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/intercept-mode-map (make-sparse-keymap))
+
+(define-minor-mode kwrooijen/intercept-mode
+  "Intercept evil keys before evil-collection."
+  :global t)
+
+(kwrooijen/intercept-mode)
+
+(dolist (state '(normal motion visual))
+  (evil-make-intercept-map
+   (evil-get-auxiliary-keymap kwrooijen/intercept-mode-map state t t)
+   state))
+
+(evil-define-key '(normal motion visual)
+  kwrooijen/intercept-mode-map
+  "[" #'avy-goto-char)
+
 (evil-collection-init)
 #+END_SRC
 

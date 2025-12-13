@@ -147,5 +147,5 @@ Enable for all programming modes. Would this be ok for lisp modes?
 (general-define-key
  :states 'normal
  :keymaps 'evil-normal-state-map
- "]" #'avy-goto-char)
+ "[" #'avy-goto-char)
 #+END_SRC

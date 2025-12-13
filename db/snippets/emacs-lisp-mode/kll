@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: kwrooijen/local-leader
+# key: kll
+# --
+(kwrooijen/local-leader
+  :keymaps '$1-map
+  "$2" '($3 :which-key "$0"))
