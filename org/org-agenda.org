@@ -184,8 +184,10 @@ Customize agenda renderer to optionally filter out habits.
 :END:
 
 ** Init :init:
+
+Read org capture templates from other file.
+
 #+BEGIN_SRC emacs-lisp
-;; If ~/.dotfiles/org-capture-templates.el exists, read it, and eval it.
 (let ((org-capture-templates-file
        (expand-file-name "~/.dotfiles/org-capture-templates.el")))
   (when (file-exists-p org-capture-templates-file)
