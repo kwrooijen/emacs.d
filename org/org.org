@@ -325,9 +325,8 @@ Improve Org TODO logging, place them in properties.
 Org agenda files. All TODOs go in here.
 
 #+BEGIN_SRC emacs-lisp
-(org-agenda-files '("~/Documents/org/todos"))
+(org-agenda-files '("~/Documents/org/todos" "~/Documents/org/todos/client"))
 #+END_SRC
-
 
 #+BEGIN_SRC emacs-lisp
 (org-directory "~/Documents/org/notes/")

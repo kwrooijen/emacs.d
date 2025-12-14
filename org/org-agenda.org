@@ -6,6 +6,25 @@
 ** Config :config:
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-client-names ()
+  "Return a list of client names derived from org files."
+  (let ((dir (expand-file-name "~/Documents/org/todos/client/")))
+    (mapcar #'file-name-base
+            (directory-files dir nil "\\.org$"))))
+
+(defun kwrooijen/org-set-clockreport-match (client)
+  "Update only :match in `org-agenda-clockreport-parameter-plist`."
+  (interactive
+   (list (completing-read "Clockreport match: " (append (kwrooijen/org-client-names) '("work")) nil nil)))
+  (setq org-agenda-clockreport-parameter-plist
+        (plist-put org-agenda-clockreport-parameter-plist
+                   :match
+                   client))
+  (org-agenda-redo))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
 (evil-set-initial-state 'org-agenda-mode 'normal)
 #+END_SRC
 
@@ -50,6 +69,7 @@ Org agenda table, include ASANA in header for ticket ids
  (list :maxlevel 2
        :narrow nil
        :properties '("ASANA")
+       :match "+work"
        :indent nil
        :tcolumns 1))
 #+END_SRC
@@ -79,7 +99,8 @@ Customize agenda renderer to optionally filter out habits.
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "aa" '(org-agenda :which-key "Org Agenda")
+  "aa" '(org-agenda-list :which-key "Org Agenda")
+  "ao" '(org-agenda :which-key "Org Commands")
   "at" '(org-todo-list :which-key "Org Todos")
   "ac" '(org-capture :which-key "Org Capture"))
 #+END_SRC
@@ -106,7 +127,7 @@ Customize agenda renderer to optionally filter out habits.
   "." #'org-agenda-goto-today
   "/" #'org-agenda-filter
   ":" #'org-agenda-set-tags
-  ";" #'org-timer-set-timer
+  ";" #'kwrooijen/org-set-clockreport-match
   "<" #'org-agenda-filter-by-category
   "=" #'org-agenda-filter-by-regexp
    ">" #'org-agenda-date-prompt
@@ -174,8 +195,7 @@ Customize agenda renderer to optionally filter out habits.
   "|" #'org-agenda-filter-remove-all
   "}" #'org-agenda-manipulate-query-subtract-re
   "~" #'org-agenda-limit-interactively
-  (kbd "DEL") #'org-agenda-show-scroll-down
-  )
+  (kbd "DEL") #'org-agenda-show-scroll-down)
 #+END_SRC
 
 
