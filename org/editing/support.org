@@ -178,11 +178,11 @@ strings?). Making it safe to enable in programming modes.
     (apply orig-fun args)))
 #+END_SRC
 
-** General :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-"a" 'aidermacs-transient-menu)
-#+END_SRC
+# ** General :general:
+# #+BEGIN_SRC emacs-lisp
+# (kwrooijen/leader
+# "a" 'aidermacs-transient-menu)
+# #+END_SRC
 
 * Eca
 :PROPERTIES:

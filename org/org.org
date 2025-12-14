@@ -147,11 +147,7 @@ If on a:
                 (org-force-cycle-archived))
                ((or (org-element-property :todo-type context)
                     (org-element-property :scheduled context))
-                (org-todo
-                 (if (eq (org-element-property :todo-type context) 'done)
-                     (or (car (+org-get-todo-keywords-for (org-element-property :todo-keyword context)))
-                         'todo)
-                   'done))))
+                (org-todo)))
          ;; Update any metadata or inline previews in this subtree
          (org-update-checkbox-count)
          (org-update-parent-todo-statistics)
@@ -311,30 +307,58 @@ holding export options."
 (org-duration-format (quote h:mm))
 #+END_SRC
 
+Improve M-RET on a heading line.
+Don't split the heading line, don't split the content in a heading line.
+
+#+BEGIN_SRC emacs-lisp
+(org-M-RET-may-split-line '((default . nil)))
+(org-insert-heading-respect-content t)
+#+END_SRC
+
+Improve Org TODO logging, place them in properties.
+
+#+BEGIN_SRC emacs-lisp
+(org-log-done t)
+(org-log-into-drawer t)
+#+END_SRC
+
+Org agenda files. All TODOs go in here.
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-files '("~/Documents/org/todos/todo.org"
+                    "~/Documents/org/notes/work/current"))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(org-directory "~/Documents/org/notes/")
+#+END_SRC
+
+
+
 ** Config :config:
+
 #+BEGIN_SRC emacs-lisp
 (require 'org-clock)
-(defun org-clock-get-clock-string ()
-  "Form a clock-string, that will be shown in the mode line.
-If an effort estimate was defined for the current item, use
-01:30/01:50 format (clocked/estimated).
-If not, show simply the clocked time like 01:50."
-  (let ((clocked-time (org-clock-get-clocked-time)))
-    (if org-clock-effort
-	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
-	       (work-done-str
-		(propertize (org-duration-from-minutes clocked-time)
-			    'face
-			    (if (and org-clock-task-overrun
-				     (not org-clock-task-overrun-text))
-				'org-mode-line-clock-overrun
-			      'org-mode-line-clock)))
-	       (effort-str (org-duration-from-minutes effort-in-minutes)))
-	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
-		  work-done-str effort-str))
-      (format (propertize "[%s]" 'face 'org-mode-line-clock)
-	      (org-duration-from-minutes clocked-time)))))
+#+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-heading-1-next ()
+  (interactive)
+    (org-next-visible-heading 1)
+    (recenter-top-bottom 2))
+
+(defun kwrooijen/org-heading-1-prev ()
+  (interactive)
+    (org-next-visible-heading -1)
+    (recenter-top-bottom 2))
+
+(define-key org-mode-map (kbd "M-n") #'kwrooijen/org-heading-1-next)
+(define-key org-mode-map (kbd "M-p") #'kwrooijen/org-heading-1-prev)
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
 (font-lock-add-keywords
  'org-mode
  '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
@@ -347,9 +371,6 @@ If not, show simply the clocked time like 01:50."
  'org-mode
  '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
  'append)
-
-(custom-set-faces
- '(bold ((t (:foreground "#ffffff" :weight bold)))))
 
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
@@ -402,6 +423,8 @@ If not, show simply the clocked time like 01:50."
   "t i"  'org-toggle-inline-images
   "t e" 'kwrooijen/org-table-export
   "c t"  'org-clock-update-time-maybe
+  "c s"  '(org-schedule :which-key "Org Schedule")
+  "c d"  '(org-deadline :which-key "Org Deadline")
   "c i"  'org-clock-in
   "c o"  'org-clock-out
   "c r"  'org-clock-report
@@ -418,7 +441,6 @@ If not, show simply the clocked time like 01:50."
 #+BEGIN_SRC emacs-lisp
 (require 'face-remap)
 #+END_SRC
-
 * Org Roam
 :PROPERTIES:
 :PACKAGE: org-roam

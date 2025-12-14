@@ -131,6 +131,13 @@ Remove diredfl-match-ignored-extensions
   "'" #'casual-csv-tmenu)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'org-agenda-mode-map
+  "'" #'casual-agenda-tmenu)
+#+END_SRC
+
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (setq casual-dired-listing-switches '("--group-directories-first" "-laoh"))

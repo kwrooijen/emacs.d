@@ -70,12 +70,23 @@ mode disables line truncation set up by variables `truncate-lines` and
   "Customization for minibuffer-aware dimming rules."
   :group 'convenience)
 
+(setq kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    magit-discard
+    anzu-query-replace
+    org-schedule
+    kwrooijen/consult-ripgrep-symbol-at-point)
+)
+
 (defcustom kwrooijen/minibuffer-dim-excluded-commands
   '(consult-line
     consult-yank-from-kill-ring
     consult-ripgrep
     magit-discard
     anzu-query-replace
+    org-schedule
     kwrooijen/consult-ripgrep-symbol-at-point)
 
   "Commands for which the original window should not be dimmed.
@@ -181,8 +192,8 @@ style. Similar to Solaire mode, but more flexible.
   (add-hook hook #'kwrooijen/subwindow-setup-hook))
 
 (defun minibuffer-subwindow-hook ()
- (face-remap-add-relative 'default '(:background "#1e2030"))
- (face-remap-add-relative 'minibuffer-prompt '(:background "#1e2030"))
+ (face-remap-add-relative 'default '(:inherit kwrooijen/darken-bg-face))
+ (face-remap-add-relative 'minibuffer-prompt '(:inherit kwrooijen/darken-bg-face))
  (set-window-margins (minibuffer-window) 2 2))
 
 (add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)

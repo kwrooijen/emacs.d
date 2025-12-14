@@ -88,3 +88,26 @@ Evil collection makes it very hard to override the `[` key.
 (global-evil-search-highlight-persist t)
 (advice-add 'keyboard-quit :before #'evil-search-highlight-persist-remove-all)
 #+END_SRC
+
+
+* Hl Line
+:PROPERTIES:
+:PACKAGE:  hl-line
+:DEFER: t
+:END:
+
+** Config :config:
+
+Disable hl-line-mode when entering visual mode, since hl-line and
+visual use the same background.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/hl-line-off ()
+  (hl-line-mode -1))
+
+(defun kwrooijen/hl-line-on ()
+  (hl-line-mode 1))
+
+(add-hook 'evil-visual-state-entry-hook #'kwrooijen/hl-line-off)
+(add-hook 'evil-visual-state-exit-hook  #'kwrooijen/hl-line-on)
+#+END_SRC

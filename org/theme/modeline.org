@@ -2,7 +2,9 @@
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/modeline-border
-  '()
+  `((t (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)))
+    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+    (t (:height 1.5)))
   "Face for the active window border."
   :group 'kwrooijen/modeline)
 
@@ -44,14 +46,17 @@
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
+
+  "Face for the active window border."
+
 (kwrooijen/reset-inherit-face!
  'mode-line           'kwrooijen/darken-bg-face
  'mode-line-active    'kwrooijen/darken-bg-face
  'mode-line-inactive  'kwrooijen/darken-bg-face
  'mode-line-highlight 'unspecified)
 
-(set-face-attribute 'kwrooijen/modeline-border nil :height 1.5)
-(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5)
+(set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
+(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'kwrooijen/darken-fg-face)
 #+END_SRC
 
 ** Active bar
@@ -69,11 +74,17 @@
 
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
+(set-face-attribute  'kwrooijen/modeline-border nil
+        :foreground (face-attribute 'kwrooijen/foreground-fg-face :foreground)
+        :background (face-attribute 'kwrooijen/darken-bg-face :background)
+        :height 1.5)
+(set-face-attribute  'kwrooijen/modeline-border-inactive nil
+        :foreground (face-attribute 'kwrooijen/darken-fg-face :foreground)
+        :background (face-attribute 'kwrooijen/darken-fg-face :background)
+        :height 1.5)
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
-    (propertize kwrooijen/modeline-inactive-border 'face
-                `(:foreground ,(face-attribute 'kwrooijen/modeline-border-inactive :foreground)
-                  :height ,(face-attribute 'kwrooijen/modeline-border-inactive :height)))))
+    (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
 
 (defun kwrooijen/modeline--set-selected-window (&rest _)
   (unless (minibuffer-window-active-p (selected-window))
@@ -100,8 +111,8 @@
             (pcase state
               ('normal  'success)
               ('visual  'region)
-              ('insert  'warning)
-              ('replace 'error)
+              ('insert  'error)
+              ('replace 'warning)
               (_ 'kwrooijen/modeline-evil))))
       (kwrooijen/modeline-r tag face))))
 #+END_SRC
@@ -140,7 +151,7 @@
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
-                     `(:foreground ,(face-attribute 'kwrooijen/warning-fg-face :foreground))
+                     `(:foreground ,(face-attribute 'kwrooijen/error-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
     (kwrooijen/modeline-r " %b" face)))
 #+END_SRC

@@ -80,4 +80,5 @@ Manage windows that pop up on your screen.
 (push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
+(push '("^.**Agenda Commands*" :height 15 :position bottom :stick t) popwin:special-display-config)
 #+END_SRC

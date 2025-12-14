@@ -33,17 +33,58 @@ M-x ~kwrooijen/hex-colors-enable~
 
 #+BEGIN_SRC emacs-lisp
 
+(require 'color)
+
+(defun kwrooijen/color-increase-brightness (hex &optional percent)
+  "Increase brightness of HEX by PERCENT (default 10).
+
+Positive values brighten, negative values darken.
+Return a #RRGGBB string."
+  (let* ((p (/ (or percent 10) 100.0))
+         (rgb (color-name-to-rgb hex))
+         (adjusted
+          (mapcar
+           (lambda (c)
+             (cond
+              ((> p 0) (min 1.0 (+ c (* (- 1.0 c) p))))
+              ((< p 0) (max 0.0 (* c (+ 1.0 p))))
+              (t c)))
+           rgb)))
+    (apply #'color-rgb-to-hex (append adjusted (list 2)))))
+
+
+
+(defun kwrooijen/color-increase-saturation (hex &optional percent)
+  "Increase saturation of HEX by PERCENT (default 10)."
+  (let* ((p (/ (or percent 10) 100.0))
+         (rgb (color-name-to-rgb hex))
+         (hsl (apply #'color-rgb-to-hsl rgb))
+         (h (nth 0 hsl))
+         (s (nth 1 hsl))
+         (l (nth 2 hsl))
+         (new-s (min 1.0 (+ s (* (- 1.0 s) p))))
+         (new-rgb (color-hsl-to-rgb h new-s l)))
+    (apply #'color-rgb-to-hex (append new-rgb (list 2)))))
+
+
 (defun kwrooijen/define-face (face color &optional color2)
   ;; TODO create combinations
   ;; face/darken-       ;; darken foreground
   ;; face/-darken       ;; darken background
   ;; face/darken-darken ;; darken foreground, darken background
   ;; face/subtle-darken ;; subtle foreground, darken background
-;; e.g. darken-white, white-darken, subtle-popout, highlight-foreground.
+  ;; e.g. darken-white, white-darken, subtle-popout, highlight-foreground.
 
   (eval `(defface ,(intern (format "kwrooijen/%s-bg-face" face)) `((t (:background ,color))) ""))
   (eval `(defface ,(intern (format "kwrooijen/%s-fg-face" face)) `((t (:foreground ,color))) ""))
-  (eval `(defface ,(intern (format "kwrooijen/%s-fb-face" face)) `((t (:foreground ,color :background ,(or color2 color)))) "")))
+  (eval `(defface ,(intern (format "kwrooijen/%s-fb-face" face)) `((t (:foreground ,color :background ,(or color2 color)))) ""))
+
+  (set-face-attribute (intern (format "kwrooijen/%s-bg-face" face)) nil :background color)
+  (set-face-attribute (intern (format "kwrooijen/%s-fg-face" face)) nil :foreground color)
+  (set-face-attribute (intern (format "kwrooijen/%s-fb-face" face)) nil
+                      :foreground color
+                      :background (or color2 color))
+  )
 
 (defun kwrooijen/set-theme (&rest opts)
   (kwrooijen/define-face 'background (plist-get opts :background))
@@ -57,7 +98,14 @@ M-x ~kwrooijen/hex-colors-enable~
   (kwrooijen/define-face 'darken (plist-get opts :darken))
   (kwrooijen/define-face 'faded-darken (plist-get opts :faded) (plist-get opts :darken))
   (kwrooijen/define-face 'error (plist-get opts :error))
-  (kwrooijen/define-face 'warning (plist-get opts :error)))
+  (kwrooijen/define-face 'warning (plist-get opts :warning))
+  (kwrooijen/define-face 'success (plist-get opts :success))
+
+  (custom-theme-set-faces
+   kwrooijen/theme
+   `(default ((()
+               (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)
+                            :background ,(face-attribute 'kwrooijen/background-bg-face :background)))))))
 
 (defun kwrooijen/reset-face-attributes (&rest faces)
   "Reset all attributes of the given FACE."
@@ -115,42 +163,130 @@ brew install --cask font-roboto-mono
 
 (set-face-attribute 'default nil :family kwrooijen/font)
 
-(kwrooijen/set-theme
- ;; == Original
- :strong     "#FFFFFF"
- :foreground "#ECEFF4"
- ;; :background "#2E3440"
- ;; :darken     "#2D323E"
- ;; :highlight  "#3B4252"
- :subtle     "#434C5E"
- :faded      "#616E88"
- :salient    "#81A1C1"
- :popout     "#D08770"
- :error      "#BF616A"
- :warning    "#FFC16D"
 
- ;; == Tokyo
- :background "#222436"
- :darken     "#1e2030"
- :highlight  "#2f334d")
+(defgroup kwrooijen/colors nil
+  "Color palette used by kwrooijen themes."
+  :group 'faces)
 
-(set-frame-parameter nil 'background-color
-                        (face-attribute 'kwrooijen/background-bg-face :background))
-(custom-theme-set-faces
- kwrooijen/theme
- `(default ((()
-             (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)
-              :background ,(face-attribute 'kwrooijen/background-bg-face :background))))))
+(defcustom kwrooijen/color-strong "#FFFFFF"
+  "Primary strong color."
+  :type 'color
+  :group 'kwrooijen/colors)
 
-(set-face-attribute 'button nil :box 'unspecified)
+(defcustom kwrooijen/color-foreground "#ECEFF4"
+  "Default foreground color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-subtle "#434C5E"
+  "Subtle secondary color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-faded "#616E88"
+  "Faded or de-emphasized color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-salient "#81A1C1"
+  "Salient accent color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-popout "#D08770"
+  "Pop-out accent color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-error "#BF616A"
+  "Error indication color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-warning "#FFC16D"
+  "Warning indication color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-success "#A3BE8C"
+  "Success indication color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-background "#222436"
+  "Background color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-darken "#1e2030"
+  "Darker background variant."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+(defcustom kwrooijen/color-highlight "#2f334d"
+  "Highlight background color."
+  :type 'color
+  :group 'kwrooijen/colors)
+
+
+
+  (defun kwrooijen/set-dark-theme ()
+    (interactive)
+    (kwrooijen/set-theme
+     :background kwrooijen/color-background
+     :foreground kwrooijen/color-foreground
+     :strong kwrooijen/color-strong
+     :subtle kwrooijen/color-subtle
+     :faded kwrooijen/color-faded
+     :darken kwrooijen/color-darken
+     :highlight kwrooijen/color-highlight
+     :salient kwrooijen/color-salient
+     :popout kwrooijen/color-popout
+     :error kwrooijen/color-error
+     :warning kwrooijen/color-warning
+     :success kwrooijen/color-success))
+
+  (defun kwrooijen/set-light-theme ()
+    (interactive)
+    (kwrooijen/set-theme
+     ;; == Original
+     :background "#fafafa"
+     :foreground "#101010"
+     :strong     "#000000"
+     :faded      (kwrooijen/color-increase-brightness "#101010" 60)
+     :darken     (kwrooijen/color-increase-brightness "#fafafa" -2)
+     :highlight  (kwrooijen/color-increase-brightness "#fafafa" 100)
+     :subtle     (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-subtle -20) 30)
+     :salient    (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-salient -20) 30)
+     :popout     (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-popout -20) 30)
+     :error      (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-error -20) 30)
+     :warning    (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-warning -20) 30)
+     :success    (kwrooijen/color-increase-saturation (kwrooijen/color-increase-brightness kwrooijen/color-success -20) 30)))
+
+(kwrooijen/set-dark-theme)
+;; (kwrooijen/set-light-theme)
+
+(kwrooijen/reset-inherit-face! 'bold 'kwrooijen/strong-fg-face)
+(set-face-attribute 'bold nil :weight 'bold)
+
+(kwrooijen/reset-inherit-face!
+ 'secondary-selection 'kwrooijen/darken-bg-face
+ 'region 'kwrooijen/highlight-bg-face
+ 'success 'kwrooijen/success-fg-face
+ 'error   'kwrooijen/error-fg-face
+ 'warning 'kwrooijen/warning-fg-face
+ 'highlight 'kwrooijen/highlight-bg-face
+ 'button 'kwrooijen/popout-fg-face)
+
+(kwrooijen/reset-inherit-face! 'fringe 'kwrooijen/background-bg-face)
+(kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
 
 (kwrooijen/reset-inherit-face!
  'isearch        'kwrooijen/faded-bg-face
  'lazy-highlight 'kwrooijen/subtle-bg-face)
 
-(kwrooijen/reset-inherit-face!
- 'error   'kwrooijen/error-fg-face
- 'warning 'kwrooijen/warning-fg-face)
+(kwrooijen/reset-inherit-face! 'match 'bold)
 
 (kwrooijen/reset-inherit-face!
  'font-lock-comment-face       'kwrooijen/faded-fg-face
@@ -164,18 +300,9 @@ brew install --cask font-roboto-mono
  'font-lock-type-face          'kwrooijen/salient-fg-face
  'font-lock-keyword-face       'kwrooijen/salient-fg-face)
 
-(kwrooijen/reset-inherit-face! 'match 'bold)
-(kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
-
 (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
 
-(set-face-attribute 'highlight nil :foreground 'unspecified)
-(set-face-attribute 'bold nil :foreground "#ffffff" :weight 'bold)
-
-(set-face-attribute 'fringe nil :inherit 'kwrooijen/background-bg-face
-:background 'unspecified)
-
-(kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
+(set-frame-parameter nil 'background-color (face-attribute 'kwrooijen/background-bg-face :background))
 #+END_SRC
 
 
@@ -270,8 +397,11 @@ Recenter screen when iedit is used.
 :END:
 
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-face-attributes 'magit-section-highlight)
-(set-face-attribute 'magit-section-highlight nil :foreground 'unspecified :inherit 'highlight)
+(kwrooijen/reset-inherit-face!
+ 'magit-diff-context-highlight 'kwrooijen/darken-bg-face
+ 'magit-section-highlight 'kwrooijen/highlight-bg-face)
+;; diff-refine-added (currently dark)
+;; magit-diff-added-highlight (currently light)
 #+END_SRC
 
 
@@ -497,4 +627,16 @@ Recenter screen when iedit is used.
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/reset-inherit-face! 'pulse-highlight-face 'kwrooijen/salient-bg-face)
 (kwrooijen/reset-inherit-face! 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
+#+END_SRC
+
+* Org Habit :config:
+:PROPERTIES:
+:PACKAGE:  org-habit
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'org-habit-clear-future-face 'kwrooijen/salient-fb-face)
+(kwrooijen/reset-inherit-face! 'org-habit-alert-face 'kwrooijen/warning-fb-face)
+(kwrooijen/reset-inherit-face! 'org-habit-overdue-future-face 'kwrooijen/error-fb-face)
 #+END_SRC
