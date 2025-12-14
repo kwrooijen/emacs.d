@@ -80,6 +80,7 @@ Customize agenda renderer to optionally filter out habits.
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
   "aa" '(org-agenda :which-key "Org Agenda")
+  "at" '(org-todo-list :which-key "Org Todos")
   "ac" '(org-capture :which-key "Org Capture"))
 #+END_SRC
 
