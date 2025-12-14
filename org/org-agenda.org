@@ -1,0 +1,326 @@
+* Org Agenda
+:PROPERTIES:
+:PACKAGE:  org-agenda
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'org-agenda-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-agenda-edit-subtree ()
+  (interactive)
+  (org-agenda-redo)
+  (org-agenda-goto)
+  (org-narrow-to-subtree)
+  (evil-normal-state)
+  (with-current-buffer "*Org Agenda*"
+    (org-agenda-redo)))
+
+(evil-define-key 'normal org-agenda-mode-map (kbd "<tab>") #'kwrooijen/org-agenda-edit-subtree)
+#+END_SRC
+
+Add functionality to toggle habits in agenda.
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/org-habit-shown-p t)
+
+(defun kwrooijen/org-habit-toggle ()
+  (interactive)
+  (setq kwrooijen/org-habit-shown-p (not kwrooijen/org-habit-shown-p))
+  (org-agenda-redo))
+
+(require 'org-habit)
+#+END_SRC
+
+** Custom :custom:
+
+Don't show scheduled TODOs if they have been done today
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-todo-ignore-scheduled 'future)
+#+END_SRC
+
+Org agenda table, include ASANA in header for ticket ids
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-clockreport-parameter-plist
+ (list :maxlevel 2
+       :narrow nil
+       :properties '("ASANA")
+       :indent nil
+       :tcolumns 1))
+#+END_SRC
+
+List of keywords which a TODO heading can have.
+
+#+BEGIN_SRC emacs-lisp
+(org-todo-keywords '((sequence
+                      "TODO(t)"
+                      "IN PROGRESS(p)"
+                      "|"
+                      "CANCELLED(c!)"
+                      "DONE(d!)")))
+#+END_SRC
+
+Customize agenda renderer to optionally filter out habits.
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-skip-function-global
+ (lambda ()
+   (when (and (org-is-habit-p) (not kwrooijen/org-habit-shown-p))
+     (org-agenda-skip-entry-if 'todo 'any))))
+#+END_SRC
+
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "aa" '(org-agenda :which-key "Org Agenda")
+  "ac" '(org-capture :which-key "Org Capture"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+:states '(normal)
+:keymaps 'org-agenda-mode-map
+  (kbd "TAB") #'kwrooijen/org-agenda-edit-subtree
+  (kbd "RET") #'org-agenda-switch-to
+  (kbd "SPC") #'org-agenda-show-and-scroll-up
+
+  (kbd "C-k") #'org-agenda-kill
+  (kbd "C-n") #'org-agenda-next-line
+  (kbd "C-p") #'org-agenda-previous-line
+  ;; "C-_" #'org-agenda-undo
+  "!" #'org-agenda-toggle-deadlines
+  "#" #'org-agenda-dim-blocked-tasks
+  "$" #'org-agenda-archive
+  "%" #'org-agenda-bulk-mark-regexp
+  "+" #'org-agenda-priority-up
+  "," #'org-agenda-priority
+  "-" #'org-agenda-priority-down
+  "." #'org-agenda-goto-today
+  "/" #'org-agenda-filter
+  ":" #'org-agenda-set-tags
+  ";" #'org-timer-set-timer
+  "<" #'org-agenda-filter-by-category
+  "=" #'org-agenda-filter-by-regexp
+   ">" #'org-agenda-date-prompt
+  "?" #'org-agenda-show-the-flagging-note
+  "A" #'org-agenda-append-agenda
+  "B" #'org-agenda-bulk-action
+  "C" #'org-agenda-convert-date
+  "D" #'org-agenda-toggle-diary
+  "E" #'org-agenda-entry-text-mode
+  "F" #'org-agenda-follow-mode
+  "G" #'org-agenda-toggle-time-grid
+  "H" #'org-agenda-holidays
+  "I" #'org-agenda-clock-in
+  "J" #'org-agenda-clock-goto
+  "K" #'org-habit-toggle-display-in-agenda
+  "L" #'org-agenda-recenter
+  "N" #'org-agenda-next-item
+  "O" #'org-agenda-clock-out
+  "P" #'org-agenda-previous-item
+  "Q" #'org-agenda-Quit
+  "R" #'org-agenda-clockreport-mode
+  "S" #'org-agenda-sunrise-sunset
+  "T" #'org-agenda-show-tags
+  (kbd "M-m") #'org-agenda-bulk-unmark
+  (kbd "M-M") #'org-agenda-bulk-unmark-all
+  "m" #'org-agenda-bulk-mark
+  "M" #'org-agenda-bulk-mark-all
+  "X" #'org-agenda-clock-cancel
+  "[" #'org-agenda-manipulate-query-add
+  "\\" #'org-agenda-filter-by-tag
+  "]" #'org-agenda-manipulate-query-subtract
+  "^" #'org-agenda-filter-by-top-headline
+  "_" #'org-agenda-filter-by-effort
+  "a" #'org-agenda-archive-default-with-confirmation
+  "b" #'org-agenda-earlier
+  "c" #'org-agenda-goto-calendar
+  "d" #'org-agenda-day-view
+  "e" #'org-agenda-set-effort
+  "f" #'org-agenda-later
+  "g" #'org-agenda-redo-all
+  "H" #'org-agenda-holidays
+  "i" #'org-agenda-diary-entry
+  "n" #'org-agenda-goto-date
+  "p" #'org-agenda-capture
+  "L" #'org-agenda-log-mode
+  "o" #'org-agenda-month-view
+
+  "k" #'org-agenda-previous-line
+  "j" #'org-agenda-next-line
+  "l" #'evil-forward-char
+  "h" #'evil-backward-char
+
+  "q" #'org-agenda-quit
+  "r" #'org-agenda-redo
+  "s" #'org-save-all-org-buffers
+  "t" #'org-agenda-todo
+  "u" #'org-agenda-undo
+  "U" #'org-agenda-redo
+  "v" #'org-agenda-view-mode-dispatch
+  "w" #'org-agenda-week-view
+  "x" #'org-agenda-exit
+  "y" #'org-agenda-year-view
+  "z" #'org-agenda-add-note
+  "{" #'org-agenda-manipulate-query-add-re
+  "|" #'org-agenda-filter-remove-all
+  "}" #'org-agenda-manipulate-query-subtract-re
+  "~" #'org-agenda-limit-interactively
+  (kbd "DEL") #'org-agenda-show-scroll-down
+  )
+#+END_SRC
+
+
+* Org Capture
+:PROPERTIES:
+:PACKAGE:  org-capture
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+;; If ~/.dotfiles/org-capture-templates.el exists, read it, and eval it.
+(let ((org-capture-templates-file
+       (expand-file-name "~/.dotfiles/org-capture-templates.el")))
+  (when (file-exists-p org-capture-templates-file)
+    (load-file org-capture-templates-file)))
+#+END_SRC
+
+
+* Calendar
+:PROPERTIES:
+:PACKAGE:  calendar
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'calendar-mode 'normal)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states '(normal)
+ :keymaps 'calendar-mode-map
+ (kbd "RET") #'org-calendar-select
+ "C-@" #'calendar-set-mark
+ "C-a" #'calendar-beginning-of-week
+ "h" #'calendar-backward-day
+ "l" #'calendar-forward-day
+ "j" #'calendar-forward-week
+ "k" #'calendar-backward-week
+ "C-e" #'calendar-end-of-week
+ "C-l" #'calendar-recenter
+ "C-v" #'calendar-scroll-left-three-months
+ (kbd "SPC") #'scroll-other-window
+ "-" #'negative-argument
+ "." #'calendar-goto-today
+ "<" #'calendar-scroll-right
+ ">" #'calendar-scroll-left
+ "?" #'calendar-goto-info-node
+ "D" #'diary-view-other-diary-entries
+ "M" #'calendar-lunar-phases
+ "S" #'calendar-sunrise-sunset
+ "[" #'calendar-backward-year
+ "]" #'calendar-forward-year
+ "a" #'calendar-list-holidays
+ "c" #'org-calendar-goto-agenda
+ "d" #'diary-view-entries
+ ;; "h" #'calendar-cursor-holidays
+ "m" #'diary-mark-entries
+ "o" #'calendar-other-month
+ "q" #'calendar-exit
+ "s" #'diary-show-all-entries
+ "u" #'calendar-unmark
+ "x" #'calendar-mark-holidays
+ "{" #'calendar-backward-month
+ "}" #'calendar-forward-month
+ ;; "DEL" #'scroll-other-window-down
+ ;; "S-SPC" #'scroll-other-window-down
+ ;; "C-SPC" #'calendar-set-mark
+
+ (kbd "C-c C-l") #'calendar-redraw
+
+ (kbd "C-x C-x") #'calendar-exchange-point-and-mark
+ (kbd "C-x <") #'calendar-scroll-right
+ (kbd "C-x >") #'calendar-scroll-left
+ (kbd "C-x [") #'calendar-backward-year
+ (kbd "C-x ]") #'calendar-forward-year
+
+ (kbd "M-<") #'calendar-beginning-of-year
+ (kbd "M-=") #'calendar-count-days-region
+ (kbd "M->") #'calendar-end-of-year
+ (kbd "M-a") #'calendar-beginning-of-month
+ (kbd "M-e") #'calendar-end-of-month
+ (kbd "M-v") #'calendar-scroll-right-three-months
+ (kbd "M-{") #'calendar-backward-month
+ (kbd "M-}") #'calendar-forward-month
+
+ "A a" #'appt-add
+ "A d" #'appt-delete
+
+ "H m" #'cal-html-cursor-month
+ "H y" #'cal-html-cursor-year
+
+ "g C" #'calendar-chinese-goto-date
+ "g D" #'calendar-goto-day-of-year
+ "g a" #'calendar-astro-goto-day-number
+ "g b" #'calendar-bahai-goto-date
+ "g c" #'calendar-iso-goto-date
+ "g d" #'calendar-goto-date
+ "g e" #'calendar-ethiopic-goto-date
+ "g f" #'calendar-french-goto-date
+ "g h" #'calendar-hebrew-goto-date
+ "g i" #'calendar-islamic-goto-date
+ "g j" #'calendar-julian-goto-date
+ "g k" #'calendar-coptic-goto-date
+ "g p" #'calendar-persian-goto-date
+ "g w" #'calendar-iso-goto-week
+
+ "i a" #'diary-insert-anniversary-entry
+ "i b" #'diary-insert-block-entry
+ "i c" #'diary-insert-cyclic-entry
+ "i d" #'diary-insert-entry
+ "i m" #'diary-insert-monthly-entry
+ "i w" #'diary-insert-weekly-entry
+ "i y" #'diary-insert-yearly-entry
+
+ "p C" #'calendar-chinese-print-date
+ "p a" #'calendar-astro-print-day-number
+ "p b" #'calendar-bahai-print-date
+ "p c" #'calendar-iso-print-date
+ "p d" #'calendar-print-day-of-year
+ "p e" #'calendar-ethiopic-print-date
+ "p f" #'calendar-french-print-date
+ "p h" #'calendar-hebrew-print-date
+ "p i" #'calendar-islamic-print-date
+ "p j" #'calendar-julian-print-date
+ "p k" #'calendar-coptic-print-date
+ "p m" #'calendar-mayan-print-date
+ "p o" #'calendar-print-other-dates
+ "p p" #'calendar-persian-print-date
+
+ "t M" #'cal-tex-cursor-month-landscape
+ "t Y" #'cal-tex-cursor-year-landscape
+ "t d" #'cal-tex-cursor-day
+ "t m" #'cal-tex-cursor-month
+ "t y" #'cal-tex-cursor-year
+
+ "t f W" #'cal-tex-cursor-filofax-week
+ "t f d" #'cal-tex-cursor-filofax-daily
+ "t f w" #'cal-tex-cursor-filofax-2week
+ "t f y" #'cal-tex-cursor-filofax-year
+
+ "t w 1" #'cal-tex-cursor-week
+ "t w 2" #'cal-tex-cursor-week2
+ "t w 3" #'cal-tex-cursor-week-iso
+ "t w 4" #'cal-tex-cursor-week-monday
+ "t w W" #'cal-tex-cursor-week2-summary)
+#+END_SRC
