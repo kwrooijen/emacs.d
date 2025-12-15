@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: effort
+# key: ef
+# --
+:EFFORT: $0

@@ -161,7 +161,9 @@ brew install --cask font-roboto-mono
       (message-log-max nil))
   (load-theme kwrooijen/theme t))
 
-(set-face-attribute 'default nil :family kwrooijen/font)
+(set-face-attribute 'default nil
+                    :family kwrooijen/font
+                    :weight 'light)
 
 
 (defgroup kwrooijen/colors nil
@@ -400,8 +402,6 @@ Recenter screen when iedit is used.
 (kwrooijen/reset-inherit-face!
  'magit-diff-context-highlight 'kwrooijen/darken-bg-face
  'magit-section-highlight 'kwrooijen/highlight-bg-face)
-;; diff-refine-added (currently dark)
-;; magit-diff-added-highlight (currently light)
 #+END_SRC
 
 
@@ -414,6 +414,7 @@ Recenter screen when iedit is used.
 
 (kwrooijen/reset-inherit-face!
  'org-block              'kwrooijen/darken-bg-face
+ 'org-quote              'kwrooijen/darken-bg-face
  'org-block-begin-line   'kwrooijen/faded-darken-fb-face
  'org-block-end-line     'kwrooijen/faded-darken-fb-face)
 
@@ -454,7 +455,7 @@ Recenter screen when iedit is used.
  'org-meta-line                'kwrooijen/faded-fg-face
  'org-mode-line-clock          'kwrooijen/faded-fg-face
  'org-mode-line-clock-overrun  'kwrooijen/faded-fg-face
- 'org-priority                 'kwrooijen/faded-fg-face
+ 'org-priority                 'kwrooijen/error-fg-face
  'org-property-value           'kwrooijen/faded-fg-face
  'org-quote                    'kwrooijen/faded-fg-face
  'org-scheduled                'kwrooijen/faded-fg-face
@@ -489,8 +490,6 @@ Recenter screen when iedit is used.
  'org-agenda-structure    'kwrooijen/strong-fg-face)
 
 (kwrooijen/reset-inherit-face!
- 'org-agenda-calendar-sexp 'kwrooijen/salient-fg-face
- 'org-agenda-date          'kwrooijen/salient-fg-face
  'org-link                 'kwrooijen/salient-fg-face
  'org-table                'kwrooijen/salient-fg-face
  'org-todo                 'kwrooijen/salient-fg-face)
@@ -636,7 +635,33 @@ Recenter screen when iedit is used.
 :END:
 
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'org-habit-clear-future-face 'kwrooijen/salient-fb-face)
-(kwrooijen/reset-inherit-face! 'org-habit-alert-face 'kwrooijen/warning-fb-face)
-(kwrooijen/reset-inherit-face! 'org-habit-overdue-future-face 'kwrooijen/error-fb-face)
+(kwrooijen/reset-inherit-face! 'org-habit-clear-future-face 'kwrooijen/salient-fb-face
+ 'org-habit-alert-face 'kwrooijen/warning-fb-face
+ 'org-habit-overdue-future-face 'kwrooijen/error-fb-face
+ 'org-habit-overdue-future-face 'kwrooijen/error-fb-face)
+#+END_SRC
+
+* Org Agenda :config:
+:PROPERTIES:
+:PACKAGE:  org-agenda
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'org-agenda-calendar-sexp 'kwrooijen/salient-fg-face
+ 'org-agenda-date          'kwrooijen/salient-fg-face
+ 'org-agenda-clocking 'kwrooijen/warning-fg-face)
+#+END_SRC
+
+* Shr :config:
+:PROPERTIES:
+:PACKAGE:  shr
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'shr-text nil
+                    :family kwrooijen/font
+                    :weight 'light)
 #+END_SRC

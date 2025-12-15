@@ -56,6 +56,17 @@ Add functionality to toggle habits in agenda.
 
 ** Custom :custom:
 
+Adjsut the org agenda format. We add `EFFORT` (`[%e]`) to the `agenda`
+view. (NOTE: Removed `%e` for now, to see how we can organize it nicely
+
+#+BEGIN_SRC emacs-lisp
+(setq org-agenda-prefix-format
+ '((agenda . "[%-5e] %-12:c%?-12t% s")
+   (todo . " %i %-12:c")
+   (tags . " %i %-12:c")
+   (search . " %i %-12:c")))
+#+END_SRC
+
 Don't show scheduled TODOs if they have been done today
 
 #+BEGIN_SRC emacs-lisp
@@ -209,10 +220,7 @@ Customize agenda renderer to optionally filter out habits.
 Read org capture templates from other file.
 
 #+BEGIN_SRC emacs-lisp
-(let ((org-capture-templates-file
-       (expand-file-name "~/.dotfiles/org-capture-templates.el")))
-  (when (file-exists-p org-capture-templates-file)
-    (load-file org-capture-templates-file)))
+(kwrooijen/find-and-load-file "~/.dotfiles/org-capture-templates.el")
 #+END_SRC
 
 

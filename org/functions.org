@@ -2,6 +2,13 @@
 * Functions
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/find-and-load-file (file)
+  (let ((file-path (expand-file-name file)))
+    (when (file-exists-p file-path)
+      (load-file file-path))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/upgrade-packages ()
   "Upgrades all packages to their latest version (using Straight.el) and updates the lockfile."
   (interactive)

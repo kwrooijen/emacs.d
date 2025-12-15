@@ -1,4 +1,32 @@
 * Functions
+
+Org heading search
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-search-heading ()
+  "Jump to an Org heading using full outline paths."
+  (interactive)
+  (let (candidates)
+    (org-map-entries
+     (lambda ()
+       (let* ((pos (point))
+              (path (org-get-outline-path t t))
+              (display (string-join path " > ")))
+         (push (cons display pos) candidates)))
+     nil 'file)
+    (let* ((choice
+            (completing-read
+             "Heading: "
+             (mapcar #'car candidates)
+             nil t))
+           (pos (cdr (assoc choice candidates))))
+      (goto-char pos)
+      (org-show-context)
+      (org-show-entry)
+      (org-narrow-to-subtree))))
+#+END_SRC
+
+
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-table-current-line-columns ()
   "Return the columns of the current line in an Org table as a list of plain strings."
@@ -412,6 +440,10 @@ Org agenda files. All TODOs go in here.
 (kwrooijen/local-leader
   :keymaps 'org-mode-map
   "'" 'org-edit-special
+  "s s" 'kwrooijen/org-search-heading
+  ", ," 'org-priority
+  ", k" 'org-priority-up
+  ", j" 'org-priority-down
   "i i" 'kwrooijen/org-images-increase
   "i j" 'kwrooijen/org-images-decrease
   "f b"  'org/toggle-bold
@@ -419,7 +451,7 @@ Org agenda files. All TODOs go in here.
   "f i"  'org/toggle-italic
   "t a"  'kwrooijen/org-focus-this-heading
   "t i"  'org-toggle-inline-images
-  "t e" 'kwrooijen/org-table-export
+  "t e"  'kwrooijen/org-table-export
   "c t"  'org-clock-update-time-maybe
   "c s"  '(org-schedule :which-key "Org Schedule")
   "c d"  '(org-deadline :which-key "Org Deadline")
@@ -504,7 +536,11 @@ Org agenda files. All TODOs go in here.
                           ("#+begin_quote" . "“")
                           ("#+end_quote" . "”")
                           ("#+BEGIN_QUOTE" . "“")
-                          ("#+END_QUOTE" . "”")))
+                          ("#+END_QUOTE" . "”")
+                          ("#+begin_example" . "“")
+                          ("#+end_example" . "”")
+                          ("#+BEGIN_EXAMPLE" . "“")
+                          ("#+END_EXAMPLE" . "”")))
 #+END_SRC
 
 * Org Appear

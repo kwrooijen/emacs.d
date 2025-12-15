@@ -1,0 +1,144 @@
+* Elfeed
+:PROPERTIES:
+:PACKAGE:  elfeed
+:STRAIGHT: t
+:END:
+** Custom :custom:
+Max body width (using shr renderer)
+
+#+BEGIN_SRC emacs-lisp
+(shr-width 80)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'elfeed-search-feed-face 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'elfeed-search-tag-face 'kwrooijen/popout-fg-face)
+(kwrooijen/reset-inherit-face! 'elfeed-search-date-face 'kwrooijen/faded-fg-face)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/find-and-load-file "~/.dotfiles/elfeed-feeds.el")
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/elfeed-default-tags '("saved"))
+
+(defun kwrooijen/elfeed-search-tag-all (tag)
+  "Apply TAG to all selected entries."
+  (interactive
+   (list
+    (intern
+     (completing-read
+      "Tag: "
+      kwrooijen/elfeed-default-tags
+      nil          ; predicate
+      nil))))      ; require-match → allow new tags
+(elfeed-search-tag-all tag))
+
+(defun kwrooijen/elfeed-entry-tags-at-point ()
+  "Return a list of tag names (strings) for the entry at point."
+  (when-let ((entry (elfeed-search-selected :single)))
+    (mapcar #'symbol-name (elfeed-entry-tags entry))))
+
+
+(defun kwrooijen/elfeed-search-untag-all (tag)
+  "Remove TAG from all selected Elfeed entries."
+  (interactive
+   (let ((tags (kwrooijen/elfeed-entry-tags-at-point)))
+     (unless tags
+       (user-error "No tags on entry"))
+     (list
+      (intern
+       (completing-read
+        "Remove tag: "
+        tags
+        nil
+        t)))))
+(elfeed-search-untag-all tag)
+  )
+
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "af" '(elfeed :which-key "Elfeed"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states '(normal)
+ :keymaps 'elfeed-search-mode-map
+ "r" #'elfeed-search-untag-all-unread
+ "R" #'elfeed-search-tag-all-unread
+ "t" #'kwrooijen/elfeed-search-tag-all
+ "T" #'kwrooijen/elfeed-search-untag-all
+ "u" #'elfeed-update
+ "/" #'elfeed-search-live-filter
+ "?" #'elfeed-search-set-filter)
+#+END_SRC
+
+
+
+
+* Message
+:PROPERTIES:
+:PACKAGE:  message
+:END:
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'message-header-to 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-subject 'kwrooijen/strong-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-other 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+#+END_SRC
+
+
+
+* Olivetti
+:PROPERTIES:
+:PACKAGE:  olivetti
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(elfeed-show-mode . olivetti-mode)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(olivetti-minimum-body-width 90)
+#+END_SRC
+
+
+* Eww
+:PROPERTIES:
+:PACKAGE:  eww
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(advice-add 'eww-readable :after
+            (lambda (&rest _)
+              (when (plist-get eww-data :readable)
+                (olivetti-mode 1))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(browse-url-browser-function 'eww-browse-url)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(eww-mode . pixel-scroll-precision-mode)
+#+END_SRC

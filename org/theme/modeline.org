@@ -46,9 +46,6 @@
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-
-  "Face for the active window border."
-
 (kwrooijen/reset-inherit-face!
  'mode-line           'kwrooijen/darken-bg-face
  'mode-line-active    'kwrooijen/darken-bg-face
@@ -62,7 +59,7 @@
 ** Active bar
 
 #+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/modeline-raise 0.20)
+(defvar kwrooijen/modeline-raise 0.15)
 
 (defun kwrooijen/modeline-r (s face)
   "Apply face and vertical raise to a modeline string."

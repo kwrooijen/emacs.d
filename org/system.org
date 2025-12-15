@@ -172,10 +172,11 @@ Window keys
   "w t" '(transpose-window-layout :repeat t)
   "w c" '(window-layout-rotate-clockwise :repeat t)
   "w C" '(window-layout-rotate-anticlockwise :repeat t)
-  "w a" 'window-layout-flip-leftright)
-  "w d" 'window-layout-flip-leftright)
-  "w w" 'window-layout-flip-topdown)
-  "w s" 'window-layout-flip-topdown))
+  "w a" 'window-layout-flip-leftright
+  "w d" 'window-layout-flip-leftright
+  "w w" 'window-layout-flip-topdown
+  "w s" 'window-layout-flip-topdown
+  "w i" 'widen)
 #+END_SRC
 
 Resume keys
@@ -194,6 +195,7 @@ Resume keys
 #+BEGIN_SRC emacs-lisp
 (general-define-key
  :keymaps 'minibuffer-mode-map
+ "M--" 'describe-key
  "M-v" 'clipboard-yank
  "M-k" 'previous-line-or-history-element
  "M-j" 'next-line-or-history-element)

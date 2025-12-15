@@ -4,6 +4,32 @@
 :STRAIGHT: t
 :END:
 
+** Config :config:
+
+
+#+BEGIN_SRC emacs-lisp
+;; (defun kwrooijen/consult-grep-fix-tab ()
+;;   (when (eq (completion-metadata-get
+;;              (completion-metadata (minibuffer-contents)
+;;                                   minibuffer-completion-table
+;;                                   minibuffer-completion-predicate)
+;;              'category)
+;;             'consult-grep)
+;;     (let ((map (make-sparse-keymap)))
+;;       (define-key map (kbd "TAB")   #'ignore)
+;;       (define-key map (kbd "<tab>") #'ignore)
+;;       (setq-local minor-mode-overriding-map-alist
+;;                   (cons `(vertico-mode . ,map)
+;;                         minor-mode-overriding-map-alist)))
+;;     ))
+
+;; (add-hook 'minibuffer-setup-hook #'kwrooijen/consult-grep-fix-tab)
+;; vertico-next-group is causing consult-rip-grep to break. Disabling it for now.
+;; Attempted to override the keybinding with a hook, but that doesn't seem to work.
+(defun vertico-next-group (&optional n) (interactive))
+#+END_SRC
+
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (:keymaps 'minibuffer-local-map
@@ -147,6 +173,7 @@ No delays
  consult-notes-search-in-all-notes
  :preview-key "TAB")
 
+(kwrooijen/reset-inherit-face! 'consult-file 'kwrooijen/faded-fg-face)
 (set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
 (set-face-attribute 'consult-highlight-match nil :inherit 'bold)
 (set-face-attribute 'consult-preview-match nil :inherit 'bold)
@@ -211,19 +238,11 @@ No delays
   "sp" '(consult-ripgrep :which-key "Grep in Project")
   "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
   "bb" '(consult-buffer :which-key "Switch buffer")
-   "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
+  "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
   "fb" '(consult-bookmark :which-key "Open bookmark")
   "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
   "pp" '(project-switch-project :which-key "Switch project")
   "pf" '(project-find-file :which-key "Find file in project"))
-#+END_SRC
-
-Remove consult-map binding because otherwise Consult preview becomes
-buggy.
-
-#+BEGIN_SRC emacs-lisp
-(:keymaps 'consult-map
-  "TAB" #'ignore)
 #+END_SRC
 
 * Orderless
