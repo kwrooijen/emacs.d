@@ -5,6 +5,60 @@
 
 ** Config :config:
 
+Automatically save any org buffers when making changes in org agenda.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agenda-org-save-all-org-buffers ()
+  (when (equal major-mode 'org-agenda-mode)
+    ;; TODO Inhibit messages
+    (org-save-all-org-buffers)))
+
+(add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
+(add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
+(add-hook 'org-clock-out-hook               #'kwrooijen/agenda-org-save-all-org-buffers)
+#+END_SRC
+
+
+Custom loading bar for work.
+
+#+BEGIN_SRC emacs-lisp
+(setq org-agenda-custom-commands
+      '(("c" "My custom agenda"
+         ((agenda "")
+          (tags-todo "work")))))
+
+
+(defun kwrooijen/org-agenda-loading-bar ()
+  "Return a textual loading bar based on today's clocked minutes."
+  (let* ((max 480.0)
+         (current (float (kwrooijen/org-clock-clocked-today)))
+         (ratio (min 1.0 (/ current max)))
+         (width 30)
+         (filled (round (* width ratio)))
+         (empty (- width filled))
+         (percent (round (* 100 ratio))))
+    (format
+     "%s\n\nWork Progress: [%s%s] %d%% (%d / 480 min)\n\n%s\n\n"
+     (make-string (- (window-width) 1) ?─)
+     (make-string filled ?█)
+     (make-string empty ?░)
+     percent
+     (round current)
+     (make-string (- (window-width) 1) ?─))))
+
+(defun kwrooijen/org-agenda-insert-loading-bar ()
+  "Insert loading bar at the top of the agenda buffer."
+  ;; TODO only when current day is mon - fri
+  ;; (when (derived-mode-p 'org-agenda-mode)
+  ;;   (let ((inhibit-read-only t))
+  ;;     (goto-char (point-min))
+  ;;     (insert (kwrooijen/org-agenda-loading-bar))))
+)
+
+(add-hook 'org-agenda-finalize-hook
+          #'kwrooijen/org-agenda-insert-loading-bar)
+#+END_SRC
+
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-client-names ()
   "Return a list of client names derived from org files."
@@ -91,10 +145,23 @@ List of keywords which a TODO heading can have.
 (org-todo-keywords '((sequence
                       "TODO(t)"
                       "IN PROGRESS(p)"
+                      "WAITING(w)"
                       "|"
                       "CANCELLED(c!)"
                       "DONE(d!)")))
 #+END_SRC
+
+Set the faces for specific org keywords
+
+#+BEGIN_SRC emacs-lisp
+(org-todo-keyword-faces
+      '(("TODO"        . (:inherit kwrooijen/salient-fg-face))
+        ("IN PROGRESS" . (:inherit kwrooijen/popout-fg-face))
+        ("WAITING"     . (:inherit kwrooijen/faded-fg-face))
+        ("DONE"        . (:inherit org-done))
+        ("CANCELLED"   . (:inherit org-done))))
+#+END_SRC
+
 
 Customize agenda renderer to optionally filter out habits.
 
@@ -354,4 +421,56 @@ Read org capture templates from other file.
  "t w 3" #'cal-tex-cursor-week-iso
  "t w 4" #'cal-tex-cursor-week-monday
  "t w W" #'cal-tex-cursor-week2-summary)
+#+END_SRC
+
+
+* Org Clock
+:PROPERTIES:
+:PACKAGE:  org-clock
+:END:
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-clock--today-range ()
+  "Return (START . END) of today in Unix seconds."
+  (let* ((now (decode-time (current-time)))
+         (start (float-time
+                 (encode-time 0 0 0
+                              (nth 3 now)
+                              (nth 4 now)
+                              (nth 5 now)))))
+    (cons start (+ start 86400))))
+
+
+(defun kwrooijen/org-clock--today-start ()
+  "Return Unix time (seconds) for start of today."
+  (let* ((now (decode-time (current-time))))
+    (encode-time 0 0 0
+                 (nth 3 now)   ; day
+                 (nth 4 now)   ; month
+                 (nth 5 now)))) ; year
+
+(defun kwrooijen/org-clock--open-clocked-today ()
+  "Return minutes from currently running clock that fall within today."
+  (when (org-clocking-p)
+    (pcase-let* ((`(,start . ,end) (kwrooijen/org-clock--today-range))
+                 (clock-start (float-time org-clock-start-time))
+                 (now (float-time (current-time))))
+      ;; overlap between [clock-start, now] and [start, end]
+      (when (< clock-start end)
+        (/ (max 0 (- (min now end)
+                     (max clock-start start)))
+           60)))))
+
+(defun kwrooijen/org-clock-clocked-today (&optional as-duration)
+  "Return total time clocked today across `org-agenda-files`.
+If AS-DURATION is non-nil, return an Org duration string."
+  (let* ((start (float-time (kwrooijen/org-clock--today-start)))
+         (end   (+ start 86400))
+         (minutes (or (kwrooijen/org-clock--open-clocked-today) 0)))
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (setq minutes (+ minutes (org-clock-sum start end)))))
+    (if as-duration
+        (org-duration-from-minutes minutes)
+      minutes)))
 #+END_SRC
