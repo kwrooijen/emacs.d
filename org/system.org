@@ -109,6 +109,7 @@ modes. These keys are configurable through the variables
   "s" '(:ignore t :which-key "Search")
   "b" '(:ignore t :which-key "Buffers")
   "f" '(:ignore t :which-key "Files")
+  "d" '(:ignore t :which-key "Denote")
   "p" '(:ignore t :which-key "Project")
   "w" '(:ignore t :which-key "Window")
   "r" '(:ignore t :which-key "Resume")

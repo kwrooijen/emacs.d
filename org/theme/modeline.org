@@ -154,14 +154,34 @@
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/weekday-p (&optional time)
+  "Return t if TIME (or now) is Monday through Friday."
+  (let ((day-of-week (nth 6 (decode-time time))))
+    (<= 1 day-of-week 5)))
+
+(defun kwrooijen/clocked-today ()
+  (let ((clocked-today (kwrooijen/org-clock-clocked-today)))
+    (format "%d:%02d"
+            (/ (floor clocked-today) 60)
+            (% (floor clocked-today) 60))))
+
+(defun kwrooijen/clocked-today-percentage ()
+  (format "%d％"
+          (round
+           (* 100.0
+              (/ (float (kwrooijen/org-clock-clocked-today))
+                 480.0)))))
+
+
+(defun kwrooijen/clocked-session ()
+  (format "%d:%02d"
+          (/ (org-clock-get-clocked-time) 60)
+          (% (org-clock-get-clocked-time) 60)))
+
 (defun kwrooijen/modeline-org-clock ()
-  (when (and (org-clocking-p)
-           (org-clock-get-clocked-time))
-      (kwrooijen/modeline-r
-       (format " [%d:%02d]"
-               (/ (org-clock-get-clocked-time) 60)
-               (% (org-clock-get-clocked-time) 60))
-       'kwrooijen/faded-fg-face)))
+  (when (kwrooijen/weekday-p)
+    (let ((face (if (org-clocking-p) 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
+      (kwrooijen/modeline-r (format " [%s] [%s]" (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp

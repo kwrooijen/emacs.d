@@ -230,6 +230,32 @@ No delays
          (funcall popwin-fn (find-file-noselect (car selected))))))))
 #+END_SRC
 
+Project find files
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-project-find-file ()
+  "Find a project file using `rg --files`, excluding .git/ but keeping .gitignore."
+  (interactive)
+  (let* ((root (project-root (project-current t)))
+         (default-directory root)
+         (rg (executable-find "rg")))
+    (unless rg
+      (user-error "ripgrep (rg) not found in PATH"))
+    (let* ((files (process-lines rg
+                                 "--files"
+                                 "--color=never"
+                                 "--hidden"
+                                 "--follow"
+                                 "--glob" "!.git/**"))
+           (choice (consult--read files
+                                  :prompt "Project file: "
+                                  :sort nil
+                                  :category 'file
+                                  :history 'file-name-history)))
+      (find-file (expand-file-name choice root)))))
+#+END_SRC
+
+
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
@@ -242,7 +268,7 @@ No delays
   "fb" '(consult-bookmark :which-key "Open bookmark")
   "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
   "pp" '(project-switch-project :which-key "Switch project")
-  "pf" '(project-find-file :which-key "Find file in project"))
+  "pf" '(kwrooijen/consult-project-find-file :which-key "Find file in project"))
 #+END_SRC
 
 * Orderless

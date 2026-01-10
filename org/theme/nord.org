@@ -163,7 +163,7 @@ brew install --cask font-roboto-mono
 
 (set-face-attribute 'default nil
                     :family kwrooijen/font
-                    :weight 'light)
+                    :weight 'thin)
 
 
 (defgroup kwrooijen/colors nil
@@ -401,9 +401,10 @@ Recenter screen when iedit is used.
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/reset-inherit-face!
  'magit-diff-context-highlight 'kwrooijen/darken-bg-face
- 'magit-section-highlight 'kwrooijen/highlight-bg-face)
+ 'magit-section-highlight 'kwrooijen/highlight-bg-face
+ 'magit-diff-hunk-heading-highlight 'kwrooijen/background-bg-face
+ 'magit-diff-hunk-heading 'kwrooijen/background-bg-face)
 #+END_SRC
-
 
 * Org :config:
 :PROPERTIES:

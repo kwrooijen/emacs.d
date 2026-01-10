@@ -1,0 +1,29 @@
+* Denote
+:PROPERTIES:
+:PACKAGE:  denote
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(dired-mode . denote-dired-mode)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "d n" 'denote
+ "d r" 'denote-rename-file
+ "d l" 'denote-link
+ "d b" 'denote-backlinks
+ "d d" 'denote-dired
+ "d g" 'denote-grep)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(setq denote-directory (expand-file-name "~/Documents/notes/"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(denote-rename-buffer-mode 1)
+#+END_SRC

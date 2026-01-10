@@ -142,3 +142,30 @@ Max body width (using shr renderer)
 #+BEGIN_SRC emacs-lisp
 (eww-mode . pixel-scroll-precision-mode)
 #+END_SRC
+
+* Spray
+:PROPERTIES:
+:PACKAGE:  spray
+:STRAIGHT: t
+:END:
+
+A speed reading mode for Emacs
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/spray ()
+  "Copy current buffer into a new buffer and start spray-mode."
+  (interactive)
+  (let* ((source (current-buffer))
+         (text (with-current-buffer source
+                 (buffer-string)))
+         (buf (generate-new-buffer
+               (format "*spray: %s*" (buffer-name source)))))
+    (switch-to-buffer buf)
+    (insert text)
+    (goto-char (point-min))
+    (spray-mode 1)
+    (use-local-map (copy-keymap spray-mode-map))
+    (local-set-key (kbd "q") #'kill-current-buffer)
+    (local-set-key (kbd "SPC") #'spray-start/stop)))
+#+END_SRC

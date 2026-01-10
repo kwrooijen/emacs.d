@@ -221,11 +221,12 @@ If on a:
                (org-call-with-arg 'org-table-recalculate (or arg t))))))
 
         (`table-cell
-         (org-table-blank-field)
+         ;; (org-table-blank-field)
          (org-table-recalculate arg)
-         (when (and (string-empty-p (string-trim (org-table-get-field)))
-                    (bound-and-true-p evil-local-mode))
-           (evil-change-state 'insert)))
+         ;; (when (and (string-empty-p (string-trim (org-table-get-field)))
+         ;;            (bound-and-true-p evil-local-mode))
+         ;;   (evil-change-state 'insert))
+)
 
         (`babel-call
          (org-babel-lob-execute-maybe))
@@ -562,12 +563,14 @@ Org agenda files. All TODOs go in here.
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
-(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/org/notes/")))
+(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/notes/")
+                                  ("Old"  ?n  "~/Documents/org/notes/")))
 #+END_SRC
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (consult-notes-org-roam-mode)
+(consult-notes-denote-mode)
 #+END_SRC
 
 ** General :general:
