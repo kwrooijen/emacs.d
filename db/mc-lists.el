@@ -43,6 +43,7 @@
         evil-undo
         evil-yank-line
         evilnc-comment-or-uncomment-lines
+        fill-paragraph
         forward-sexp
         helm-M-x
         helm-buffers-list

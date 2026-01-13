@@ -94,3 +94,20 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 #+BEGIN_SRC emacs-lisp
 (magit-todos-mode 1)
 #+END_SRC
+
+# TODO Magit delta sometimes breaks, so we should have an easy way to toggle it.
+# * Magit Delta
+# :PROPERTIES:
+# :PACKAGE:  magit-delta
+# :STRAIGHT: t
+# :END:
+
+# ** Hook :hook:
+# #+BEGIN_SRC emacs-lisp
+# (magit-mode . magit-delta-mode)
+# #+END_SRC
+
+# ** Custom :custom:
+# #+BEGIN_SRC emacs-lisp
+# (magit-delta-delta-args '("--max-line-distance" "0.6" "--true-color" "always" "--color-only" "--syntax-theme" "Nord" ))
+# #+END_SRC

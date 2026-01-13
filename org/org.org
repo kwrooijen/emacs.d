@@ -589,3 +589,20 @@ Org agenda files. All TODOs go in here.
 #+BEGIN_SRC emacs-lisp
 ((org-mode . org-fragtog-mode))
 #+END_SRC
+
+* Org Ql
+:PROPERTIES:
+:PACKAGE:  org-ql
+:STRAIGHT: t
+:END:
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-ql-views
+      `(("Notes"
+         :buffers-files
+,(directory-files
+ "~/Documents/notes"
+ t "\\.org$"))))
+#+END_SRC
