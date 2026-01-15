@@ -11,7 +11,10 @@ Automatically save any org buffers when making changes in org agenda.
 (defun kwrooijen/agenda-org-save-all-org-buffers ()
   (when (equal major-mode 'org-agenda-mode)
     ;; TODO Inhibit messages
-    (org-save-all-org-buffers)))
+    (org-save-all-org-buffers))
+  (when (equal major-mode 'org-mode)
+    ;; TODO Inhibit messages
+    (save-buffer)))
 
 (add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
@@ -19,13 +22,23 @@ Automatically save any org buffers when making changes in org agenda.
 #+END_SRC
 
 
-Custom loading bar for work.
-
 #+BEGIN_SRC emacs-lisp
 (setq org-agenda-custom-commands
       '(("c" "My custom agenda"
          ((agenda "")
-          (tags-todo "work")))))
+          (tags-todo "work")))
+        ("D" "Done tasks"
+         todo "DONE")))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-agenda-done ()
+  (interactive)
+  (org-agenda nil "D"))
+#+END_SRC
+
+Custom loading bar for work.
+#+BEGIN_SRC emacs-lisp
 
 
 (defun kwrooijen/org-agenda-loading-bar ()
@@ -179,6 +192,7 @@ Customize agenda renderer to optionally filter out habits.
   "aa" '(org-agenda-list :which-key "Org Agenda")
   "ao" '(org-agenda :which-key "Org Commands")
   "at" '(org-todo-list :which-key "Org Todos")
+  "ad" '(kwrooijen/org-agenda-done :which-key "Org Done")
   "ac" '(org-capture :which-key "Org Capture"))
 #+END_SRC
 
