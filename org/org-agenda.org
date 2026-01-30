@@ -21,6 +21,21 @@ Automatically save any org buffers when making changes in org agenda.
 (add-hook 'org-clock-out-hook               #'kwrooijen/agenda-org-save-all-org-buffers)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-agenda-clockreport-widen (&rest _)
+  (let* ((dir (file-truename (expand-file-name "~/Documents/org/todos/client/"))))
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (when-let ((f (buffer-file-name buf)))
+          (setq f (file-truename f))
+          (when (and (string-prefix-p dir f)
+                     (string-match-p "\\.org\\'" f))
+            (widen)))))))
+
+(advice-add 'org-agenda-clockreport-mode :before
+            #'kwrooijen/org-agenda-clockreport-widen)
+#+END_SRC
+
 
 #+BEGIN_SRC emacs-lisp
 (setq org-agenda-custom-commands
