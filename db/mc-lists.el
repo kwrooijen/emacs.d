@@ -4,6 +4,7 @@
 (setq mc/cmds-to-run-for-all
       '(
         +org/dwim-at-point
+        agent-shell-next-item
         backward-sexp
         c-electric-colon
         c-electric-paren
@@ -16,6 +17,7 @@
         cljr-slash
         cljr-thread-last-all
         combobulate-python-indent-for-tab-command
+        consult-ripgrep
         cycle-spacing
         describe-key
         dired-toggle-read-only
@@ -52,6 +54,7 @@
         insert-parentheses
         isearch-exit
         kill-sexp
+        kwrooijen/capitalize-previous-word
         kwrooijen/font-size-decrease
         kwrooijen/helm-exit-minibuffer
         kwrooijen/key-chord-evil-normal-state-and-save
@@ -226,6 +229,7 @@
 
 (setq mc/cmds-to-run-once
       '(
+        agent-shell-previous-item
         beginning-of-buffer
         copilot-mode
         evil-record-macro

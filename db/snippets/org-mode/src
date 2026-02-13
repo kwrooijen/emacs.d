@@ -2,6 +2,6 @@
 # name: src
 # key: sr
 # --
-#+BEGIN_SRC ${1:$$(yas-choose-value '("emacs-lisp" "jupyter-python" "ruby" "solidity"))}
+#+BEGIN_SRC ${1:$$(yas-choose-value '("emacs-lisp" "jupyter-python" "ruby" "solidity" "ai-image"))}
 $0
 #+END_SRC

@@ -25,6 +25,10 @@ Recenter screen when searching forward / backwards
 (advice-add 'evil-search-previous :after #'kwrooijen/recenter)
 #+END_SRC
 
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(minibuffer-setup . #'evil-insert-state)
+#+END_SRC
 
 ** Bindings :general:
 

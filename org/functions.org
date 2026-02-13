@@ -129,3 +129,15 @@
   (let ((project-root (project-root (project-current t))))
     (dired project-root)))
 #+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/remove-empty-lines ()
+  "Remove all empty lines in the current buffer or region."
+  (interactive)
+  (let ((start (if (use-region-p) (region-beginning) (point-min)))
+        (end (if (use-region-p) (region-end) (point-max))))
+    (save-excursion
+      (goto-char start)
+      (while (re-search-forward "^[[:space:]]*\n" end t)
+        (replace-match "")))))
+#+END_SRC

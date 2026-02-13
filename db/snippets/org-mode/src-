@@ -4,4 +4,4 @@
 # --
 #+END_SRC
 $0
-#+BEGIN_SRC ${1:$$(yas-choose-value '("emacs-lisp" "jupyter-python" "ruby" "solidity"))}
+#+BEGIN_SRC ${1:$$(yas-choose-value '("emacs-lisp" "jupyter-python" "ruby" "solidity" "ai-image"))}
