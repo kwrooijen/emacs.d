@@ -180,8 +180,10 @@
 
 (defun kwrooijen/modeline-org-clock ()
   (when (kwrooijen/weekday-p)
-    (let ((face (if (org-clocking-p) 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
-      (kwrooijen/modeline-r (format " [%s] [%s]" (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
+    (let* ((clock-count (length org-clock-multi-clocks))
+           (clocked-in-p (> clock-count 0))
+           (face (if clocked-in-p 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
+      (kwrooijen/modeline-r (format " [%d] [%s] [%s]" clock-count (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp

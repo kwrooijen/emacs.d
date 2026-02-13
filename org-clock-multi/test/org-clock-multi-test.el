@@ -17,22 +17,29 @@
 ;;; Test Utilities
 
 (defmacro org-clock-multi-test-with-temp-org (content &rest body)
-  "Create a temp org buffer with CONTENT and execute BODY."
+  "Create a temp org file with CONTENT and execute BODY."
   (declare (indent 1) (debug t))
-  `(let ((org-clock-multi-clocks nil)  ; Start with clean state
-         (org-clock-multi-persist-file (make-temp-file "org-clock-multi-test-"))
-         ;; Save original state to restore after test
-         (--orig-clocks-- org-clock-multi-clocks))
+  `(let* ((org-clock-multi-clocks nil)  ; Start with clean state
+          (org-clock-multi-persist-file (make-temp-file "org-clock-multi-test-persist-"))
+          (--org-file-- (make-temp-file "org-clock-multi-test-org-" nil ".org"))
+          ;; Save original state to restore after test
+          (--orig-clocks-- org-clock-multi-clocks))
      (unwind-protect
-         (with-temp-buffer
-           (org-mode)
-           (insert ,content)
-           (goto-char (point-min))
-           ,@body)
-       ;; Restore original state and clean up temp file
+         (progn
+           (with-temp-file --org-file--
+             (insert ,content))
+           (with-current-buffer (find-file-noselect --org-file--)
+             (org-mode)
+             (goto-char (point-min))
+             ,@body))
+       ;; Restore original state and clean up temp files
        (setq org-clock-multi-clocks --orig-clocks--)
        (when (file-exists-p org-clock-multi-persist-file)
-         (delete-file org-clock-multi-persist-file)))))
+         (delete-file org-clock-multi-persist-file))
+       (when (file-exists-p --org-file--)
+         (delete-file --org-file--))
+       (when-let* ((buf (find-buffer-visiting --org-file--)))
+         (kill-buffer buf)))))
 
 (defun org-clock-multi-test--get-logbook-entries ()
   "Get all CLOCK entries from LOGBOOK at current heading."
@@ -89,6 +96,86 @@
       (should (= 1 (length entries)))
       ;; Duration should be 0:10 (10 minutes)
       (should (string-match-p " =>  0:10$" (car entries))))))
+
+(ert-deftest org-clock-multi-test-clock-duration-one-minute ()
+  "Test that 1 minute duration is calculated correctly (regression test)."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (org-clock-multi-clock-in)
+    ;; Simulate 1 minute passing by modifying the start time
+    (let ((clock (car org-clock-multi-clocks)))
+      (setcdr clock (time-subtract (current-time) (* 1 60))))
+    (org-clock-multi-clock-out)
+    (let ((entries (org-clock-multi-test--get-logbook-entries)))
+      (should (= 1 (length entries)))
+      ;; Duration should be 0:01 (1 minute), NOT 0:00
+      (should (string-match-p " =>  0:01$" (car entries))))))
+
+(ert-deftest org-clock-multi-test-clock-duration-after-persistence ()
+  "Test that duration is correct after save/load cycle (regression test)."
+  (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org"))
+        (persist-file (make-temp-file "org-clock-multi-test-persist-")))
+    (unwind-protect
+        (let ((org-clock-multi-clocks nil)
+              (org-clock-multi-persist-file persist-file))
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            ;; Clock in
+            (org-clock-multi-clock-in)
+            ;; Simulate 5 minutes passing
+            (let ((clock (car org-clock-multi-clocks)))
+              (setcdr clock (time-subtract (current-time) (* 5 60))))
+            ;; Save and reload (simulating Emacs restart)
+            (org-clock-multi-save-state)
+            (setq org-clock-multi-clocks nil)
+            (org-clock-multi-load-state)
+            ;; Clock out
+            (org-clock-multi-clock-out)
+            ;; Check duration
+            (let ((entries (org-clock-multi-test--get-logbook-entries)))
+              (should (= 1 (length entries)))
+              ;; Duration should be 0:05, NOT 0:00
+              (should (string-match-p " =>  0:05$" (car entries))))))
+      (delete-file org-file)
+      (delete-file persist-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
+
+(ert-deftest org-clock-multi-test-clock-out-via-marker ()
+  "Test clocking out when navigating to heading via marker (simulates agenda)."
+  (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org"))
+        (persist-file (make-temp-file "org-clock-multi-test-persist-")))
+    (unwind-protect
+        (let ((org-clock-multi-clocks nil)
+              (org-clock-multi-persist-file persist-file)
+              saved-marker)
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            ;; Clock in and save marker (simulating what agenda does)
+            (org-clock-multi-clock-in)
+            (setq saved-marker (point-marker))
+            ;; Simulate 5 minutes passing
+            (let ((clock (car org-clock-multi-clocks)))
+              (setcdr clock (time-subtract (current-time) (* 5 60))))
+            ;; Now simulate agenda-style clock out: go to marker, then clock out
+            (goto-char (point-max))  ; move away
+            (goto-char saved-marker)  ; go back via marker
+            (org-clock-multi-clock-out)
+            ;; Check duration
+            (let ((entries (org-clock-multi-test--get-logbook-entries)))
+              (should (= 1 (length entries)))
+              ;; Duration should be 0:05, NOT 0:00
+              (should (string-match-p " =>  0:05$" (car entries))))))
+      (delete-file org-file)
+      (delete-file persist-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
 
 (ert-deftest org-clock-multi-test-clock-duration-format-two-spaces ()
   "Test that clock entry has two spaces after => like org-clock."
@@ -276,12 +363,80 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
             (setq org-clock-multi-clocks nil)
             (org-clock-multi-load-state)
             (should (= 1 (length org-clock-multi-clocks)))
-            ;; Verify it points to same place
-            (let ((clock (car org-clock-multi-clocks)))
-              (should (marker-buffer (car clock)))
-              (should (= 1 (marker-position (car clock)))))))
+            ;; Verify key structure (file . id)
+            (let* ((clock (car org-clock-multi-clocks))
+                   (key (car clock)))
+              (should (stringp (car key)))  ; file path
+              (should (stringp (cdr key)))))) ; UUID
       ;; Cleanup
       (delete-file test-file)
+      (delete-file org-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
+
+;;; UUID-based identification tests
+
+(ert-deftest org-clock-multi-test-clock-multi-id-created ()
+  "Test that CLOCK_MULTI_ID property is created on clock-in."
+  (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
+    (unwind-protect
+        (let ((org-clock-multi-clocks nil))
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            ;; No ID before clock-in
+            (should-not (org-entry-get nil "CLOCK_MULTI_ID"))
+            (org-clock-multi-clock-in)
+            ;; ID exists after clock-in
+            (should (org-entry-get nil "CLOCK_MULTI_ID"))
+            ;; ID is a valid UUID format
+            (should (string-match-p "^[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{12\\}$"
+                                    (org-entry-get nil "CLOCK_MULTI_ID")))))
+      (delete-file org-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
+
+(ert-deftest org-clock-multi-test-clock-multi-id-reused ()
+  "Test that existing CLOCK_MULTI_ID is reused, not regenerated."
+  (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
+    (unwind-protect
+        (let ((org-clock-multi-clocks nil))
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            (org-clock-multi-clock-in)
+            (let ((id1 (org-entry-get nil "CLOCK_MULTI_ID")))
+              (org-clock-multi-clock-out)
+              ;; Clock in again
+              (org-clock-multi-clock-in)
+              (let ((id2 (org-entry-get nil "CLOCK_MULTI_ID")))
+                ;; Same ID should be used
+                (should (string= id1 id2))))))
+      (delete-file org-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
+
+(ert-deftest org-clock-multi-test-no-duplicate-with-uuid ()
+  "Test that same heading cannot be clocked in twice using UUID."
+  (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
+    (unwind-protect
+        (let ((org-clock-multi-clocks nil))
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            (org-clock-multi-clock-in)
+            (should (= 1 (length org-clock-multi-clocks)))
+            ;; Try to clock in again from different position in heading
+            (forward-char 5)
+            (org-clock-multi-clock-in)
+            ;; Should still be just 1 clock
+            (should (= 1 (length org-clock-multi-clocks)))))
       (delete-file org-file)
       (when-let* ((buf (find-buffer-visiting org-file)))
         (kill-buffer buf)))))
