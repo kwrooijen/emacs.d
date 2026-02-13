@@ -39,7 +39,7 @@
 ** Config :config:
 
 #+BEGIN_SRC emacs-lisp
-(push '("*Agent-Shell Buffers*" :height 6 :position bottom :stick t) popwin:special-display-config)
+(push '("*Agent-Shell Buffers*" :height 6 :position bottom :stick t :dedicated t) popwin:special-display-config)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
