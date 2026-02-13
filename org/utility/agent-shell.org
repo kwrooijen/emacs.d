@@ -60,7 +60,7 @@
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agent-shell-start-in-project ()
-  "Start agent-shell in a selected project without showing the buffer.
+  "Start agent-shell in a selected project and switch to it.
 Projects that already have an active agent-shell are excluded from the list."
   (interactive)
   (let* ((active-dirs (kwrooijen/agent-shell--active-project-dirs))
@@ -73,9 +73,7 @@ Projects that already have an active agent-shell are excluded from the list."
         (message "No projects available (all have active agent-shells)")
       (let* ((selected (completing-read "Start agent-shell in project: " available-projects nil t))
              (default-directory selected))
-        (save-window-excursion
-          (agent-shell t))
-        (message "Started agent-shell in %s" selected)))))
+        (agent-shell t)))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -109,12 +107,32 @@ TOTAL counts all live agent-shell buffers."
           (kwrooijen/modeline-r (format " [%d/%d]" working total) face))))))
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell-switch-agent ()
+  "Switch to an agent-shell buffer using completing-read."
+  (interactive)
+  (let* ((buffers (seq-filter #'buffer-live-p (agent-shell-buffers)))
+         (candidates
+          (mapcar (lambda (buf)
+                    (let* ((name (buffer-name buf))
+                           (status (agent-shell-manager--get-status buf)))
+                      (cons (format "%s [%s]" name status) buf)))
+                  buffers)))
+    (if (null candidates)
+        (message "No agent-shell buffers")
+      (let* ((selected (completing-read "Switch to agent: " candidates nil t))
+             (buffer (cdr (assoc selected candidates))))
+        (when buffer
+          (pop-to-buffer buffer))))))
+#+END_SRC
+
 ** General :general:
 
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
  "l s" 'agent-shell-manager-toggle
- "l p" 'kwrooijen/agent-shell-start-in-project)
+ "l p" 'kwrooijen/agent-shell-start-in-project
+ "l b" 'kwrooijen/agent-shell-switch-agent)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
