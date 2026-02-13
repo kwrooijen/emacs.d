@@ -27,20 +27,7 @@ Automatically save any org buffers when making changes in org agenda.
 (advice-add 'org-clock-multi-clock-cancel  :after #'org-save-all-org-buffers)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/org-agenda-clockreport-widen (&rest _)
-  (let* ((dir (file-truename (expand-file-name "~/Documents/org/todos/client/"))))
-    (dolist (buf (buffer-list))
-      (with-current-buffer buf
-        (when-let ((f (buffer-file-name buf)))
-          (setq f (file-truename f))
-          (when (and (string-prefix-p dir f)
-                     (string-match-p "\\.org\\'" f))
-            (widen)))))))
 
-(advice-add 'org-agenda-clockreport-mode :before
-            #'kwrooijen/org-agenda-clockreport-widen)
-#+END_SRC
 
 
 #+BEGIN_SRC emacs-lisp
@@ -136,12 +123,16 @@ Custom loading bar for work.
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-agenda-edit-subtree ()
+  "Edit the subtree at point in an indirect buffer.
+Use C-c C-c to commit changes, C-c C-k to abort."
   (interactive)
-  (org-agenda-goto)
-  (org-narrow-to-subtree)
-  (evil-normal-state)
-  (with-current-buffer "*Org Agenda*"
-    (org-agenda-redo)))
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (buffer (marker-buffer marker))
+         (pos (marker-position marker)))
+    (with-current-buffer buffer
+      (goto-char pos)
+      (kwrooijen/org-edit-subtree))))
 
 (evil-define-key 'normal org-agenda-mode-map (kbd "<tab>") #'kwrooijen/org-agenda-edit-subtree)
 #+END_SRC
@@ -528,10 +519,8 @@ If AS-DURATION is non-nil, return an Org duration string."
          (minutes (or (kwrooijen/org-clock--open-clocked-today) 0)))
     (dolist (file (org-agenda-files))
       (with-current-buffer (find-file-noselect file)
-        (save-restriction
-          (widen)
-          (setq minutes
-                (+ minutes (org-clock-sum start end))))))
+        (setq minutes
+              (+ minutes (org-clock-sum start end)))))
     (if as-duration
         (org-duration-from-minutes minutes)
       minutes)))

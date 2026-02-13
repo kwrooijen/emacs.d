@@ -1,0 +1,22 @@
+* Edit Indirect
+:PROPERTIES:
+:PACKAGE:  edit-indirect
+:STRAIGHT: t
+:END:
+
+Edit regions in separate buffers, like org-edit-special but for any region.
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-edit-subtree ()
+  "Edit the current org subtree in an indirect buffer.
+Use C-c C-c to commit changes, C-c C-k to abort."
+  (interactive)
+  (org-back-to-heading t)
+  (let ((beg (point))
+        (end (save-excursion (org-end-of-subtree t) (point))))
+    (edit-indirect-region beg end t)
+    (org-mode)
+    (org-show-all)))
+#+END_SRC
