@@ -19,6 +19,12 @@ Automatically save any org buffers when making changes in org agenda.
 (add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-out-hook               #'kwrooijen/agenda-org-save-all-org-buffers)
+
+;; Save org buffers after org-clock-multi operations
+(advice-add 'org-clock-multi-clock-in      :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-out     :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-out-all :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-cancel  :after #'org-save-all-org-buffers)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
