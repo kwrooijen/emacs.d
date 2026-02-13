@@ -76,6 +76,31 @@
       (should (= 1 (length entries)))
       (should (org-clock-multi-test--valid-clock-entry-p (car entries))))))
 
+(ert-deftest org-clock-multi-test-clock-duration-calculated ()
+  "Test that clock duration is calculated correctly, not always 0:00."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (org-clock-multi-clock-in)
+    ;; Simulate 10 minutes passing by modifying the start time
+    (let ((clock (car org-clock-multi-clocks)))
+      (setcdr clock (time-subtract (current-time) (* 10 60))))
+    (org-clock-multi-clock-out)
+    (let ((entries (org-clock-multi-test--get-logbook-entries)))
+      (should (= 1 (length entries)))
+      ;; Duration should be 0:10 (10 minutes)
+      (should (string-match-p " =>  0:10$" (car entries))))))
+
+(ert-deftest org-clock-multi-test-clock-duration-format-two-spaces ()
+  "Test that clock entry has two spaces after => like org-clock."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (org-clock-multi-clock-in)
+    (org-clock-multi-clock-out)
+    (let ((entries (org-clock-multi-test--get-logbook-entries)))
+      (should (= 1 (length entries)))
+      ;; org-clock format uses two spaces: " =>  0:00" not " => 0:00"
+      (should (string-match-p " =>  [0-9]+:[0-9][0-9]$" (car entries))))))
+
 (ert-deftest org-clock-multi-test-multiple-clock-outs ()
   "Test clocking in 3 tasks and clocking out each separately."
   (org-clock-multi-test-with-temp-org

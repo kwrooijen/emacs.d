@@ -135,7 +135,8 @@ Adds to the list of active clocks without affecting other clocks."
 (defun org-clock-multi--write-clock-entry (marker start-time)
   "Write a LOGBOOK clock entry for MARKER with START-TIME.
 Uses org-clock's format for compatibility."
-  (let ((end-time (current-time)))
+  (let* ((end-time (current-time))
+         (minutes (floor (/ (float-time (time-subtract end-time start-time)) 60))))
     (with-current-buffer (marker-buffer marker)
       (save-excursion
         (goto-char marker)
@@ -145,14 +146,14 @@ Uses org-clock's format for compatibility."
           ;; Find or create LOGBOOK drawer
           (org-clock-find-position nil)
           ;; Insert the clock line in org-clock's exact format
+          ;; Note: org-clock uses two spaces after "=>"
           (insert-before-markers
            "CLOCK: "
            (org-clock-multi--format-timestamp start-time)
            "--"
            (org-clock-multi--format-timestamp end-time)
-           " => "
-           (org-duration-from-minutes
-            (floor (/ (float-time (time-subtract end-time start-time)) 60)))
+           " =>  "
+           (org-duration-from-minutes minutes)
            "\n"))))))
 
 (defun org-clock-multi-clock-out (&optional marker)
