@@ -56,7 +56,9 @@ Automatically save any org buffers when making changes in org agenda.
               (setq dominated nil))))))
     (when dominated
       (org-end-of-subtree t))))
+#+END_SRC
 
+#+BEGIN_SRC emacs-lisp
 (setq org-agenda-custom-commands
       '(("c" "My custom agenda"
          ((agenda "")
