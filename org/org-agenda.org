@@ -275,7 +275,6 @@ Customize agenda renderer to optionally filter out habits.
   "m" #'org-agenda-bulk-mark
   "M" #'org-agenda-bulk-mark-all
   "X" #'org-clock-multi-agenda-clock-cancel
-  (kbd "C-x") #'org-clock-multi-agenda-clock-cancel-all
   "[" #'org-agenda-manipulate-query-add
   "\\" #'org-agenda-filter-by-tag
   "]" #'org-agenda-manipulate-query-subtract
@@ -492,16 +491,22 @@ Read org capture templates from other file.
                  (nth 5 now)))) ; year
 
 (defun kwrooijen/org-clock--open-clocked-today ()
-  "Return minutes from currently running clock that fall within today."
-  (when (org-clocking-p)
-    (pcase-let* ((`(,start . ,end) (kwrooijen/org-clock--today-range))
-                 (clock-start (float-time org-clock-start-time))
-                 (now (float-time (current-time))))
-      ;; overlap between [clock-start, now] and [start, end]
-      (when (< clock-start end)
-        (/ (max 0 (- (min now end)
-                     (max clock-start start)))
-           60)))))
+  "Return minutes from currently running clocks that fall within today.
+Uses org-clock-multi-clocks for multiple simultaneous clocks.
+Note: Clock start times are stored in minutes since epoch."
+  (let ((total 0))
+    ;; Convert day boundaries to minutes for consistent comparison
+    (pcase-let* ((`(,day-start-sec . ,day-end-sec) (kwrooijen/org-clock--today-range))
+                 (day-start (floor (/ day-start-sec 60)))
+                 (day-end (floor (/ day-end-sec 60)))
+                 (now (floor (/ (float-time (current-time)) 60))))
+      (dolist (clock org-clock-multi-clocks)
+        (let ((clock-start (cdr clock)))  ; already in minutes
+          (when (< clock-start day-end)
+            (setq total (+ total
+                           (max 0 (- (min now day-end)
+                                     (max clock-start day-start)))))))))
+    (when (> total 0) total)))
 
 (defun kwrooijen/org-clock-clocked-today (&optional as-duration)
   "Return total time clocked today across `org-agenda-files`.

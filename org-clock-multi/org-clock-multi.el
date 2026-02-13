@@ -36,8 +36,8 @@
 
 (defvar org-clock-multi-clocks nil
   "List of active clocks.
-Each entry is a cons cell (KEY . START-TIME) where KEY is (file . id)
-and START-TIME is the clock-in time.")
+Each entry is a cons cell (KEY . START-MINUTES) where KEY is (file . id)
+and START-MINUTES is the clock-in time in minutes since epoch.")
 
 (defun org-clock-multi-save-state ()
   "Save clock state to `org-clock-multi-persist-file'."
@@ -122,6 +122,14 @@ Returns the clock cons cell or nil."
   "Return non-nil if heading at point is clocked in."
   (org-clock-multi--find-clock-at-point))
 
+(defun org-clock-multi--current-minutes ()
+  "Return current time as minutes since epoch."
+  (floor (/ (float-time (current-time)) 60)))
+
+(defun org-clock-multi--minutes-to-time (minutes)
+  "Convert MINUTES since epoch to an Emacs time value."
+  (seconds-to-time (* minutes 60)))
+
 (defun org-clock-multi-clock-in ()
   "Clock in the current heading.
 Adds to the list of active clocks without affecting other clocks."
@@ -129,10 +137,10 @@ Adds to the list of active clocks without affecting other clocks."
   (save-excursion
     (org-back-to-heading t)
     (let ((key (org-clock-multi--heading-key))
-          (start-time (current-time)))
+          (start-minutes (org-clock-multi--current-minutes)))
       (if (org-clock-multi--find-clock-by-key key)
           (message "Already clocked in to this task")
-        (push (cons key start-time) org-clock-multi-clocks)
+        (push (cons key start-minutes) org-clock-multi-clocks)
         (org-clock-multi-save-state)
         (message "Clocked in: %s" (org-get-heading t t t t))))))
 
@@ -157,11 +165,14 @@ KEY is (file . id). Returns t if found, nil otherwise."
              (org-back-to-heading t)
              t)))))))
 
-(defun org-clock-multi--write-clock-entry (key start-time)
-  "Write a LOGBOOK clock entry for heading at KEY with START-TIME.
-KEY is (file . id). Uses org-clock's format for compatibility."
-  (let* ((end-time (current-time))
-         (minutes (floor (/ (float-time (time-subtract end-time start-time)) 60)))
+(defun org-clock-multi--write-clock-entry (key start-minutes)
+  "Write a LOGBOOK clock entry for heading at KEY with START-MINUTES.
+KEY is (file . id). START-MINUTES is minutes since epoch.
+Uses org-clock's format for compatibility."
+  (let* ((end-minutes (org-clock-multi--current-minutes))
+         (start-time (org-clock-multi--minutes-to-time start-minutes))
+         (end-time (org-clock-multi--minutes-to-time end-minutes))
+         (duration (- end-minutes start-minutes))
          (file (car key))
          (id (cdr key)))
     (when (and file (file-exists-p file))
@@ -186,7 +197,7 @@ KEY is (file . id). Uses org-clock's format for compatibility."
                 "--"
                 (org-clock-multi--format-timestamp end-time)
                 " =>  "
-                (org-duration-from-minutes minutes)
+                (org-duration-from-minutes duration)
                 "\n")))))))))
 
 (defun org-clock-multi--get-heading-for-key (key)
@@ -266,10 +277,8 @@ Writes a LOGBOOK entry and removes from active clocks."
             (delq nil
                   (mapcar (lambda (clock)
                             (let* ((key (car clock))
-                                   (start-time (cdr clock))
-                                   (elapsed (floor (/ (float-time
-                                                       (time-subtract (current-time) start-time))
-                                                      60)))
+                                   (start-minutes (cdr clock))
+                                   (elapsed (- (org-clock-multi--current-minutes) start-minutes))
                                    (heading (org-clock-multi--get-heading-for-key key))
                                    (file (car key)))
                               (when heading

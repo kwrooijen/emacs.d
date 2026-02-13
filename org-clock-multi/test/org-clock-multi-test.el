@@ -88,9 +88,9 @@
   (org-clock-multi-test-with-temp-org
       "* TODO Test task\n"
     (org-clock-multi-clock-in)
-    ;; Simulate 10 minutes passing by modifying the start time
+    ;; Simulate 10 minutes passing by subtracting from start-minutes
     (let ((clock (car org-clock-multi-clocks)))
-      (setcdr clock (time-subtract (current-time) (* 10 60))))
+      (setcdr clock (- (cdr clock) 10)))
     (org-clock-multi-clock-out)
     (let ((entries (org-clock-multi-test--get-logbook-entries)))
       (should (= 1 (length entries)))
@@ -102,14 +102,26 @@
   (org-clock-multi-test-with-temp-org
       "* TODO Test task\n"
     (org-clock-multi-clock-in)
-    ;; Simulate 1 minute passing by modifying the start time
+    ;; Simulate 1 minute passing by modifying the start time (in minutes)
     (let ((clock (car org-clock-multi-clocks)))
-      (setcdr clock (time-subtract (current-time) (* 1 60))))
+      (setcdr clock (- (cdr clock) 1)))  ; subtract 1 minute
     (org-clock-multi-clock-out)
     (let ((entries (org-clock-multi-test--get-logbook-entries)))
       (should (= 1 (length entries)))
       ;; Duration should be 0:01 (1 minute), NOT 0:00
       (should (string-match-p " =>  0:01$" (car entries))))))
+
+(ert-deftest org-clock-multi-test-clock-stores-minutes-not-seconds ()
+  "Test that start time is stored in minutes for consistency with LOGBOOK."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (org-clock-multi-clock-in)
+    (let* ((clock (car org-clock-multi-clocks))
+           (start-time (cdr clock)))
+      ;; Start time should be an integer (minutes since epoch)
+      (should (integerp start-time))
+      ;; Should be roughly current time in minutes (within 1 minute)
+      (should (< (abs (- start-time (floor (/ (float-time (current-time)) 60)))) 2)))))
 
 (ert-deftest org-clock-multi-test-clock-duration-after-persistence ()
   "Test that duration is correct after save/load cycle (regression test)."
@@ -125,9 +137,9 @@
             (goto-char (point-min))
             ;; Clock in
             (org-clock-multi-clock-in)
-            ;; Simulate 5 minutes passing
+            ;; Simulate 5 minutes passing by subtracting from start-minutes
             (let ((clock (car org-clock-multi-clocks)))
-              (setcdr clock (time-subtract (current-time) (* 5 60))))
+              (setcdr clock (- (cdr clock) 5)))
             ;; Save and reload (simulating Emacs restart)
             (org-clock-multi-save-state)
             (setq org-clock-multi-clocks nil)
@@ -160,9 +172,9 @@
             ;; Clock in and save marker (simulating what agenda does)
             (org-clock-multi-clock-in)
             (setq saved-marker (point-marker))
-            ;; Simulate 5 minutes passing
+            ;; Simulate 5 minutes passing by subtracting from start-minutes
             (let ((clock (car org-clock-multi-clocks)))
-              (setcdr clock (time-subtract (current-time) (* 5 60))))
+              (setcdr clock (- (cdr clock) 5)))
             ;; Now simulate agenda-style clock out: go to marker, then clock out
             (goto-char (point-max))  ; move away
             (goto-char saved-marker)  ; go back via marker
