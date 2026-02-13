@@ -1,3 +1,17 @@
+* Agent Shell
+:PROPERTIES:
+:PACKAGE:  agent-shell
+:STRAIGHT: t
+:END:
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "l l" 'agent-shell
+ "l m" 'agent-shell-set-session-model)
+#+END_SRC
+
+
 * Agent Shell Manager
 :PROPERTIES:
 :PACKAGE:  agent-shell-manager
@@ -66,7 +80,9 @@ TOTAL counts all live agent-shell buffers."
             (when (string= status "working")
               (setq working (1+ working)))))))
     (cons working total)))
+#+END_SRC
 
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-agent-shell ()
   "Return modeline segment showing agent-shell status as [WORKING/TOTAL]."
   (when (fboundp 'agent-shell-buffers)
