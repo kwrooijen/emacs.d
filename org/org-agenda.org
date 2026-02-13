@@ -43,7 +43,19 @@ Automatically save any org buffers when making changes in org agenda.
          ((agenda "")
           (tags-todo "work")))
         ("D" "Done tasks"
-         todo "DONE")))
+         todo "DONE")
+        ("k" "Currently clocked"
+         ((alltodo "" ((org-agenda-skip-function
+                        '(unless (and (org-clocking-p)
+                                      (eq (current-buffer) (marker-buffer org-clock-marker))
+                                      (save-excursion
+                                        (org-back-to-heading t)
+                                        (= (point) (save-excursion
+                                                     (with-current-buffer (marker-buffer org-clock-marker)
+                                                       (goto-char org-clock-marker)
+                                                       (org-back-to-heading t)
+                                                       (point))))))
+                           (org-end-of-subtree t)))))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -246,12 +258,12 @@ Customize agenda renderer to optionally filter out habits.
   "F" #'org-agenda-follow-mode
   "G" #'org-agenda-toggle-time-grid
   "H" #'org-agenda-holidays
-  "I" #'org-agenda-clock-in
-  "J" #'org-agenda-clock-goto
+  "I" #'org-clock-multi-agenda-clock-in
+  "J" #'org-clock-multi-agenda-clock-goto
   "K" #'org-habit-toggle-display-in-agenda
   "L" #'org-agenda-recenter
   "N" #'org-agenda-next-item
-  "O" #'org-agenda-clock-out
+  "O" #'org-clock-multi-agenda-clock-out
   "P" #'org-agenda-previous-item
   "Q" #'org-agenda-Quit
   "R" #'org-agenda-clockreport-mode
@@ -259,9 +271,11 @@ Customize agenda renderer to optionally filter out habits.
   "T" #'org-agenda-show-tags
   (kbd "M-m") #'org-agenda-bulk-unmark
   (kbd "M-M") #'org-agenda-bulk-unmark-all
+  (kbd "C-o") #'org-clock-multi-agenda-clock-out-all
   "m" #'org-agenda-bulk-mark
   "M" #'org-agenda-bulk-mark-all
-  "X" #'org-agenda-clock-cancel
+  "X" #'org-clock-multi-agenda-clock-cancel
+  (kbd "C-x") #'org-clock-multi-agenda-clock-cancel-all
   "[" #'org-agenda-manipulate-query-add
   "\\" #'org-agenda-filter-by-tag
   "]" #'org-agenda-manipulate-query-subtract

@@ -23,3 +23,6 @@
   (wisdom-output-directory "~/.emacs.d/wisdom")
   :config
   (wisdom-boot))
+
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
+(require 'org-clock-multi)

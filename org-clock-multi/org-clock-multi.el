@@ -119,14 +119,15 @@ If MARKER is nil, check the heading at point."
   "Clock in the current heading.
 Adds to the list of active clocks without affecting other clocks."
   (interactive)
-  (org-back-to-heading t)
-  (let ((marker (point-marker))
-        (start-time (current-time)))
-    (if (org-clock-multi--find-clock marker)
-        (message "Already clocked in to this task")
-      (push (cons marker start-time) org-clock-multi-clocks)
-      (org-clock-multi-save-state)
-      (message "Clocked in: %s" (org-get-heading t t t t)))))
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((marker (point-marker))
+          (start-time (current-time)))
+      (if (org-clock-multi--find-clock marker)
+          (message "Already clocked in to this task")
+        (push (cons marker start-time) org-clock-multi-clocks)
+        (org-clock-multi-save-state)
+        (message "Clocked in: %s" (org-get-heading t t t t))))))
 
 (defun org-clock-multi--format-timestamp (time)
   "Format TIME as an inactive org timestamp."
@@ -160,19 +161,20 @@ Uses org-clock's format for compatibility."
   "Clock out MARKER (or heading at point).
 Writes a LOGBOOK entry and removes from active clocks."
   (interactive)
-  (let* ((m (or marker (org-clock-multi--heading-marker)))
-         (clock (org-clock-multi--find-clock m)))
-    (if (not clock)
-        (message "Not clocked in to this task")
-      (let ((start-time (cdr clock))
-            (heading (with-current-buffer (marker-buffer (car clock))
-                       (save-excursion
-                         (goto-char (car clock))
-                         (org-get-heading t t t t)))))
-        (org-clock-multi--write-clock-entry (car clock) start-time)
-        (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
-        (org-clock-multi-save-state)
-        (message "Clocked out: %s" heading)))))
+  (save-excursion
+    (let* ((m (or marker (org-clock-multi--heading-marker)))
+           (clock (org-clock-multi--find-clock m)))
+      (if (not clock)
+          (message "Not clocked in to this task")
+        (let ((start-time (cdr clock))
+              (heading (with-current-buffer (marker-buffer (car clock))
+                         (save-excursion
+                           (goto-char (car clock))
+                           (org-get-heading t t t t)))))
+          (org-clock-multi--write-clock-entry (car clock) start-time)
+          (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
+          (org-clock-multi-save-state)
+          (message "Clocked out: %s" heading))))))
 
 (defun org-clock-multi-clock-out-all ()
   "Clock out all active clocks."
@@ -187,17 +189,18 @@ Writes a LOGBOOK entry and removes from active clocks."
 (defun org-clock-multi-clock-cancel (&optional marker)
   "Cancel clock for MARKER (or heading at point) without writing LOGBOOK."
   (interactive)
-  (let* ((m (or marker (org-clock-multi--heading-marker)))
-         (clock (org-clock-multi--find-clock m)))
-    (if (not clock)
-        (message "Not clocked in to this task")
-      (let ((heading (with-current-buffer (marker-buffer (car clock))
-                       (save-excursion
-                         (goto-char (car clock))
-                         (org-get-heading t t t t)))))
-        (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
-        (org-clock-multi-save-state)
-        (message "Cancelled clock: %s" heading)))))
+  (save-excursion
+    (let* ((m (or marker (org-clock-multi--heading-marker)))
+           (clock (org-clock-multi--find-clock m)))
+      (if (not clock)
+          (message "Not clocked in to this task")
+        (let ((heading (with-current-buffer (marker-buffer (car clock))
+                         (save-excursion
+                           (goto-char (car clock))
+                           (org-get-heading t t t t)))))
+          (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
+          (org-clock-multi-save-state)
+          (message "Cancelled clock: %s" heading))))))
 
 (defun org-clock-multi-clock-cancel-all ()
   "Cancel all active clocks without writing LOGBOOK entries."

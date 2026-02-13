@@ -283,7 +283,7 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
       ;; Cleanup
       (delete-file test-file)
       (delete-file org-file)
-      (when-let ((buf (find-buffer-visiting org-file)))
+      (when-let* ((buf (find-buffer-visiting org-file)))
         (kill-buffer buf)))))
 
 (provide 'org-clock-multi-test)
