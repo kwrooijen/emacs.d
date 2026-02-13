@@ -1,0 +1,73 @@
+* Agent Shell Manager
+:PROPERTIES:
+:PACKAGE:  agent-shell-manager
+:STRAIGHT: (agent-shell-manager :host github :repo "jethrokuan/agent-shell-manager")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-manager-side nil)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(push '("*Agent-Shell Buffers*" :height 6 :position bottom :stick t) popwin:special-display-config)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'agent-shell-manager-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell--active-project-dirs ()
+  "Return list of project directories that have an active agent-shell."
+  (let ((dirs nil))
+    (dolist (buf (agent-shell-buffers))
+      (when (buffer-live-p buf)
+        (let ((name (buffer-name buf)))
+          (when (string-match " Agent @ \\(.+\\)$" name)
+            (push (file-truename (match-string 1 name)) dirs)))))
+    dirs))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell-start-in-project ()
+  "Start agent-shell in a selected project without showing the buffer.
+Projects that already have an active agent-shell are excluded from the list."
+  (interactive)
+  (let* ((active-dirs (kwrooijen/agent-shell--active-project-dirs))
+         (all-projects (project-known-project-roots))
+         (available-projects
+          (seq-filter (lambda (proj)
+                        (not (member (file-truename proj) active-dirs)))
+                      all-projects)))
+    (if (null available-projects)
+        (message "No projects available (all have active agent-shells)")
+      (let* ((selected (completing-read "Start agent-shell in project: " available-projects nil t))
+             (default-directory selected))
+        (save-window-excursion
+          (agent-shell))
+        (message "Started agent-shell in %s" selected)))))
+#+END_SRC
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "l s" 'agent-shell-manager-toggle
+ "l p" 'kwrooijen/agent-shell-start-in-project)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states '(normal)
+ :keymaps 'agent-shell-manager-mode-map
+ (kbd "RET") #'agent-shell-manager-goto
+ (kbd "TAB") #'agent-shell-manager-goto
+ "r" #'agent-shell-manager-refresh
+ "l" #'agent-shell-manager-view-traffic
+ "L" #'agent-shell-manager-toggle-logging
+ "p" #'kwrooijen/agent-shell-start-in-project
+ "C-c C-c" #'agent-shell-manager-interrupt)
+#+END_SRC
