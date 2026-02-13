@@ -4,6 +4,11 @@
 :STRAIGHT: t
 :END:
 
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-preferred-agent-config (agent-shell-anthropic-make-claude-code-config))
+#+END_SRC
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
@@ -18,10 +23,38 @@
 :STRAIGHT: (agent-review :host github :repo "nineluj/agent-review")
 :END:
 
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'agent-review-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-review ()
+  "Run agent-review with Claude Code as the default agent."
+  (interactive)
+  (agent-review (agent-shell-anthropic-make-claude-code-config)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'agent-review
+  (general-define-key
+   :states '(normal)
+   :keymaps 'agent-review-mode-map
+   "m" #'agent-review-mark
+   "u" #'agent-review-unmark
+   "r" #'agent-review-refresh
+   "M" #'agent-review-mark-all
+   "U" #'agent-review-unmark-all
+   "c" #'agent-review-copy-issues
+   "E" #'agent-review-send-to-agent-shell)
+
+  (evil-define-key 'normal agent-review-mode-map (kbd "<tab>") #'agent-review-jump-to-issue))
+#+END_SRC
+
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
- "l r" 'agent-review)
+ "l r" 'kwrooijen/agent-review)
 #+END_SRC
 
 
@@ -61,7 +94,8 @@
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agent-shell-start-in-project ()
   "Start agent-shell in a selected project and switch to it.
-Projects that already have an active agent-shell are excluded from the list."
+Projects that already have an active agent-shell are excluded from the list.
+Uses Claude Code as the default agent."
   (interactive)
   (let* ((active-dirs (kwrooijen/agent-shell--active-project-dirs))
          (all-projects (project-known-project-roots))
@@ -73,7 +107,7 @@ Projects that already have an active agent-shell are excluded from the list."
         (message "No projects available (all have active agent-shells)")
       (let* ((selected (completing-read "Start agent-shell in project: " available-projects nil t))
              (default-directory selected))
-        (agent-shell t)))))
+        (agent-shell-start :config (agent-shell-anthropic-make-claude-code-config))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
