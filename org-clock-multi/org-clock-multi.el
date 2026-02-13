@@ -39,6 +39,10 @@
 Each entry is a cons cell (KEY . START-MINUTES) where KEY is (file . id)
 and START-MINUTES is the clock-in time in minutes since epoch.")
 
+(defvar org-clock-multi-paused nil
+  "List of paused clock keys.
+Each entry is a KEY (file . id) for a task that was clocked out but paused.")
+
 (defun org-clock-multi-save-state ()
   "Save clock state to `org-clock-multi-persist-file'."
   (let ((dir (file-name-directory org-clock-multi-persist-file)))
@@ -49,6 +53,9 @@ and START-MINUTES is the clock-in time in minutes since epoch.")
     (insert ";;; org-clock-multi state file -*- lexical-binding: t; -*-\n")
     (insert ";; This file is auto-generated. Do not edit.\n\n")
     (prin1 `(setq org-clock-multi--persistent-state ',org-clock-multi-clocks)
+           (current-buffer))
+    (insert "\n")
+    (prin1 `(setq org-clock-multi--persistent-paused ',org-clock-multi-paused)
            (current-buffer))
     (insert "\n")))
 
@@ -65,7 +72,17 @@ and START-MINUTES is the clock-in time in minutes since epoch.")
                               (when (and file (file-exists-p file))
                                 clock)))
                           org-clock-multi--persistent-state)))
-      (makunbound 'org-clock-multi--persistent-state))))
+      (makunbound 'org-clock-multi--persistent-state))
+    (when (boundp 'org-clock-multi--persistent-paused)
+      ;; Filter out paused keys for files that no longer exist
+      (setq org-clock-multi-paused
+            (delq nil
+                  (mapcar (lambda (key)
+                            (let ((file (car key)))
+                              (when (and file (file-exists-p file))
+                                key)))
+                          org-clock-multi--persistent-paused)))
+      (makunbound 'org-clock-multi--persistent-paused))))
 
 ;;; Core Functions
 
@@ -122,6 +139,16 @@ Returns the clock cons cell or nil."
   "Return non-nil if heading at point is clocked in."
   (org-clock-multi--find-clock-at-point))
 
+(defun org-clock-multi--find-paused-by-key (key)
+  "Find KEY in `org-clock-multi-paused'.
+Returns the key if found, nil otherwise."
+  (cl-find-if (lambda (k) (equal key k)) org-clock-multi-paused))
+
+(defun org-clock-multi-paused-p ()
+  "Return non-nil if heading at point is paused."
+  (let ((key (org-clock-multi--heading-key)))
+    (org-clock-multi--find-paused-by-key key)))
+
 (defun org-clock-multi--current-minutes ()
   "Return current time as minutes since epoch."
   (floor (/ (float-time (current-time)) 60)))
@@ -132,7 +159,8 @@ Returns the clock cons cell or nil."
 
 (defun org-clock-multi-clock-in ()
   "Clock in the current heading.
-Adds to the list of active clocks without affecting other clocks."
+Adds to the list of active clocks without affecting other clocks.
+If the task was paused, removes it from the paused list."
   (interactive)
   (save-excursion
     (org-back-to-heading t)
@@ -140,6 +168,9 @@ Adds to the list of active clocks without affecting other clocks."
           (start-minutes (org-clock-multi--current-minutes)))
       (if (org-clock-multi--find-clock-by-key key)
           (message "Already clocked in to this task")
+        ;; Remove from paused list if present
+        (setq org-clock-multi-paused
+              (cl-remove-if (lambda (k) (equal key k)) org-clock-multi-paused))
         (push (cons key start-minutes) org-clock-multi-clocks)
         (org-clock-multi-save-state)
         (message "Clocked in: %s" (org-get-heading t t t t))))))
@@ -246,6 +277,33 @@ Writes a LOGBOOK entry and removes from active clocks."
       (org-clock-multi-save-state)
       (message "Clocked out %d task(s)" count))))
 
+(defun org-clock-multi-clock-pause ()
+  "Pause clock for heading at point.
+Clocks out the task and adds it to the paused list for easy resumption."
+  (interactive)
+  (save-excursion
+    (let* ((clock (org-clock-multi--find-clock-at-point)))
+      (if (not clock)
+          (message "Not clocked in to this task")
+        (let ((key (car clock))
+              (start-time (cdr clock))
+              (heading (org-get-heading t t t t)))
+          ;; Write the clock entry
+          (org-clock-multi--write-clock-entry key start-time)
+          ;; Remove from active clocks
+          (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
+          ;; Add to paused list if not already there
+          (unless (org-clock-multi--find-paused-by-key key)
+            (push key org-clock-multi-paused))
+          (org-clock-multi-save-state)
+          (message "Paused: %s" heading))))))
+
+(defun org-clock-multi-clock-resume ()
+  "Resume a paused clock at point.
+Equivalent to clock-in but explicitly for paused tasks."
+  (interactive)
+  (org-clock-multi-clock-in))
+
 (defun org-clock-multi-clock-cancel ()
   "Cancel clock for heading at point without writing LOGBOOK."
   (interactive)
@@ -337,11 +395,30 @@ Writes a LOGBOOK entry and removes from active clocks."
   (org-clock-multi-clock-out-all)
   (org-agenda-redo-all))
 
+(defun org-clock-multi-agenda-clock-pause ()
+  "Pause clock for task at point in agenda."
+  (interactive)
+  (org-agenda-check-no-diary)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
+    (with-current-buffer (marker-buffer hdmarker)
+      (save-excursion
+        (goto-char hdmarker)
+        (org-clock-multi-clock-pause))))
+  (org-agenda-redo-all))
+
 (defun org-clock-multi-agenda-clock-cancel ()
   "Cancel clock for task at point in agenda."
   (interactive)
-  (org-clock-multi--with-agenda-heading
-   (org-clock-multi-clock-cancel))
+  (org-agenda-check-no-diary)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
+    (with-current-buffer (marker-buffer hdmarker)
+      (save-excursion
+        (goto-char hdmarker)
+        (org-clock-multi-clock-cancel))))
   (org-agenda-redo-all))
 
 (defun org-clock-multi-agenda-clock-cancel-all ()

@@ -453,5 +453,198 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
       (when-let* ((buf (find-buffer-visiting org-file)))
         (kill-buffer buf)))))
 
+;;; Pause Functionality Tests
+
+(ert-deftest org-clock-multi-test-pause-adds-to-paused-list ()
+  "Test that pausing a clock adds it to the paused list."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      (org-clock-multi-clock-in)
+      (should (= 1 (length org-clock-multi-clocks)))
+      (should (= 0 (length org-clock-multi-paused)))
+      (org-clock-multi-clock-pause)
+      (should (= 0 (length org-clock-multi-clocks)))
+      (should (= 1 (length org-clock-multi-paused))))))
+
+(ert-deftest org-clock-multi-test-pause-writes-logbook ()
+  "Test that pausing a clock writes a LOGBOOK entry."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      (org-clock-multi-clock-in)
+      ;; Simulate 5 minutes passing
+      (let ((clock (car org-clock-multi-clocks)))
+        (setcdr clock (- (cdr clock) 5)))
+      (org-clock-multi-clock-pause)
+      (let ((entries (org-clock-multi-test--get-logbook-entries)))
+        (should (= 1 (length entries)))
+        (should (org-clock-multi-test--valid-clock-entry-p (car entries)))
+        (should (string-match-p " =>  0:05$" (car entries)))))))
+
+(ert-deftest org-clock-multi-test-clock-in-removes-from-paused ()
+  "Test that clocking in removes task from paused list."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      (should (= 1 (length org-clock-multi-paused)))
+      ;; Clock back in (resume)
+      (org-clock-multi-clock-in)
+      (should (= 1 (length org-clock-multi-clocks)))
+      (should (= 0 (length org-clock-multi-paused))))))
+
+(ert-deftest org-clock-multi-test-resume-is-clock-in ()
+  "Test that resume is equivalent to clock-in."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      (should (= 0 (length org-clock-multi-clocks)))
+      (should (= 1 (length org-clock-multi-paused)))
+      ;; Use resume instead of clock-in
+      (org-clock-multi-clock-resume)
+      (should (= 1 (length org-clock-multi-clocks)))
+      (should (= 0 (length org-clock-multi-paused))))))
+
+(ert-deftest org-clock-multi-test-paused-p-predicate ()
+  "Test org-clock-multi-paused-p predicate."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Task 1\n* TODO Task 2\n"
+    (let ((org-clock-multi-paused nil))
+      (goto-char (point-min))
+      ;; Neither task is paused initially
+      (should-not (org-clock-multi-paused-p))
+      (org-next-visible-heading 1)
+      (should-not (org-clock-multi-paused-p))
+      ;; Clock in and pause first task
+      (goto-char (point-min))
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      ;; First task should be paused
+      (should (org-clock-multi-paused-p))
+      ;; Second task should not be paused
+      (org-next-visible-heading 1)
+      (should-not (org-clock-multi-paused-p)))))
+
+(ert-deftest org-clock-multi-test-pause-does-not-duplicate ()
+  "Test that pausing twice doesn't add duplicate entries to paused list."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      (should (= 1 (length org-clock-multi-paused)))
+      ;; Clock in again and pause again
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      ;; Should still have only 1 entry in paused list
+      (should (= 1 (length org-clock-multi-paused))))))
+
+(ert-deftest org-clock-multi-test-paused-state-persistence ()
+  "Test that paused state persists via save/load cycle."
+  (let ((test-file (make-temp-file "org-clock-multi-test-" nil ".el"))
+        (org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
+    (unwind-protect
+        (let ((org-clock-multi-persist-file test-file)
+              (org-clock-multi-clocks nil)
+              (org-clock-multi-paused nil))
+          ;; Create an org file, clock in, and pause
+          (with-temp-file org-file
+            (insert "* TODO Test task\n"))
+          (with-current-buffer (find-file-noselect org-file)
+            (org-mode)
+            (goto-char (point-min))
+            (org-clock-multi-clock-in)
+            (org-clock-multi-clock-pause)
+            (should (= 1 (length org-clock-multi-paused)))
+            ;; Save state
+            (org-clock-multi-save-state)
+            ;; Clear and reload
+            (setq org-clock-multi-paused nil)
+            (org-clock-multi-load-state)
+            ;; Paused state should be restored
+            (should (= 1 (length org-clock-multi-paused)))
+            ;; Verify key structure (file . id)
+            (let ((key (car org-clock-multi-paused)))
+              (should (stringp (car key)))  ; file path
+              (should (stringp (cdr key)))) ; UUID
+            ;; The task should still be paused
+            (should (org-clock-multi-paused-p))))
+      ;; Cleanup
+      (delete-file test-file)
+      (delete-file org-file)
+      (when-let* ((buf (find-buffer-visiting org-file)))
+        (kill-buffer buf)))))
+
+(ert-deftest org-clock-multi-test-pause-not-clocked-in ()
+  "Test that pausing when not clocked in shows a message."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      ;; Should not error, just message
+      (org-clock-multi-clock-pause)
+      ;; Nothing should be added to paused list
+      (should (= 0 (length org-clock-multi-paused))))))
+
+(ert-deftest org-clock-multi-test-multiple-paused-tasks ()
+  "Test that multiple tasks can be paused simultaneously."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Task 1\n* TODO Task 2\n* TODO Task 3\n"
+    (let ((org-clock-multi-paused nil))
+      ;; Clock in all 3 tasks
+      (goto-char (point-min))
+      (org-clock-multi-clock-in)
+      (org-next-visible-heading 1)
+      (org-clock-multi-clock-in)
+      (org-next-visible-heading 1)
+      (org-clock-multi-clock-in)
+      (should (= 3 (length org-clock-multi-clocks)))
+      ;; Pause first two tasks
+      (goto-char (point-min))
+      (org-clock-multi-clock-pause)
+      (org-next-visible-heading 1)
+      (org-clock-multi-clock-pause)
+      ;; Should have 1 active clock and 2 paused
+      (should (= 1 (length org-clock-multi-clocks)))
+      (should (= 2 (length org-clock-multi-paused)))
+      ;; Check predicates
+      (goto-char (point-min))
+      (should (org-clock-multi-paused-p))
+      (should-not (org-clock-multi-clocking-p))
+      (org-next-visible-heading 1)
+      (should (org-clock-multi-paused-p))
+      (should-not (org-clock-multi-clocking-p))
+      (org-next-visible-heading 1)
+      (should-not (org-clock-multi-paused-p))
+      (should (org-clock-multi-clocking-p)))))
+
+(ert-deftest org-clock-multi-test-pause-then-clock-out-other ()
+  "Test that pausing one task doesn't affect other clocked tasks."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Task 1\n* TODO Task 2\n"
+    (let ((org-clock-multi-paused nil))
+      ;; Clock in both tasks
+      (goto-char (point-min))
+      (org-clock-multi-clock-in)
+      (org-next-visible-heading 1)
+      (org-clock-multi-clock-in)
+      (should (= 2 (length org-clock-multi-clocks)))
+      ;; Pause first task
+      (goto-char (point-min))
+      (org-clock-multi-clock-pause)
+      (should (= 1 (length org-clock-multi-clocks)))
+      (should (= 1 (length org-clock-multi-paused)))
+      ;; Clock out second task normally
+      (org-next-visible-heading 1)
+      (org-clock-multi-clock-out)
+      (should (= 0 (length org-clock-multi-clocks)))
+      ;; Paused task should still be paused
+      (should (= 1 (length org-clock-multi-paused)))
+      (goto-char (point-min))
+      (should (org-clock-multi-paused-p)))))
+
 (provide 'org-clock-multi-test)
 ;;; org-clock-multi-test.el ends here

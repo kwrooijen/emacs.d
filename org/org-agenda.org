@@ -31,16 +31,17 @@ Automatically save any org buffers when making changes in org agenda.
 
 
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/org-clock-multi-skip-unless-clocked ()
-  "Skip function for agenda: skip unless heading is in org-clock-multi-clocks."
+(defun kwrooijen/org-clock-multi-skip-unless-clocked-or-paused ()
+  "Skip function for agenda: skip unless heading is clocked or paused."
   (let ((dominated t))
-    (when org-clock-multi-clocks
-      (let* ((file (buffer-file-name))
-             (id (org-entry-get nil "CLOCK_MULTI_ID")))
-        (when (and file id)
-          (let ((key (cons file id)))
-            (when (org-clock-multi--find-clock-by-key key)
-              (setq dominated nil))))))
+    (let* ((file (buffer-file-name))
+           (id (org-entry-get nil "CLOCK_MULTI_ID")))
+      (when (and file id)
+        (let ((key (cons file id)))
+          ;; Show if clocked in OR paused
+          (when (or (org-clock-multi--find-clock-by-key key)
+                    (org-clock-multi--find-paused-by-key key))
+            (setq dominated nil)))))
     (when dominated
       (org-end-of-subtree t))))
 #+END_SRC
@@ -54,7 +55,7 @@ Automatically save any org buffers when making changes in org agenda.
          todo "DONE")
         ("k" "Currently clocked"
          ((alltodo "" ((org-agenda-skip-function
-                        #'kwrooijen/org-clock-multi-skip-unless-clocked))))))))
+                        #'kwrooijen/org-clock-multi-skip-unless-clocked-or-paused))))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -267,7 +268,7 @@ Customize agenda renderer to optionally filter out habits.
   "L" #'org-agenda-recenter
   "N" #'org-agenda-next-item
   "O" #'org-clock-multi-agenda-clock-out
-  "P" #'org-agenda-previous-item
+  "P" #'org-clock-multi-agenda-clock-pause
   "Q" #'org-agenda-Quit
   "R" #'org-agenda-clockreport-mode
   "S" #'org-agenda-sunrise-sunset
