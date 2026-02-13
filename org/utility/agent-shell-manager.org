@@ -47,8 +47,37 @@ Projects that already have an active agent-shell are excluded from the list."
       (let* ((selected (completing-read "Start agent-shell in project: " available-projects nil t))
              (default-directory selected))
         (save-window-excursion
-          (agent-shell))
+          (agent-shell t))
         (message "Started agent-shell in %s" selected)))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell--count-by-status ()
+  "Return (WORKING . TOTAL) count of agent-shell buffers.
+WORKING counts agents that are actively working (not waiting for input).
+TOTAL counts all live agent-shell buffers."
+  (let ((working 0)
+        (total 0))
+    (dolist (buf (agent-shell-buffers))
+      (when (buffer-live-p buf)
+        (let ((status (agent-shell-manager--get-status buf)))
+          (unless (string= status "killed")
+            (setq total (1+ total))
+            (when (string= status "working")
+              (setq working (1+ working)))))))
+    (cons working total)))
+
+(defun kwrooijen/modeline-agent-shell ()
+  "Return modeline segment showing agent-shell status as [WORKING/TOTAL]."
+  (when (fboundp 'agent-shell-buffers)
+    (let* ((counts (kwrooijen/agent-shell--count-by-status))
+           (working (car counts))
+           (total (cdr counts)))
+      (when (> total 0)
+        (let ((face (if (< working total)
+                        'kwrooijen/popout-fg-face
+                      'kwrooijen/faded-fg-face)))
+          (kwrooijen/modeline-r (format " [%d/%d]" working total) face))))))
 #+END_SRC
 
 ** General :general:
@@ -60,15 +89,16 @@ Projects that already have an active agent-shell are excluded from the list."
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-(general-define-key
- :states '(normal)
- :keymaps 'agent-shell-manager-mode-map
- (kbd "RET") #'agent-shell-manager-goto
- "r" #'agent-shell-manager-refresh
- "l" #'agent-shell-manager-view-traffic
- "L" #'agent-shell-manager-toggle-logging
- "p" #'kwrooijen/agent-shell-start-in-project
- "C-c C-c" #'agent-shell-manager-interrupt)
+(with-eval-after-load 'agent-shell-manager
+  (general-define-key
+   :states '(normal)
+   :keymaps 'agent-shell-manager-mode-map
+   (kbd "RET") #'agent-shell-manager-goto
+   "r" #'agent-shell-manager-refresh
+   "l" #'agent-shell-manager-view-traffic
+   "L" #'agent-shell-manager-toggle-logging
+   "p" #'kwrooijen/agent-shell-start-in-project
+   "C-c C-c" #'agent-shell-manager-interrupt)
 
-(evil-define-key 'normal agent-shell-manager-mode-map (kbd "<tab>") #'agent-shell-manager-goto)
+  (evil-define-key 'normal agent-shell-manager-mode-map (kbd "<tab>") #'agent-shell-manager-goto))
 #+END_SRC

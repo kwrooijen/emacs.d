@@ -44,6 +44,19 @@ Automatically save any org buffers when making changes in org agenda.
 
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-clock-multi-skip-unless-clocked ()
+  "Skip function for agenda: skip unless heading is in org-clock-multi-clocks."
+  (let ((dominated t))
+    (when org-clock-multi-clocks
+      (let* ((file (buffer-file-name))
+             (id (org-entry-get nil "CLOCK_MULTI_ID")))
+        (when (and file id)
+          (let ((key (cons file id)))
+            (when (org-clock-multi--find-clock-by-key key)
+              (setq dominated nil))))))
+    (when dominated
+      (org-end-of-subtree t))))
+
 (setq org-agenda-custom-commands
       '(("c" "My custom agenda"
          ((agenda "")
@@ -52,16 +65,7 @@ Automatically save any org buffers when making changes in org agenda.
          todo "DONE")
         ("k" "Currently clocked"
          ((alltodo "" ((org-agenda-skip-function
-                        '(unless (and (org-clocking-p)
-                                      (eq (current-buffer) (marker-buffer org-clock-marker))
-                                      (save-excursion
-                                        (org-back-to-heading t)
-                                        (= (point) (save-excursion
-                                                     (with-current-buffer (marker-buffer org-clock-marker)
-                                                       (goto-char org-clock-marker)
-                                                       (org-back-to-heading t)
-                                                       (point))))))
-                           (org-end-of-subtree t)))))))))
+                        #'kwrooijen/org-clock-multi-skip-unless-clocked))))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
