@@ -54,8 +54,10 @@
   (capitalize (replace-regexp-in-string "_" " " client)))
 
 (defun org-todo-dashboard--separator ()
-  "Return a separator line sized to the current window."
-  (make-string (min 70 (- (window-width) 1)) ?─))
+  "Return a separator line sized to the current window. Divide window-width
+to account for the character width of the separator."
+  (concat (make-string (floor (/ (window-width) 1.7)) ?┄)
+          "\n"))
 
 (defun org-todo-dashboard--client-blocks ()
   "Build a list of agenda blocks, one per client."
