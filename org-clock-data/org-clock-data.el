@@ -146,34 +146,52 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
                       (filled (round (* org-clock-data-bar-max-width ratio)))
                       (label (org-clock-data--format-date-short date))
                       (time-str (format "%dh%02dm" hours remaining-mins))
-                      (info (if (and org-clock-data-hourly-rates (> earnings 0))
-                                (format "[%s | %s%.2f]" time-str
-                                        org-clock-data-currency-symbol earnings)
+                      (earn-str (when (and org-clock-data-hourly-rates (> earnings 0))
+                                  (format "%s%.2f" org-clock-data-currency-symbol earnings)))
+                      (info (if earn-str
+                                (format "[%s | %s]" time-str earn-str)
                               (format "[%s]" time-str))))
                  (setq total-mins (+ total-mins mins))
                  (setq total-earnings (+ total-earnings earnings))
-                 (list label info filled)))
+                 (list label time-str earn-str info filled)))
              aggregated))
-           (max-info-width (apply #'max (mapcar (lambda (r) (length (nth 1 r))) row-data)))
-           (fmt (format "  %%s  %%-%ds %%s" max-info-width))
+           (max-info-width (apply #'max (mapcar (lambda (r) (length (nth 3 r))) row-data)))
            (lines
             (mapcar
              (lambda (r)
-               (format fmt
-                       (nth 0 r)
-                       (nth 1 r)
-                       (make-string (nth 2 r) org-clock-data-bar-char)))
+               (let* ((time-str (nth 1 r))
+                      (earn-str (nth 2 r))
+                      (colored-info
+                       (if earn-str
+                           (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
+                                   (propertize time-str 'face `(:foreground ,(kwrooijen-color :info)))
+                                   (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
+                                   (propertize earn-str 'face `(:foreground ,(kwrooijen-color :success)))
+                                   (propertize "]" 'face `(:foreground ,(kwrooijen-color :info))))
+                         (concat (propertize (format "[%s]" time-str) 'face `(:foreground ,(kwrooijen-color :info))))))
+                      (padding (make-string (- max-info-width (length (nth 3 r))) ?\s)))
+                 (concat "  "
+                         (propertize (nth 0 r) 'face `(:foreground ,(kwrooijen-color :salient)))
+                         "  "
+                         colored-info padding
+                         " "
+                         (propertize (make-string (nth 4 r) org-clock-data-bar-char)
+                                     'face `(:foreground ,(kwrooijen-color :subtle))))))
              row-data))
            (total-hours (/ total-mins 60))
            (total-remaining (% total-mins 60))
            (total-time-str (format "%dh%02dm" total-hours total-remaining))
            (total-line
             (if (and org-clock-data-hourly-rates (> total-earnings 0))
-                (format "  Total: %s | %s%.2f"
-                        total-time-str org-clock-data-currency-symbol total-earnings)
-              (format "  Total: %s" total-time-str))))
+                (concat (propertize "  Total: " 'face `(:foreground ,(kwrooijen-color :salient)))
+                        (propertize total-time-str 'face `(:foreground ,(kwrooijen-color :info)))
+                        (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
+                        (propertize (format "%s%.2f" org-clock-data-currency-symbol total-earnings)
+                                    'face `(:foreground ,(kwrooijen-color :success))))
+              (concat (propertize "  Total: " 'face `(:foreground ,(kwrooijen-color :salient)))
+                      (propertize total-time-str 'face `(:foreground ,(kwrooijen-color :info)))))))
       (concat (string-join lines "\n") "\n"
-              (make-string 40 ?─) "\n"
+              (propertize (make-string 40 ?─) 'face `(:foreground ,(kwrooijen-color :faded))) "\n"
               total-line "\n"))))
 
 ;;; Agenda Integration
