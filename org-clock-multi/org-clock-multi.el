@@ -274,26 +274,28 @@ Equivalent to clock-in but explicitly for paused tasks.")
       (org-clock-multi-save-state)
       (message "Cancelled %d clock(s)" count))))
 
+(defun org-clock-multi--format-clock-candidate (clock)
+  "Format CLOCK as a candidate for `completing-read'.
+Returns (label . key) or nil if the heading cannot be found."
+  (let* ((key (car clock))
+         (start-minutes (cdr clock))
+         (elapsed (- (org-clock-multi--current-minutes) start-minutes))
+         (heading (org-clock-multi--get-heading-for-key key))
+         (file (car key)))
+    (when heading
+      (cons (format "%s (%s) [%s]"
+                    heading
+                    (org-duration-from-minutes elapsed)
+                    (file-name-nondirectory file))
+            key))))
+
 (defun org-clock-multi-clock-goto ()
   "Jump to one of the active clocks."
   (interactive)
   (if (null org-clock-multi-clocks)
       (message "No active clocks")
-    (let* ((candidates
-            (delq nil
-                  (mapcar (lambda (clock)
-                            (let* ((key (car clock))
-                                   (start-minutes (cdr clock))
-                                   (elapsed (- (org-clock-multi--current-minutes) start-minutes))
-                                   (heading (org-clock-multi--get-heading-for-key key))
-                                   (file (car key)))
-                              (when heading
-                                (cons (format "%s (%s) [%s]"
-                                              heading
-                                              (org-duration-from-minutes elapsed)
-                                              (file-name-nondirectory file))
-                                      key))))
-                          org-clock-multi-clocks)))
+    (let* ((candidates (delq nil (mapcar #'org-clock-multi--format-clock-candidate
+                                         org-clock-multi-clocks)))
            (selected (completing-read "Clock: " candidates nil t)))
       (when selected
         (let ((key (cdr (assoc selected candidates))))
