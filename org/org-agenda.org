@@ -676,3 +676,13 @@ If AS-DURATION is non-nil, return an Org duration string."
         (org-duration-from-minutes minutes)
       minutes)))
 #+END_SRC
+
+* Org Clock Data
+:PROPERTIES:
+:PACKAGE:  org-clock-data
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-clock-data-bar-value 'earnings)
+#+END_SRC

@@ -141,7 +141,7 @@ Returns an alist of (HOUR . (:minutes M :earnings E)) sorted by hour."
 
 (defcustom org-clock-data-hourly-rates nil
   "Alist mapping tag names to hourly rates.
-Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
+Example: ((\"company1\" . 100) (\"company2\" . 120))"
   :type '(alist :key-type string :value-type number)
   :group 'org-clock-data)
 
@@ -165,6 +165,14 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
   :type 'float
   :group 'org-clock-data)
 
+(defcustom org-clock-data-bar-value 'time
+  "What the bar length represents.
+\\='time means bar length is based on minutes worked.
+\\='earnings means bar length is based on money earned."
+  :type '(choice (const :tag "Time" time)
+                 (const :tag "Earnings" earnings))
+  :group 'org-clock-data)
+
 (defun org-clock-data--format-hour (hour)
   "Format HOUR (integer 0-23) as a label like 09:00 or 14:00."
   (format "%02d:00" hour))
@@ -181,11 +189,17 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
   "Render AGGREGATED data as a bar chart string.
 MODE is \\='daily (default) or \\='hourly.
 In daily mode, keys are date strings and target is `org-clock-data-bar-target-hours'.
-In hourly mode, keys are hour integers and target is 60 minutes."
+In hourly mode, keys are hour integers and target is 60 minutes.
+Bar length is based on `org-clock-data-bar-value' (time or earnings)."
   (if (null aggregated)
       "  No clock data for this period.\n"
     (let* ((hourlyp (eq mode 'hourly))
            (target-mins (if hourlyp 60 (* org-clock-data-bar-target-hours 60)))
+           (earn-bar-p (eq org-clock-data-bar-value 'earnings))
+           (max-rate (if (and earn-bar-p org-clock-data-hourly-rates)
+                         (apply #'max (mapcar #'cdr org-clock-data-hourly-rates))
+                       0))
+           (target-earnings (* (/ target-mins 60.0) max-rate))
            (total-mins 0)
            (total-earnings 0.0)
            (row-data
@@ -197,42 +211,50 @@ In hourly mode, keys are hour integers and target is 60 minutes."
                       (earnings (plist-get data :earnings))
                       (hours (/ mins 60))
                       (remaining-mins (% mins 60))
-                      (ratio (min 1.0 (/ (float mins) target-mins)))
+                      (bar-target (if earn-bar-p target-earnings target-mins))
+                      (bar-val (if earn-bar-p earnings (float mins)))
+                      (ratio (if (> bar-target 0)
+                                 (min 1.0 (/ bar-val bar-target))
+                               0.0))
                       (filled (round (* org-clock-data-bar-max-width ratio)))
                       (label (if hourlyp
                                  (org-clock-data--format-hour key)
                                (org-clock-data--format-date-short key)))
                       (time-str (format "%dh%02dm" hours remaining-mins))
                       (earn-str (when (and org-clock-data-hourly-rates (> earnings 0))
-                                  (format "%s%.2f" org-clock-data-currency-symbol earnings)))
-                      (info (if earn-str
-                                (format "[%s | %s]" time-str earn-str)
-                              (format "[%s]" time-str))))
+                                  (format "%s%.2f" org-clock-data-currency-symbol earnings))))
                  (setq total-mins (+ total-mins mins))
                  (setq total-earnings (+ total-earnings earnings))
-                 (list label time-str earn-str info filled)))
+                 (list label time-str earn-str filled)))
              aggregated))
-           (max-info-width (apply #'max (mapcar (lambda (r) (length (nth 3 r))) row-data)))
+           (has-earnings (cl-some (lambda (r) (nth 2 r)) row-data))
+           (max-time-width (apply #'max (mapcar (lambda (r) (length (nth 1 r))) row-data)))
+           (max-earn-width (if has-earnings
+                               (apply #'max (mapcar (lambda (r) (length (or (nth 2 r) ""))) row-data))
+                             0))
            (lines
             (mapcar
              (lambda (r)
                (let* ((time-str (nth 1 r))
                       (earn-str (nth 2 r))
+                      (padded-time (format (format "%%-%ds" max-time-width) time-str))
                       (colored-info
                        (if earn-str
-                           (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
-                                   (propertize time-str 'face `(:foreground ,(kwrooijen-color :info)))
-                                   (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
-                                   (propertize earn-str 'face `(:foreground ,(kwrooijen-color :success)))
-                                   (propertize "]" 'face `(:foreground ,(kwrooijen-color :info))))
-                         (concat (propertize (format "[%s]" time-str) 'face `(:foreground ,(kwrooijen-color :info))))))
-                      (padding (make-string (- max-info-width (length (nth 3 r))) ?\s)))
+                           (let ((padded-earn (format (format "%%%ds" max-earn-width) earn-str)))
+                             (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
+                                     (propertize padded-time 'face `(:foreground ,(kwrooijen-color :info)))
+                                     (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
+                                     (propertize padded-earn 'face `(:foreground ,(kwrooijen-color :success)))
+                                     (propertize "]" 'face `(:foreground ,(kwrooijen-color :info)))))
+                         (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
+                                 (propertize padded-time 'face `(:foreground ,(kwrooijen-color :info)))
+                                 (propertize "]" 'face `(:foreground ,(kwrooijen-color :info)))))))
                  (concat "  "
                          (propertize (nth 0 r) 'face `(:foreground ,(kwrooijen-color :salient)))
                          "  "
-                         colored-info padding
+                         colored-info
                          " "
-                         (propertize (make-string (nth 4 r) org-clock-data-bar-char)
+                         (propertize (make-string (nth 3 r) org-clock-data-bar-char)
                                      'face `(:foreground ,(kwrooijen-color :subtle))))))
              row-data))
            (total-hours (/ total-mins 60))
