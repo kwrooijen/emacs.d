@@ -64,6 +64,52 @@ Automatically save any org buffers when making changes in org agenda.
 (defun kwrooijen/org-agenda-done ()
   (interactive)
   (org-agenda nil "D"))
+
+(defun kwrooijen/org-todo-unarchive ()
+  "Select a DONE task from agenda files and change it back to TODO."
+  (interactive)
+  (let (entries max-tag-width max-closed-width)
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (org-with-wide-buffer
+         (goto-char (point-min))
+         (while (re-search-forward org-heading-regexp nil t)
+           (when (member (org-get-todo-state) org-done-keywords)
+             (let* ((heading (org-get-heading t t t t))
+                    (tags (org-get-tags))
+                    (tag-str (if tags (string-join tags ":") ""))
+                    (closed (or (org-entry-get nil "CLOSED") ""))
+                    (marker (point-marker)))
+               (push (list tag-str closed heading marker) entries)))))))
+    (if (null entries)
+        (message "No DONE tasks found")
+      (setq entries (sort entries (lambda (a b)
+                                    (string> (nth 1 a) (nth 1 b)))))
+      (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
+      (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
+      (let* ((candidates
+              (mapcar
+               (lambda (entry)
+                 (let* ((tag-str (nth 0 entry))
+                        (closed (nth 1 entry))
+                        (heading (nth 2 entry))
+                        (marker (nth 3 entry))
+                        (padded-tag (string-pad tag-str max-tag-width))
+                        (padded-closed (string-pad closed max-closed-width))
+                        (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                       "  "
+                                       (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                       "  " heading)))
+                   (cons label marker)))
+               entries))
+             (selection (completing-read "Unarchive: " (mapcar #'car candidates) nil t))
+             (marker (cdr (assoc selection candidates))))
+        (when marker
+          (with-current-buffer (marker-buffer marker)
+            (goto-char marker)
+            (org-todo "TODO")
+            (save-buffer)
+            (kwrooijen/org-edit-subtree)))))))
 #+END_SRC
 
 Custom loading bar for work.
@@ -227,7 +273,8 @@ Customize agenda renderer to optionally filter out habits.
   "at" '(org-todo-list :which-key "Org Todos")
   "ad" '(kwrooijen/org-agenda-done :which-key "Org Done")
   "ac" '(org-capture :which-key "Org Capture")
-  "aD" '(org-todo-dashboard-open :which-key "Dashboard"))
+  "aD" '(org-todo-dashboard-open :which-key "Dashboard")
+  "au" '(kwrooijen/org-todo-unarchive :which-key "Unarchive"))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
