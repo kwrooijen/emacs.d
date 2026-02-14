@@ -16,6 +16,13 @@
 
 (straight-use-package 'org)
 
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
+(require 'org-clock-multi)
+
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-todo-dashboard"))
+(require 'org-todo-dashboard)
+
+
 (use-package wisdom
   :straight (wisdom :type git :host github :repo "kwrooijen/wisdom")
   :custom
@@ -24,5 +31,3 @@
   :config
   (wisdom-boot))
 
-(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
-(require 'org-clock-multi)
