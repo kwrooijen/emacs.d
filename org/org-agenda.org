@@ -40,7 +40,7 @@ Automatically save any org buffers when making changes in org agenda.
         (let ((key (cons file id)))
           ;; Show if clocked in OR paused
           (when (or (org-clock-multi--find-clock-by-key key)
-                    (org-clock-multi--find-paused-by-key key))
+                    (member key org-clock-multi-paused))
             (setq dominated nil)))))
     (when dominated
       (org-end-of-subtree t))))
