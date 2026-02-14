@@ -420,6 +420,7 @@ Customize agenda renderer to optionally filter out habits.
   "P" #'org-clock-multi-agenda-clock-pause
   "Q" #'org-agenda-Quit
   "R" #'org-agenda-clockreport-mode
+  "V" #'org-clock-data-agenda-chart-mode
   "S" #'org-agenda-sunrise-sunset
   "T" #'org-agenda-show-tags
   (kbd "M-m") #'org-agenda-bulk-unmark
