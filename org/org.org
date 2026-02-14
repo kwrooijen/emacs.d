@@ -461,7 +461,14 @@ Org agenda files. All TODOs go in here.
   "c O"  'org-clock-multi-clock-out-all
   "c r"  'org-clock-report
   "c x"  'org-clock-multi-clock-cancel
-  "c X"  'org-clock-multi-clock-cancel-all)
+  "c X"  'org-clock-multi-clock-cancel-all
+  "a l"  'org-agent-shell-launch
+  "a s"  'org-agent-shell-open-shell
+  "a m"  'org-agent-shell-open-magit
+  "a d"  'org-agent-shell-diff
+  "a r"  'org-agent-shell-resend
+  "a v"  'org-agent-shell-review
+  "a x"  'org-agent-shell-reset)
 #+END_SRC
 
 * Org Margin
