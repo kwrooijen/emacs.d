@@ -2,7 +2,7 @@
 
 ;; Author: Kevin van Rooijen
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27.1") (org "9.0") (consult "0.35"))
+;; Package-Requires: ((emacs "27.1") (org "9.0"))
 ;; Keywords: org, clock, time-tracking
 ;; URL: https://github.com/kwrooijen/org-clock-multi
 
@@ -14,8 +14,10 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'org)
 (require 'org-clock)
+(require 'org-id)
 (require 'org-agenda)
 
 ;;; Customization
@@ -48,52 +50,34 @@ Each entry is a KEY (file . id) for a task that was clocked out but paused.")
   (let ((dir (file-name-directory org-clock-multi-persist-file)))
     (unless (file-exists-p dir)
       (make-directory dir t)))
-  ;; Keys are already in persistent format (file . id)
   (with-temp-file org-clock-multi-persist-file
-    (insert ";;; org-clock-multi state file -*- lexical-binding: t; -*-\n")
-    (insert ";; This file is auto-generated. Do not edit.\n\n")
-    (prin1 `(setq org-clock-multi--persistent-state ',org-clock-multi-clocks)
-           (current-buffer))
+    (insert ";; org-clock-multi state file. Do not edit.\n")
+    (prin1 org-clock-multi-clocks (current-buffer))
     (insert "\n")
-    (prin1 `(setq org-clock-multi--persistent-paused ',org-clock-multi-paused)
-           (current-buffer))
+    (prin1 org-clock-multi-paused (current-buffer))
     (insert "\n")))
+
+(defun org-clock-multi--filter-existing-files (entries key-fn)
+  "Filter ENTRIES, keeping only those where KEY-FN returns an existing file."
+  (cl-remove-if-not (lambda (entry)
+                      (let ((file (funcall key-fn entry)))
+                        (and file (file-exists-p file))))
+                    entries))
 
 (defun org-clock-multi-load-state ()
   "Load clock state from `org-clock-multi-persist-file'."
   (when (file-exists-p org-clock-multi-persist-file)
-    (load org-clock-multi-persist-file nil t)
-    (when (boundp 'org-clock-multi--persistent-state)
-      ;; Filter out clocks for files that no longer exist
-      (setq org-clock-multi-clocks
-            (delq nil
-                  (mapcar (lambda (clock)
-                            (let ((file (car (car clock))))
-                              (when (and file (file-exists-p file))
-                                clock)))
-                          org-clock-multi--persistent-state)))
-      (makunbound 'org-clock-multi--persistent-state))
-    (when (boundp 'org-clock-multi--persistent-paused)
-      ;; Filter out paused keys for files that no longer exist
-      (setq org-clock-multi-paused
-            (delq nil
-                  (mapcar (lambda (key)
-                            (let ((file (car key)))
-                              (when (and file (file-exists-p file))
-                                key)))
-                          org-clock-multi--persistent-paused)))
-      (makunbound 'org-clock-multi--persistent-paused))))
+    (with-temp-buffer
+      (insert-file-contents org-clock-multi-persist-file)
+      (goto-char (point-min))
+      (let ((clocks (read (current-buffer)))
+            (paused (read (current-buffer))))
+        (setq org-clock-multi-clocks
+              (org-clock-multi--filter-existing-files clocks #'caar))
+        (setq org-clock-multi-paused
+              (org-clock-multi--filter-existing-files paused #'car))))))
 
 ;;; Core Functions
-
-(defun org-clock-multi--generate-uuid ()
-  "Generate a UUID string."
-  (format "%04x%04x-%04x-%04x-%04x-%04x%04x%04x"
-          (random 65536) (random 65536)
-          (random 65536)
-          (logior (logand (random 65536) 4095) 16384)
-          (logior (logand (random 65536) 16383) 32768)
-          (random 65536) (random 65536) (random 65536)))
 
 (defun org-clock-multi--get-or-create-id ()
   "Get or create a CLOCK_MULTI_ID property for the heading at point.
@@ -101,19 +85,9 @@ Returns the ID string."
   (org-back-to-heading t)
   (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
     (unless id
-      (setq id (org-clock-multi--generate-uuid))
+      (setq id (org-id-new))
       (org-entry-put nil "CLOCK_MULTI_ID" id))
     id))
-
-(defun org-clock-multi--get-id-at-marker (marker)
-  "Get the CLOCK_MULTI_ID for the heading at MARKER.
-Returns nil if marker is invalid or no ID exists."
-  (when (and marker (marker-buffer marker))
-    (with-current-buffer (marker-buffer marker)
-      (save-excursion
-        (goto-char marker)
-        (org-back-to-heading t)
-        (org-entry-get nil "CLOCK_MULTI_ID")))))
 
 (defun org-clock-multi--heading-key ()
   "Return a unique key for the heading at point.
@@ -139,15 +113,10 @@ Returns the clock cons cell or nil."
   "Return non-nil if heading at point is clocked in."
   (org-clock-multi--find-clock-at-point))
 
-(defun org-clock-multi--find-paused-by-key (key)
-  "Find KEY in `org-clock-multi-paused'.
-Returns the key if found, nil otherwise."
-  (cl-find-if (lambda (k) (equal key k)) org-clock-multi-paused))
-
 (defun org-clock-multi-paused-p ()
   "Return non-nil if heading at point is paused."
   (let ((key (org-clock-multi--heading-key)))
-    (org-clock-multi--find-paused-by-key key)))
+    (member key org-clock-multi-paused)))
 
 (defun org-clock-multi--current-minutes ()
   "Return current time as minutes since epoch."
@@ -179,22 +148,28 @@ If the task was paused, removes it from the paused list."
   "Format TIME as an inactive org timestamp."
   (format-time-string "[%Y-%m-%d %a %H:%M]" time))
 
-(defun org-clock-multi--goto-key (key)
-  "Go to the heading identified by KEY.
-KEY is (file . id). Returns t if found, nil otherwise."
-  (let ((file (car key))
-        (id (cdr key)))
-    (when (and file (file-exists-p file))
-      (let ((buf (or (find-buffer-visiting file)
-                     (find-file-noselect file))))
-        (with-current-buffer buf
-          (org-with-wide-buffer
-           (goto-char (point-min))
-           (when (re-search-forward
-                  (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$" (regexp-quote id))
-                  nil t)
-             (org-back-to-heading t)
-             t)))))))
+(defmacro org-clock-multi--with-heading-at-key (key &rest body)
+  "Execute BODY with point at the heading identified by KEY.
+KEY is (file . id). BODY is only executed if the heading is found.
+Returns nil if the heading cannot be located."
+  (declare (indent 1) (debug t))
+  (let ((file-sym (gensym "file-"))
+        (id-sym (gensym "id-"))
+        (buf-sym (gensym "buf-")))
+    `(let ((,file-sym (car ,key))
+           (,id-sym (cdr ,key)))
+       (when (and ,file-sym (file-exists-p ,file-sym))
+         (let ((,buf-sym (or (find-buffer-visiting ,file-sym)
+                             (find-file-noselect ,file-sym))))
+           (with-current-buffer ,buf-sym
+             (org-with-wide-buffer
+              (goto-char (point-min))
+              (when (re-search-forward
+                     (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$"
+                             (regexp-quote ,id-sym))
+                     nil t)
+                (org-back-to-heading t)
+                ,@body))))))))
 
 (defun org-clock-multi--write-clock-entry (key start-minutes)
   "Write a LOGBOOK clock entry for heading at KEY with START-MINUTES.
@@ -203,65 +178,47 @@ Uses org-clock's format for compatibility."
   (let* ((end-minutes (org-clock-multi--current-minutes))
          (start-time (org-clock-multi--minutes-to-time start-minutes))
          (end-time (org-clock-multi--minutes-to-time end-minutes))
-         (duration (- end-minutes start-minutes))
-         (file (car key))
-         (id (cdr key)))
-    (when (and file (file-exists-p file))
-      (let ((buf (or (find-buffer-visiting file)
-                     (find-file-noselect file))))
-        (with-current-buffer buf
-          (org-with-wide-buffer
-           (goto-char (point-min))
-           (when (re-search-forward
-                  (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$" (regexp-quote id))
-                  nil t)
-             (org-back-to-heading t)
-             ;; Use org-clock's function to find the right position
-             (let ((org-clock-out-when-done nil))
-               ;; Find or create LOGBOOK drawer
-               (org-clock-find-position nil)
-               ;; Insert the clock line in org-clock's exact format
-               ;; Note: org-clock uses two spaces after "=>"
-               (insert-before-markers
-                "CLOCK: "
-                (org-clock-multi--format-timestamp start-time)
-                "--"
-                (org-clock-multi--format-timestamp end-time)
-                " =>  "
-                (org-duration-from-minutes duration)
-                "\n")))))))))
+         (duration (- end-minutes start-minutes)))
+    (org-clock-multi--with-heading-at-key key
+      (let ((org-clock-out-when-done nil))
+        (org-clock-find-position nil)
+        (insert-before-markers
+         "CLOCK: "
+         (org-clock-multi--format-timestamp start-time)
+         "--"
+         (org-clock-multi--format-timestamp end-time)
+         " =>  "
+         (org-duration-from-minutes duration)
+         "\n")))))
 
 (defun org-clock-multi--get-heading-for-key (key)
   "Get the heading text for KEY."
-  (let ((file (car key))
-        (id (cdr key)))
-    (when (and file (file-exists-p file))
-      (let ((buf (or (find-buffer-visiting file)
-                     (find-file-noselect file))))
-        (with-current-buffer buf
-          (org-with-wide-buffer
-           (goto-char (point-min))
-           (when (re-search-forward
-                  (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$" (regexp-quote id))
-                  nil t)
-             (org-back-to-heading t)
-             (org-get-heading t t t t))))))))
+  (org-clock-multi--with-heading-at-key key
+    (org-get-heading t t t t)))
+
+(defun org-clock-multi--clock-out-internal ()
+  "Clock out the heading at point, writing a LOGBOOK entry.
+Returns (key . heading) on success, nil if not clocked in."
+  (let ((clock (org-clock-multi--find-clock-at-point)))
+    (when clock
+      (let ((key (car clock))
+            (start-time (cdr clock))
+            (heading (org-get-heading t t t t)))
+        (org-clock-multi--write-clock-entry key start-time)
+        (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
+        (cons key heading)))))
 
 (defun org-clock-multi-clock-out ()
   "Clock out heading at point.
 Writes a LOGBOOK entry and removes from active clocks."
   (interactive)
   (save-excursion
-    (let* ((clock (org-clock-multi--find-clock-at-point)))
-      (if (not clock)
-          (message "Not clocked in to this task")
-        (let ((key (car clock))
-              (start-time (cdr clock))
-              (heading (org-get-heading t t t t)))
-          (org-clock-multi--write-clock-entry key start-time)
-          (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
-          (org-clock-multi-save-state)
-          (message "Clocked out: %s" heading))))))
+    (let ((result (org-clock-multi--clock-out-internal)))
+      (if result
+          (progn
+            (org-clock-multi-save-state)
+            (message "Clocked out: %s" (cdr result)))
+        (message "Not clocked in to this task")))))
 
 (defun org-clock-multi-clock-out-all ()
   "Clock out all active clocks."
@@ -282,27 +239,18 @@ Writes a LOGBOOK entry and removes from active clocks."
 Clocks out the task and adds it to the paused list for easy resumption."
   (interactive)
   (save-excursion
-    (let* ((clock (org-clock-multi--find-clock-at-point)))
-      (if (not clock)
-          (message "Not clocked in to this task")
-        (let ((key (car clock))
-              (start-time (cdr clock))
-              (heading (org-get-heading t t t t)))
-          ;; Write the clock entry
-          (org-clock-multi--write-clock-entry key start-time)
-          ;; Remove from active clocks
-          (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
-          ;; Add to paused list if not already there
-          (unless (org-clock-multi--find-paused-by-key key)
-            (push key org-clock-multi-paused))
-          (org-clock-multi-save-state)
-          (message "Paused: %s" heading))))))
+    (let ((result (org-clock-multi--clock-out-internal)))
+      (if result
+          (let ((key (car result)))
+            (unless (member key org-clock-multi-paused)
+              (push key org-clock-multi-paused))
+            (org-clock-multi-save-state)
+            (message "Paused: %s" (cdr result)))
+        (message "Not clocked in to this task")))))
 
-(defun org-clock-multi-clock-resume ()
+(defalias 'org-clock-multi-clock-resume #'org-clock-multi-clock-in
   "Resume a paused clock at point.
-Equivalent to clock-in but explicitly for paused tasks."
-  (interactive)
-  (org-clock-multi-clock-in))
+Equivalent to clock-in but explicitly for paused tasks.")
 
 (defun org-clock-multi-clock-cancel ()
   "Cancel clock for heading at point without writing LOGBOOK."
@@ -348,46 +296,38 @@ Equivalent to clock-in but explicitly for paused tasks."
                           org-clock-multi-clocks)))
            (selected (completing-read "Clock: " candidates nil t)))
       (when selected
-        (let* ((key (cdr (assoc selected candidates)))
-               (file (car key))
-               (id (cdr key)))
-          (find-file file)
-          (org-with-wide-buffer
-           (goto-char (point-min))
-           (when (re-search-forward
-                  (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$" (regexp-quote id))
-                  nil t)
-             (org-back-to-heading t)
-             (org-show-entry)
-             (org-reveal))))))))
+        (let ((key (cdr (assoc selected candidates))))
+          (find-file (car key))
+          (org-clock-multi--with-heading-at-key key
+            (org-show-entry)
+            (org-reveal)))))))
 
 ;;; Agenda Integration
+
+(defmacro org-clock-multi--agenda-with-heading (&rest body)
+  "Execute BODY at the agenda heading, then refresh the agenda.
+Extracts the heading marker from the current agenda line."
+  (declare (indent 0) (debug t))
+  `(progn
+     (org-agenda-check-no-diary)
+     (let* ((marker (or (org-get-at-bol 'org-marker)
+                        (org-agenda-error)))
+            (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
+       (with-current-buffer (marker-buffer hdmarker)
+         (save-excursion
+           (goto-char hdmarker)
+           ,@body)))
+     (org-agenda-redo-all)))
 
 (defun org-clock-multi-agenda-clock-in ()
   "Clock in the task at point in agenda."
   (interactive)
-  (org-agenda-check-no-diary)
-  (let* ((marker (or (org-get-at-bol 'org-marker)
-                     (org-agenda-error)))
-         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
-    (with-current-buffer (marker-buffer hdmarker)
-      (save-excursion
-        (goto-char hdmarker)
-        (org-clock-multi-clock-in))))
-  (org-agenda-redo-all))
+  (org-clock-multi--agenda-with-heading (org-clock-multi-clock-in)))
 
 (defun org-clock-multi-agenda-clock-out ()
   "Clock out the task at point in agenda."
   (interactive)
-  (org-agenda-check-no-diary)
-  (let* ((marker (or (org-get-at-bol 'org-marker)
-                     (org-agenda-error)))
-         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
-    (with-current-buffer (marker-buffer hdmarker)
-      (save-excursion
-        (goto-char hdmarker)
-        (org-clock-multi-clock-out))))
-  (org-agenda-redo-all))
+  (org-clock-multi--agenda-with-heading (org-clock-multi-clock-out)))
 
 (defun org-clock-multi-agenda-clock-out-all ()
   "Clock out all active clocks from agenda."
@@ -398,39 +338,18 @@ Equivalent to clock-in but explicitly for paused tasks."
 (defun org-clock-multi-agenda-clock-pause ()
   "Pause clock for task at point in agenda."
   (interactive)
-  (org-agenda-check-no-diary)
-  (let* ((marker (or (org-get-at-bol 'org-marker)
-                     (org-agenda-error)))
-         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
-    (with-current-buffer (marker-buffer hdmarker)
-      (save-excursion
-        (goto-char hdmarker)
-        (org-clock-multi-clock-pause))))
-  (org-agenda-redo-all))
+  (org-clock-multi--agenda-with-heading (org-clock-multi-clock-pause)))
 
 (defun org-clock-multi-agenda-clock-cancel ()
   "Cancel clock for task at point in agenda."
   (interactive)
-  (org-agenda-check-no-diary)
-  (let* ((marker (or (org-get-at-bol 'org-marker)
-                     (org-agenda-error)))
-         (hdmarker (or (org-get-at-bol 'org-hd-marker) marker)))
-    (with-current-buffer (marker-buffer hdmarker)
-      (save-excursion
-        (goto-char hdmarker)
-        (org-clock-multi-clock-cancel))))
-  (org-agenda-redo-all))
+  (org-clock-multi--agenda-with-heading (org-clock-multi-clock-cancel)))
 
 (defun org-clock-multi-agenda-clock-cancel-all ()
   "Cancel all active clocks from agenda."
   (interactive)
   (org-clock-multi-clock-cancel-all)
   (org-agenda-redo-all))
-
-(defun org-clock-multi-agenda-clock-goto ()
-  "Jump to one of the active clocks from agenda using consult."
-  (interactive)
-  (org-clock-multi-clock-goto))
 
 ;;; Agenda Highlighting
 
