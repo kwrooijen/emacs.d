@@ -460,7 +460,6 @@ Org agenda files. All TODOs go in here.
   "c o"  'org-clock-multi-clock-out
   "c O"  'org-clock-multi-clock-out-all
   "c r"  'org-clock-report
-  "c c"  'org-clock-multi-clock-goto
   "c x"  'org-clock-multi-clock-cancel
   "c X"  'org-clock-multi-clock-cancel-all)
 #+END_SRC

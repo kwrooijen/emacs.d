@@ -263,7 +263,6 @@ Customize agenda renderer to optionally filter out habits.
   "G" #'org-agenda-toggle-time-grid
   "H" #'org-agenda-holidays
   "I" #'org-clock-multi-agenda-clock-in
-  "J" #'org-clock-multi-agenda-clock-goto
   "K" #'org-habit-toggle-display-in-agenda
   "L" #'org-agenda-recenter
   "N" #'org-agenda-next-item
