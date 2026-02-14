@@ -62,20 +62,46 @@ Results are sorted by date ascending."
 
 ;;; Aggregation
 
+(defun org-clock-data--entry-rate (entry)
+  "Return the hourly rate for ENTRY based on its tags and `org-clock-data-hourly-rates'."
+  (let ((tags (plist-get entry :tags))
+        (rate 0))
+    (dolist (tag tags)
+      (when-let* ((r (cdr (assoc tag org-clock-data-hourly-rates))))
+        (setq rate r)))
+    rate))
+
 (defun org-clock-data-aggregate-by-date (entries)
-  "Aggregate ENTRIES by date, summing total minutes.
-Returns an alist of (DATE . TOTAL-MINUTES) sorted by date."
+  "Aggregate ENTRIES by date, summing total minutes and earnings.
+Returns an alist of (DATE . (:minutes M :earnings E)) sorted by date."
   (let ((table (make-hash-table :test 'equal)))
     (dolist (entry entries)
-      (let ((date (plist-get entry :date))
-            (mins (+ (* (plist-get entry :hours) 60)
-                     (plist-get entry :minutes))))
-        (puthash date (+ (gethash date table 0) mins) table)))
+      (let* ((date (plist-get entry :date))
+             (mins (+ (* (plist-get entry :hours) 60)
+                      (plist-get entry :minutes)))
+             (rate (org-clock-data--entry-rate entry))
+             (earned (* (/ mins 60.0) rate))
+             (existing (gethash date table (list :minutes 0 :earnings 0.0))))
+        (puthash date
+                 (list :minutes (+ (plist-get existing :minutes) mins)
+                       :earnings (+ (plist-get existing :earnings) earned))
+                 table)))
     (let (result)
       (maphash (lambda (k v) (push (cons k v) result)) table)
       (sort result (lambda (a b) (string< (car a) (car b)))))))
 
 ;;; Bar Chart
+
+(defcustom org-clock-data-hourly-rates nil
+  "Alist mapping tag names to hourly rates.
+Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
+  :type '(alist :key-type string :value-type number)
+  :group 'org-clock-data)
+
+(defcustom org-clock-data-currency-symbol "€"
+  "Currency symbol for earnings display."
+  :type 'string
+  :group 'org-clock-data)
 
 (defcustom org-clock-data-bar-char ?█
   "Character used to draw bar chart bars."
@@ -105,22 +131,43 @@ Returns an alist of (DATE . TOTAL-MINUTES) sorted by date."
   (if (null aggregated)
       "  No clock data for this period.\n"
     (let* ((target-mins (* org-clock-data-bar-target-hours 60))
+           (total-mins 0)
+           (total-earnings 0.0)
            (lines
             (mapcar
              (lambda (pair)
                (let* ((date (car pair))
-                      (mins (cdr pair))
+                      (data (cdr pair))
+                      (mins (plist-get data :minutes))
+                      (earnings (plist-get data :earnings))
                       (hours (/ mins 60))
                       (remaining-mins (% mins 60))
                       (ratio (min 1.0 (/ (float mins) target-mins)))
                       (filled (round (* org-clock-data-bar-max-width ratio)))
-                      (label (org-clock-data--format-date-short date)))
-                 (format "  %s  %s %dh%02dm"
+                      (label (org-clock-data--format-date-short date))
+                      (time-str (format "%dh%02dm" hours remaining-mins))
+                      (info (if (and org-clock-data-hourly-rates (> earnings 0))
+                                (format "[%s | %s%.2f]" time-str
+                                        org-clock-data-currency-symbol earnings)
+                              (format "[%s]" time-str))))
+                 (setq total-mins (+ total-mins mins))
+                 (setq total-earnings (+ total-earnings earnings))
+                 (format "  %s  %s %s"
                          label
                          (make-string filled org-clock-data-bar-char)
-                         hours remaining-mins)))
-             aggregated)))
-      (concat (string-join lines "\n") "\n"))))
+                         info)))
+             aggregated))
+           (total-hours (/ total-mins 60))
+           (total-remaining (% total-mins 60))
+           (total-time-str (format "%dh%02dm" total-hours total-remaining))
+           (total-line
+            (if (and org-clock-data-hourly-rates (> total-earnings 0))
+                (format "  Total: %s | %s%.2f"
+                        total-time-str org-clock-data-currency-symbol total-earnings)
+              (format "  Total: %s" total-time-str))))
+      (concat (string-join lines "\n") "\n"
+              (make-string 40 ?─) "\n"
+              total-line "\n"))))
 
 ;;; Agenda Integration
 
