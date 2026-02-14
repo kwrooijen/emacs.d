@@ -133,7 +133,7 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
     (let* ((target-mins (* org-clock-data-bar-target-hours 60))
            (total-mins 0)
            (total-earnings 0.0)
-           (lines
+           (row-data
             (mapcar
              (lambda (pair)
                (let* ((date (car pair))
@@ -152,11 +152,18 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
                               (format "[%s]" time-str))))
                  (setq total-mins (+ total-mins mins))
                  (setq total-earnings (+ total-earnings earnings))
-                 (format "  %s  %s %s"
-                         label
-                         (make-string filled org-clock-data-bar-char)
-                         info)))
+                 (list label info filled)))
              aggregated))
+           (max-info-width (apply #'max (mapcar (lambda (r) (length (nth 1 r))) row-data)))
+           (fmt (format "  %%s  %%-%ds %%s" max-info-width))
+           (lines
+            (mapcar
+             (lambda (r)
+               (format fmt
+                       (nth 0 r)
+                       (nth 1 r)
+                       (make-string (nth 2 r) org-clock-data-bar-char)))
+             row-data))
            (total-hours (/ total-mins 60))
            (total-remaining (% total-mins 60))
            (total-time-str (format "%dh%02dm" total-hours total-remaining))
