@@ -65,8 +65,9 @@ Automatically save any org buffers when making changes in org agenda.
   (interactive)
   (org-agenda nil "D"))
 
-(defun kwrooijen/org-todo-unarchive ()
-  "Select a DONE task from agenda files and change it back to TODO."
+(defun kwrooijen/org-todo-unarchive (&optional filter-tag)
+  "Select a DONE task from agenda files and change it back to TODO.
+When FILTER-TAG is non-nil, only show tasks that have that tag."
   (interactive)
   (let (entries max-tag-width max-closed-width)
     (dolist (file (org-agenda-files))
@@ -74,7 +75,9 @@ Automatically save any org buffers when making changes in org agenda.
         (org-with-wide-buffer
          (goto-char (point-min))
          (while (re-search-forward org-heading-regexp nil t)
-           (when (member (org-get-todo-state) org-done-keywords)
+           (when (and (member (org-get-todo-state) org-done-keywords)
+                      (or (null filter-tag)
+                          (member filter-tag (org-get-tags))))
              (let* ((heading (org-get-heading t t t t))
                     (tags (org-get-tags))
                     (tag-str (if tags (string-join tags ":") ""))
@@ -102,7 +105,12 @@ Automatically save any org buffers when making changes in org agenda.
                                        "  " heading)))
                    (cons label marker)))
                entries))
-             (selection (completing-read "Unarchive: " (mapcar #'car candidates) nil t))
+             (collection (lambda (str pred action)
+                          (if (eq action 'metadata)
+                              '(metadata (display-sort-function . identity)
+                                         (cycle-sort-function . identity))
+                            (complete-with-action action (mapcar #'car candidates) str pred))))
+             (selection (completing-read "Unarchive: " collection nil t))
              (marker (cdr (assoc selection candidates))))
         (when marker
           (with-current-buffer (marker-buffer marker)
@@ -110,6 +118,11 @@ Automatically save any org buffers when making changes in org agenda.
             (org-todo "TODO")
             (save-buffer)
             (kwrooijen/org-edit-subtree)))))))
+
+(defun kwrooijen/org-todo-unarchive-work ()
+  "Select a DONE :work: task and change it back to TODO."
+  (interactive)
+  (kwrooijen/org-todo-unarchive "work"))
 #+END_SRC
 
 Custom loading bar for work.
@@ -274,7 +287,7 @@ Customize agenda renderer to optionally filter out habits.
   "ad" '(kwrooijen/org-agenda-done :which-key "Org Done")
   "ac" '(org-capture :which-key "Org Capture")
   "aD" '(org-todo-dashboard-open :which-key "Dashboard")
-  "au" '(kwrooijen/org-todo-unarchive :which-key "Unarchive"))
+  "au" '(kwrooijen/org-todo-unarchive-work :which-key "Unarchive"))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
