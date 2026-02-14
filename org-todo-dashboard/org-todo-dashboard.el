@@ -68,7 +68,8 @@ to account for the character width of the separator."
                    ,(lambda ()
                       (concat (org-todo-dashboard--separator)
                               "\nClient: "
-                              (org-todo-dashboard--format-client-header client))))
+                              (org-todo-dashboard--format-client-header client)
+                              "\n")))
                   (org-agenda-max-entries ,org-todo-dashboard-max-entries)
                   (org-agenda-sorting-strategy '(priority-down)))))
    (org-todo-dashboard--client-names)))
