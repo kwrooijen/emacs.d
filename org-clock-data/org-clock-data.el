@@ -24,15 +24,18 @@
 (defconst org-clock-data--clock-re
   (concat "^[ \t]*CLOCK: "
           "\\[\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\) [A-Za-z]\\{2,3\\} "
-          "[0-9]\\{2\\}:[0-9]\\{2\\}\\]--"
+          "\\([0-9]\\{2\\}\\):\\([0-9]\\{2\\}\\)\\]--"
           "\\[[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [A-Za-z]\\{2,3\\} "
-          "[0-9]\\{2\\}:[0-9]\\{2\\}\\] => [ ]*"
+          "\\([0-9]\\{2\\}\\):\\([0-9]\\{2\\}\\)\\] => [ ]*"
           "\\([0-9]+\\):\\([0-9]\\{2\\}\\)")
-  "Regexp matching org CLOCK lines, capturing date, hours, and minutes.")
+  "Regexp matching org CLOCK lines.
+Capture groups: 1=date, 2=start-hour, 3=start-min,
+4=end-hour, 5=end-min, 6=duration-hours, 7=duration-minutes.")
 
 (cl-defun org-clock-data-extract (&key tag from to)
   "Extract clock entries from `org-agenda-files'.
-Returns a list of plists with :date, :tags, :hours, :minutes.
+Returns a list of plists with :date, :tags, :hours, :minutes,
+:start-hh, :start-mm, :end-hh, :end-mm.
 When TAG is non-nil, only include entries under headings with that tag.
 FROM and TO are date strings (YYYY-MM-DD) for filtering (inclusive).
 Results are sorted by date ascending."
@@ -43,8 +46,12 @@ Results are sorted by date ascending."
          (goto-char (point-min))
          (while (re-search-forward org-clock-data--clock-re nil t)
            (let ((date (match-string 1))
-                 (hours (string-to-number (match-string 2)))
-                 (minutes (string-to-number (match-string 3))))
+                 (start-hh (string-to-number (match-string 2)))
+                 (start-mm (string-to-number (match-string 3)))
+                 (end-hh (string-to-number (match-string 4)))
+                 (end-mm (string-to-number (match-string 5)))
+                 (hours (string-to-number (match-string 6)))
+                 (minutes (string-to-number (match-string 7))))
              (when (and (or (null from) (org-string<= from date))
                         (or (null to) (org-string<= date to)))
                (save-excursion
@@ -55,7 +62,11 @@ Results are sorted by date ascending."
                      (push (list :date date
                                  :tags tags
                                  :hours hours
-                                 :minutes minutes)
+                                 :minutes minutes
+                                 :start-hh start-hh
+                                 :start-mm start-mm
+                                 :end-hh end-hh
+                                 :end-mm end-mm)
                            rows))))))))))
     (sort rows (lambda (a b)
                  (string< (plist-get a :date) (plist-get b :date))))))
@@ -90,6 +101,42 @@ Returns an alist of (DATE . (:minutes M :earnings E)) sorted by date."
       (maphash (lambda (k v) (push (cons k v) result)) table)
       (sort result (lambda (a b) (string< (car a) (car b)))))))
 
+(defun org-clock-data-aggregate-by-hour (entries)
+  "Aggregate ENTRIES by hour, splitting multi-hour entries proportionally.
+A clock entry spanning 09:30--12:15 distributes as:
+  hour 9 = 30min, hour 10 = 60min, hour 11 = 60min, hour 12 = 15min.
+Overlapping clocks can cause a single hour to exceed 60 minutes.
+Returns an alist of (HOUR . (:minutes M :earnings E)) sorted by hour."
+  (let ((table (make-hash-table :test 'equal)))
+    (dolist (entry entries)
+      (let* ((start-hh (plist-get entry :start-hh))
+             (start-mm (plist-get entry :start-mm))
+             (end-hh (plist-get entry :end-hh))
+             (end-mm (plist-get entry :end-mm))
+             (total-mins (+ (* (plist-get entry :hours) 60)
+                            (plist-get entry :minutes)))
+             (rate (org-clock-data--entry-rate entry))
+             (hour start-hh)
+             (cursor-mm start-mm))
+        (while (and (> total-mins 0) (<= hour 23))
+          (let* ((mins-in-hour (if (= hour end-hh)
+                                   (min total-mins (- end-mm cursor-mm))
+                                 (min total-mins (- 60 cursor-mm))))
+                 (mins-in-hour (max 0 mins-in-hour))
+                 (earned (* (/ mins-in-hour 60.0) rate))
+                 (existing (gethash hour table (list :minutes 0 :earnings 0.0))))
+            (when (> mins-in-hour 0)
+              (puthash hour
+                       (list :minutes (+ (plist-get existing :minutes) mins-in-hour)
+                             :earnings (+ (plist-get existing :earnings) earned))
+                       table))
+            (setq total-mins (- total-mins mins-in-hour))
+            (setq hour (1+ hour))
+            (setq cursor-mm 0)))))
+    (let (result)
+      (maphash (lambda (k v) (push (cons k v) result)) table)
+      (sort result (lambda (a b) (< (car a) (car b)))))))
+
 ;;; Bar Chart
 
 (defcustom org-clock-data-hourly-rates nil
@@ -118,6 +165,10 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
   :type 'float
   :group 'org-clock-data)
 
+(defun org-clock-data--format-hour (hour)
+  "Format HOUR (integer 0-23) as a label like 09:00 or 14:00."
+  (format "%02d:00" hour))
+
 (defun org-clock-data--format-date-short (date-str)
   "Format DATE-STR (YYYY-MM-DD) as a short label like Mon 02/10."
   (let ((time (encode-time 0 0 0
@@ -126,17 +177,21 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
                            (string-to-number (substring date-str 0 4)))))
     (format-time-string "%a %m/%d" time)))
 
-(defun org-clock-data-bar-chart (aggregated)
-  "Render AGGREGATED data (from `org-clock-data-aggregate-by-date') as a bar chart string."
+(defun org-clock-data-bar-chart (aggregated &optional mode)
+  "Render AGGREGATED data as a bar chart string.
+MODE is \\='daily (default) or \\='hourly.
+In daily mode, keys are date strings and target is `org-clock-data-bar-target-hours'.
+In hourly mode, keys are hour integers and target is 60 minutes."
   (if (null aggregated)
       "  No clock data for this period.\n"
-    (let* ((target-mins (* org-clock-data-bar-target-hours 60))
+    (let* ((hourlyp (eq mode 'hourly))
+           (target-mins (if hourlyp 60 (* org-clock-data-bar-target-hours 60)))
            (total-mins 0)
            (total-earnings 0.0)
            (row-data
             (mapcar
              (lambda (pair)
-               (let* ((date (car pair))
+               (let* ((key (car pair))
                       (data (cdr pair))
                       (mins (plist-get data :minutes))
                       (earnings (plist-get data :earnings))
@@ -144,7 +199,9 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
                       (remaining-mins (% mins 60))
                       (ratio (min 1.0 (/ (float mins) target-mins)))
                       (filled (round (* org-clock-data-bar-max-width ratio)))
-                      (label (org-clock-data--format-date-short date))
+                      (label (if hourlyp
+                                 (org-clock-data--format-hour key)
+                               (org-clock-data--format-date-short key)))
                       (time-str (format "%dh%02dm" hours remaining-mins))
                       (earn-str (when (and org-clock-data-hourly-rates (> earnings 0))
                                   (format "%s%.2f" org-clock-data-currency-symbol earnings)))
@@ -223,9 +280,13 @@ Example: ((\"tool2match\" . 75) (\"aviation_glass\" . 90))"
       (when range
         (let* ((from (car range))
                (to (cdr range))
+               (ndays (org-agenda-span-to-ndays org-agenda-current-span org-starting-day))
+               (day-view-p (= ndays 1))
                (entries (org-clock-data-extract :tag "work" :from from :to to))
-               (aggregated (org-clock-data-aggregate-by-date entries))
-               (chart (org-clock-data-bar-chart aggregated))
+               (aggregated (if day-view-p
+                               (org-clock-data-aggregate-by-hour entries)
+                             (org-clock-data-aggregate-by-date entries)))
+               (chart (org-clock-data-bar-chart aggregated (if day-view-p 'hourly 'daily)))
                (inhibit-read-only t))
           (save-excursion
             (goto-char (point-max))
