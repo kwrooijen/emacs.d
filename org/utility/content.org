@@ -68,7 +68,7 @@ Max body width (using shr renderer)
 ** General :general:
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/leader
-  "af" '(elfeed :which-key "Elfeed"))
+  "ay" '(elfeed :which-key "Elfeed"))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
