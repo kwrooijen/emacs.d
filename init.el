@@ -22,6 +22,9 @@
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-todo-dashboard"))
 (require 'org-todo-dashboard)
 
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-data"))
+(require 'org-clock-data)
+
 
 (use-package wisdom
   :straight (wisdom :type git :host github :repo "kwrooijen/wisdom")
@@ -31,3 +34,4 @@
   :config
   (wisdom-boot))
 
+(kwrooijen/find-and-load-file "~/.wisdom.d/local-vars.el")
