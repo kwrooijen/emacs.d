@@ -55,7 +55,9 @@ Automatically save any org buffers when making changes in org agenda.
          todo "DONE")
         ("k" "Currently clocked"
          ((alltodo "" ((org-agenda-skip-function
-                        #'kwrooijen/org-clock-multi-skip-unless-clocked-or-paused))))))))
+                        #'kwrooijen/org-clock-multi-skip-unless-clocked-or-paused)))))))
+
+(org-todo-dashboard-install)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -224,7 +226,8 @@ Customize agenda renderer to optionally filter out habits.
   "ao" '(org-agenda :which-key "Org Commands")
   "at" '(org-todo-list :which-key "Org Todos")
   "ad" '(kwrooijen/org-agenda-done :which-key "Org Done")
-  "ac" '(org-capture :which-key "Org Capture"))
+  "ac" '(org-capture :which-key "Org Capture")
+  "aD" '(org-todo-dashboard-open :which-key "Dashboard"))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
