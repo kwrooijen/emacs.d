@@ -153,12 +153,34 @@ When TAG is non-nil, only show tasks that have that tag."
   (interactive)
   (kwrooijen/org-todo-find--throw-action 'clock-pause))
 
+(defun kwrooijen/org-todo-find--preview ()
+  "Preview the currently selected candidate without closing the minibuffer."
+  (interactive)
+  (when-let* ((cand (nth vertico--index vertico--candidates))
+              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
+    ;; Kill previous preview popup if it exists
+    (when-let* ((prev (get-buffer "*org-todo-preview*")))
+      (kill-buffer prev))
+    ;; Create the edit-indirect buffer without displaying it
+    (let ((buf (save-window-excursion
+                 (with-current-buffer (marker-buffer marker)
+                   (goto-char marker)
+                   (kwrooijen/org-edit-subtree)
+                   (goto-char (point-min))
+                   (current-buffer)))))
+      (with-current-buffer buf
+        (rename-buffer "*org-todo-preview*"))
+      (popwin:display-buffer buf))
+    (select-window (active-minibuffer-window))))
+
 (defvar kwrooijen/org-todo-find-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-t") #'kwrooijen/org-todo-find--change-state)
     (define-key map (kbd "C-i") #'kwrooijen/org-todo-find--clock-in)
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
+    (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
+    (define-key map (kbd "TAB") #'kwrooijen/org-todo-find--preview)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
 
