@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: branch
+# key: br
+# --
+:BRANCH: feature/$0
