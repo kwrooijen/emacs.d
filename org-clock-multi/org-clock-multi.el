@@ -201,6 +201,7 @@ Uses org-clock's format for compatibility."
 
 (defun org-clock-multi--clock-out-internal ()
   "Clock out the heading at point, writing a LOGBOOK entry.
+Removes the task from both active clocks and the paused list.
 Returns (key . heading) on success, nil if not clocked in."
   (let ((clock (org-clock-multi--find-clock-at-point)))
     (when clock
@@ -209,11 +210,14 @@ Returns (key . heading) on success, nil if not clocked in."
             (heading (org-get-heading t t t t)))
         (org-clock-multi--write-clock-entry key start-time)
         (setq org-clock-multi-clocks (delq clock org-clock-multi-clocks))
+        (setq org-clock-multi-paused
+              (cl-remove-if (lambda (k) (equal key k)) org-clock-multi-paused))
         (cons key heading)))))
 
 (defun org-clock-multi-clock-out ()
   "Clock out heading at point.
-Writes a LOGBOOK entry and removes from active clocks."
+Writes a LOGBOOK entry and removes from active clocks.
+If the task is paused, removes it from the paused list."
   (interactive)
   (save-excursion
     (let ((result (org-clock-multi--clock-out-internal)))
@@ -221,7 +225,17 @@ Writes a LOGBOOK entry and removes from active clocks."
           (progn
             (org-clock-multi-save-state)
             (message "Clocked out: %s" (cdr result)))
-        (message "Not clocked in to this task")))))
+        ;; Not actively clocked — check if paused
+        (org-back-to-heading t)
+        (let* ((key (org-clock-multi--heading-key))
+               (was-paused (member key org-clock-multi-paused)))
+          (if was-paused
+              (progn
+                (setq org-clock-multi-paused
+                      (cl-remove-if (lambda (k) (equal key k)) org-clock-multi-paused))
+                (org-clock-multi-save-state)
+                (message "Removed from paused: %s" (org-get-heading t t t t)))
+            (message "Not clocked in to this task")))))))
 
 (defun org-clock-multi-clock-out-all ()
   "Clock out all active clocks."

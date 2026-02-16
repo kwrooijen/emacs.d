@@ -653,5 +653,21 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
       (goto-char (point-min))
       (should (org-clock-multi-paused-p)))))
 
+(ert-deftest org-clock-multi-test-clock-out-removes-from-paused ()
+  "Test that clocking out a paused task removes it from the paused list."
+  (org-clock-multi-test-with-temp-org
+      "* TODO Test task\n"
+    (let ((org-clock-multi-paused nil))
+      ;; Clock in then pause
+      (org-clock-multi-clock-in)
+      (org-clock-multi-clock-pause)
+      (should (= 0 (length org-clock-multi-clocks)))
+      (should (= 1 (length org-clock-multi-paused)))
+      ;; Clock out the paused task directly (without resuming first)
+      (org-clock-multi-clock-out)
+      (should (= 0 (length org-clock-multi-clocks)))
+      (should (= 0 (length org-clock-multi-paused)))
+      (should-not (org-clock-multi-paused-p)))))
+
 (provide 'org-clock-multi-test)
 ;;; org-clock-multi-test.el ends here
