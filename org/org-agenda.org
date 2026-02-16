@@ -127,16 +127,32 @@ When TAG is non-nil, only show tasks that have that tag."
 (defvar kwrooijen/org-todo-find--candidates nil
   "Current candidates for `kwrooijen/org-todo-find-and-edit'.")
 
+(defun kwrooijen/org-todo-find--throw-action (action)
+  "Throw ACTION for the currently selected candidate."
+  (when-let* ((cand (nth vertico--index vertico--candidates))
+              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
+    (throw 'kwrooijen/org-todo-find--action (cons action marker))))
+
 (defun kwrooijen/org-todo-find--change-state ()
   "Change the TODO state of the currently selected candidate."
   (interactive)
-  (when-let* ((cand (nth vertico--index vertico--candidates))
-              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
-    (throw 'kwrooijen/org-todo-find--action (cons 'change-state marker))))
+  (kwrooijen/org-todo-find--throw-action 'change-state))
+
+(defun kwrooijen/org-todo-find--clock-in ()
+  "Clock in the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-in))
+
+(defun kwrooijen/org-todo-find--clock-out ()
+  "Clock out the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-out))
 
 (defvar kwrooijen/org-todo-find-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-t") #'kwrooijen/org-todo-find--change-state)
+    (define-key map (kbd "C-i") #'kwrooijen/org-todo-find--clock-in)
+    (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
 
@@ -216,6 +232,20 @@ Press C-t to change the TODO state of the selected entry."
                      (save-excursion
                        (goto-char marker)
                        (org-todo))))
+                 (setq keep-going t))
+                ('clock-in
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-in))))
+                 (setq keep-going t))
+                ('clock-out
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-out))))
                  (setq keep-going t))))))))))
 
 (defun kwrooijen/org-todo-find-done-work ()
@@ -253,6 +283,7 @@ Press C-t to change the TODO state of the selected entry."
   (interactive)
   (kwrooijen/org-todo-select-and-change :from "WAITING" :to "TODO" :tag "work"))
 #+END_SRC
+
 
 
 Custom loading bar for work.
