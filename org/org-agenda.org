@@ -184,7 +184,6 @@ When TAG is non-nil, only show tasks that have that tag."
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
     (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
-    (define-key map (kbd "TAB") #'kwrooijen/org-todo-find--preview)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
 
