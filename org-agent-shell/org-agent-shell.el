@@ -188,7 +188,8 @@ Creates a git worktree and starts agent-shell with the heading body as input."
   (interactive)
   (let ((default-directory (org-agent-shell--worktree-path))
         (branch (org-agent-shell--get-property "BRANCH"))
-        (display-buffer-overriding-action '((display-buffer-use-some-window))))
+        (display-buffer-overriding-action '((display-buffer-use-some-window)))
+        (magit-section-initial-visibility-alist '((file . hide))))
     (unless branch
       (user-error "No :BRANCH: property found"))
     (magit-diff-range (format "%s...%s" org-agent-shell-base-branch branch))))
