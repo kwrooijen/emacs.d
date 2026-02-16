@@ -178,12 +178,18 @@ Press C-t to change the TODO state of the selected entry."
                         (tag-str (if tags (string-join tags ":") ""))
                         (state (or (org-get-todo-state) ""))
                         (closed (or (org-entry-get nil "CLOSED") ""))
+                        (clocked (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
+                                   (and id (org-clock-multi--find-clock-by-key id) t)))
                         (marker (point-marker)))
-                   (push (list tag-str state closed heading marker) entries)))))))
+                   (push (list tag-str state closed heading marker clocked) entries)))))))
         (if (null entries)
             (message "No %s tasks found" (string-join states "/"))
           (setq entries (sort entries (lambda (a b)
-                                        (string> (nth 2 a) (nth 2 b)))))
+                                        (let ((ca (nth 5 a)) (cb (nth 5 b)))
+                                          (cond
+                                           ((and ca (not cb)) t)
+                                           ((and (not ca) cb) nil)
+                                           (t (string> (nth 2 a) (nth 2 b))))))))
           (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
           (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
             (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
@@ -195,6 +201,7 @@ Press C-t to change the TODO state of the selected entry."
                               (closed (nth 2 entry))
                               (heading (nth 3 entry))
                               (marker (nth 4 entry))
+                              (clocked (nth 5 entry))
                               (padded-tag (string-pad tag-str max-tag-width))
                               (padded-state (propertize (string-pad state max-state-width)
                                                         'face (org-get-todo-face state)))
@@ -205,13 +212,21 @@ Press C-t to change the TODO state of the selected entry."
                                              "  "
                                              (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
                                              "  " heading)))
+                         (when clocked
+                           (put-text-property 0 1 'kwrooijen/clocked t label))
                          (cons label marker)))
                      entries))
                    (kwrooijen/org-todo-find--candidates candidates)
+                   (group-fn (lambda (cand transform)
+                               (if transform cand
+                                 (if (get-text-property 0 'kwrooijen/clocked cand)
+                                     "Clocked In"
+                                   "Tasks"))))
                    (collection (lambda (str pred action)
                                  (if (eq action 'metadata)
-                                     '(metadata (display-sort-function . identity)
-                                                (cycle-sort-function . identity))
+                                     `(metadata (display-sort-function . identity)
+                                                (cycle-sort-function . identity)
+                                                (group-function . ,group-fn))
                                    (complete-with-action action (mapcar #'car candidates) str pred))))
                    (result (catch 'kwrooijen/org-todo-find--action
                              (minibuffer-with-setup-hook
