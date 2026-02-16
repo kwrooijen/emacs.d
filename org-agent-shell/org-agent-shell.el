@@ -45,8 +45,16 @@
 ;;; Helpers
 
 (defun org-agent-shell--get-property (property)
-  "Get PROPERTY from current heading, with inheritance."
-  (org-entry-get nil property t))
+  "Get PROPERTY from current heading, with inheritance.
+When in an edit-indirect buffer, look up the property in the parent buffer."
+  (if (and (boundp 'edit-indirect--overlay) edit-indirect--overlay)
+      (let ((parent (overlay-buffer edit-indirect--overlay))
+            (pos (overlay-start edit-indirect--overlay)))
+        (with-current-buffer parent
+          (save-excursion
+            (goto-char pos)
+            (org-entry-get nil property t))))
+    (org-entry-get nil property t)))
 
 (defun org-agent-shell--worktree-path ()
   "Compute the worktree path for the current heading."
@@ -124,11 +132,17 @@ Creates a git worktree and starts agent-shell with the heading body as input."
       (unless reuse
         (make-directory (file-name-directory worktree-path) t)
         (let ((default-directory project-path))
-          (let ((output (shell-command-to-string
-                         (format "git worktree add -b %s %s %s 2>&1"
-                                 (shell-quote-argument branch)
-                                 (shell-quote-argument worktree-path)
-                                 (shell-quote-argument org-agent-shell-base-branch)))))
+          (let* ((branch-exists-p
+                  (= 0 (call-process "git" nil nil nil "rev-parse" "--verify" branch)))
+                 (output (shell-command-to-string
+                          (if branch-exists-p
+                              (format "git worktree add --force %s %s 2>&1"
+                                      (shell-quote-argument worktree-path)
+                                      (shell-quote-argument branch))
+                            (format "git worktree add -b %s %s %s 2>&1"
+                                    (shell-quote-argument branch)
+                                    (shell-quote-argument worktree-path)
+                                    (shell-quote-argument org-agent-shell-base-branch))))))
             (unless (file-exists-p worktree-path)
               (user-error "Failed to create worktree: %s" output)))))
       ;; Write ticket.org in worktree

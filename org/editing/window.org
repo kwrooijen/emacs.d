@@ -81,5 +81,5 @@ Manage windows that pop up on your screen.
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
 (push '("^.**Agenda Commands*" :height 15 :position bottom :stick t) popwin:special-display-config)
-(push '("*org-todo-preview*" :height 0.4 :position bottom :stick t :noselect t) popwin:special-display-config)
+(push '("\\*edit-indirect .*\\*" :height 0.4 :position bottom :stick t :noselect t :regexp t) popwin:special-display-config)
 #+END_SRC
