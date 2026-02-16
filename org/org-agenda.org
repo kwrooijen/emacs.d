@@ -20,6 +20,15 @@ Automatically save any org buffers when making changes in org agenda.
 (add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-out-hook               #'kwrooijen/agenda-org-save-all-org-buffers)
 
+;; Set TODO state to IN PROGRESS when clocking in
+(defun kwrooijen/org-clock-multi-set-in-progress ()
+  "Set the heading at point to IN PROGRESS."
+  (save-excursion
+    (org-back-to-heading t)
+    (org-todo "IN PROGRESS")))
+
+(advice-add 'org-clock-multi-clock-in :after #'kwrooijen/org-clock-multi-set-in-progress)
+
 ;; Save org buffers after org-clock-multi operations
 (advice-add 'org-clock-multi-clock-in      :after #'org-save-all-org-buffers)
 (advice-add 'org-clock-multi-clock-out     :after #'org-save-all-org-buffers)
@@ -186,7 +195,7 @@ When TAG is non-nil, only show tasks that have that tag."
 (defun kwrooijen/org-todo-find-active-work ()
   "Select a TODO or IN PROGRESS :work: task and edit it."
   (interactive)
-  (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS") :tag "work"))
+  (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING") :tag "work"))
 
 (defun kwrooijen/org-todo-unarchive ()
   "Select a DONE task and change it back to TODO."

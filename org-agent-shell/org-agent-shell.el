@@ -70,12 +70,12 @@
         (goto-char (point-min))
         ;; Remove property drawers
         (while (re-search-forward
-                "^[ \t]*:PROPERTIES:.*?:END:[ \t]*\n?" nil t)
+                "^[ \t]*:PROPERTIES:\n\\(?:.*\n\\)*?[ \t]*:END:[ \t]*\n?" nil t)
           (replace-match ""))
         (goto-char (point-min))
         ;; Remove logbook drawers
         (while (re-search-forward
-                "^[ \t]*:LOGBOOK:.*?:END:[ \t]*\n?" nil t)
+                "^[ \t]*:LOGBOOK:\n\\(?:.*\n\\)*?[ \t]*:END:[ \t]*\n?" nil t)
           (replace-match ""))
         (goto-char (point-min))
         ;; Remove CLOSED/DEADLINE/SCHEDULED lines
@@ -144,8 +144,9 @@ Creates a git worktree and starts agent-shell with the heading body as input."
         (run-with-timer 1.5 nil
                         (lambda (wpath)
                           (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
-                            (with-current-buffer buf
-                              (agent-shell-insert :text "Read ticket.org and enter plan mode"))))
+                            (agent-shell-insert :text "Read ticket.org and enter plan mode"
+                                                :submit t
+                                                :shell-buffer buf)))
                         worktree-path)))))
 
 (defun org-agent-shell-open-shell ()
@@ -185,8 +186,9 @@ Creates a git worktree and starts agent-shell with the heading body as input."
       (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
         (with-temp-file ticket-file
           (insert body)))
-      (with-current-buffer buf
-        (agent-shell-insert :text "ticket.org has been updated. Read it again."))
+      (agent-shell-insert :text "ticket.org has been updated. Read it again."
+                          :submit t
+                          :shell-buffer buf)
       (message "Updated ticket.org and notified agent-shell"))))
 
 (defun org-agent-shell-review ()
