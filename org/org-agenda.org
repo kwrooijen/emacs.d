@@ -124,65 +124,99 @@ When TAG is non-nil, only show tasks that have that tag."
             (save-buffer)
             (kwrooijen/org-edit-subtree)))))))
 
+(defvar kwrooijen/org-todo-find--candidates nil
+  "Current candidates for `kwrooijen/org-todo-find-and-edit'.")
+
+(defun kwrooijen/org-todo-find--change-state ()
+  "Change the TODO state of the currently selected candidate."
+  (interactive)
+  (when-let* ((cand (nth vertico--index vertico--candidates))
+              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
+    (throw 'kwrooijen/org-todo-find--action (cons 'change-state marker))))
+
+(defvar kwrooijen/org-todo-find-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-t") #'kwrooijen/org-todo-find--change-state)
+    map)
+  "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
+
 (cl-defun kwrooijen/org-todo-find-and-edit (&key states tag)
   "Select a task in one of STATES and open it with edit-subtree.
 STATES is a list of todo state strings.
-When TAG is non-nil, only show tasks that have that tag."
-  (let (entries max-tag-width max-closed-width)
-    (dolist (file (org-agenda-files))
-      (with-current-buffer (find-file-noselect file)
-        (org-with-wide-buffer
-         (goto-char (point-min))
-         (while (re-search-forward org-heading-regexp nil t)
-           (when (and (member (org-get-todo-state) states)
-                      (or (null tag)
-                          (member tag (org-get-tags))))
-             (let* ((heading (org-get-heading t t t t))
-                    (tags (org-get-tags))
-                    (tag-str (if tags (string-join tags ":") ""))
-                    (state (or (org-get-todo-state) ""))
-                    (closed (or (org-entry-get nil "CLOSED") ""))
-                    (marker (point-marker)))
-               (push (list tag-str state closed heading marker) entries)))))))
-    (if (null entries)
-        (message "No %s tasks found" (string-join states "/"))
-      (setq entries (sort entries (lambda (a b)
-                                    (string> (nth 2 a) (nth 2 b)))))
-      (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
-      (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
-        (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
-        (let* ((candidates
-                (mapcar
-                 (lambda (entry)
-                   (let* ((tag-str (nth 0 entry))
-                          (state (nth 1 entry))
-                          (closed (nth 2 entry))
-                          (heading (nth 3 entry))
-                          (marker (nth 4 entry))
-                          (padded-tag (string-pad tag-str max-tag-width))
-                          (padded-state (propertize (string-pad state max-state-width)
-                                                    'face (org-get-todo-face state)))
-                          (padded-closed (string-pad closed max-closed-width))
-                          (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
-                                         "  "
-                                         padded-state
-                                         "  "
-                                         (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
-                                         "  " heading)))
-                     (cons label marker)))
-                 entries))
-             (collection (lambda (str pred action)
-                           (if (eq action 'metadata)
-                               '(metadata (display-sort-function . identity)
-                                          (cycle-sort-function . identity))
-                             (complete-with-action action (mapcar #'car candidates) str pred))))
-             (selection (completing-read "Select: " collection nil t))
-             (marker (cdr (assoc selection candidates))))
-          (when marker
-            (with-current-buffer (marker-buffer marker)
-              (goto-char marker)
-              (kwrooijen/org-edit-subtree)
-              (goto-char (point-min)))))))))
+When TAG is non-nil, only show tasks that have that tag.
+Press C-t to change the TODO state of the selected entry."
+  (let ((keep-going t))
+    (while keep-going
+      (setq keep-going nil)
+      (let (entries max-tag-width max-closed-width)
+        (dolist (file (org-agenda-files))
+          (with-current-buffer (find-file-noselect file)
+            (org-with-wide-buffer
+             (goto-char (point-min))
+             (while (re-search-forward org-heading-regexp nil t)
+               (when (and (member (org-get-todo-state) states)
+                          (or (null tag)
+                              (member tag (org-get-tags))))
+                 (let* ((heading (org-get-heading t t t t))
+                        (tags (org-get-tags))
+                        (tag-str (if tags (string-join tags ":") ""))
+                        (state (or (org-get-todo-state) ""))
+                        (closed (or (org-entry-get nil "CLOSED") ""))
+                        (marker (point-marker)))
+                   (push (list tag-str state closed heading marker) entries)))))))
+        (if (null entries)
+            (message "No %s tasks found" (string-join states "/"))
+          (setq entries (sort entries (lambda (a b)
+                                        (string> (nth 2 a) (nth 2 b)))))
+          (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
+          (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
+            (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
+            (let* ((candidates
+                    (mapcar
+                     (lambda (entry)
+                       (let* ((tag-str (nth 0 entry))
+                              (state (nth 1 entry))
+                              (closed (nth 2 entry))
+                              (heading (nth 3 entry))
+                              (marker (nth 4 entry))
+                              (padded-tag (string-pad tag-str max-tag-width))
+                              (padded-state (propertize (string-pad state max-state-width)
+                                                        'face (org-get-todo-face state)))
+                              (padded-closed (string-pad closed max-closed-width))
+                              (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                             "  "
+                                             padded-state
+                                             "  "
+                                             (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                             "  " heading)))
+                         (cons label marker)))
+                     entries))
+                   (kwrooijen/org-todo-find--candidates candidates)
+                   (collection (lambda (str pred action)
+                                 (if (eq action 'metadata)
+                                     '(metadata (display-sort-function . identity)
+                                                (cycle-sort-function . identity))
+                                   (complete-with-action action (mapcar #'car candidates) str pred))))
+                   (result (catch 'kwrooijen/org-todo-find--action
+                             (minibuffer-with-setup-hook
+                                 (lambda () (use-local-map (make-composed-keymap
+                                                            kwrooijen/org-todo-find-map
+                                                            (current-local-map))))
+                               (cons 'select (completing-read "Select: " collection nil t))))))
+              (pcase (car result)
+                ('select
+                 (when-let* ((marker (cdr (assoc (cdr result) candidates))))
+                   (with-current-buffer (marker-buffer marker)
+                     (goto-char marker)
+                     (kwrooijen/org-edit-subtree)
+                     (goto-char (point-min)))))
+                ('change-state
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-todo))))
+                 (setq keep-going t))))))))))
 
 (defun kwrooijen/org-todo-find-done-work ()
   "Select a DONE or CANCELLED :work: task and edit it."
