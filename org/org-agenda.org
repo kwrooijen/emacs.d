@@ -140,30 +140,37 @@ When TAG is non-nil, only show tasks that have that tag."
              (let* ((heading (org-get-heading t t t t))
                     (tags (org-get-tags))
                     (tag-str (if tags (string-join tags ":") ""))
+                    (state (or (org-get-todo-state) ""))
                     (closed (or (org-entry-get nil "CLOSED") ""))
                     (marker (point-marker)))
-               (push (list tag-str closed heading marker) entries)))))))
+               (push (list tag-str state closed heading marker) entries)))))))
     (if (null entries)
         (message "No %s tasks found" (string-join states "/"))
       (setq entries (sort entries (lambda (a b)
-                                    (string> (nth 1 a) (nth 1 b)))))
+                                    (string> (nth 2 a) (nth 2 b)))))
       (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
-      (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
-      (let* ((candidates
-              (mapcar
-               (lambda (entry)
-                 (let* ((tag-str (nth 0 entry))
-                        (closed (nth 1 entry))
-                        (heading (nth 2 entry))
-                        (marker (nth 3 entry))
-                        (padded-tag (string-pad tag-str max-tag-width))
-                        (padded-closed (string-pad closed max-closed-width))
-                        (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
-                                       "  "
-                                       (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
-                                       "  " heading)))
-                   (cons label marker)))
-               entries))
+      (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
+        (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
+        (let* ((candidates
+                (mapcar
+                 (lambda (entry)
+                   (let* ((tag-str (nth 0 entry))
+                          (state (nth 1 entry))
+                          (closed (nth 2 entry))
+                          (heading (nth 3 entry))
+                          (marker (nth 4 entry))
+                          (padded-tag (string-pad tag-str max-tag-width))
+                          (padded-state (propertize (string-pad state max-state-width)
+                                                    'face (org-get-todo-face state)))
+                          (padded-closed (string-pad closed max-closed-width))
+                          (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                         "  "
+                                         padded-state
+                                         "  "
+                                         (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                         "  " heading)))
+                     (cons label marker)))
+                 entries))
              (collection (lambda (str pred action)
                            (if (eq action 'metadata)
                                '(metadata (display-sort-function . identity)
@@ -171,11 +178,11 @@ When TAG is non-nil, only show tasks that have that tag."
                              (complete-with-action action (mapcar #'car candidates) str pred))))
              (selection (completing-read "Select: " collection nil t))
              (marker (cdr (assoc selection candidates))))
-        (when marker
-          (with-current-buffer (marker-buffer marker)
-            (goto-char marker)
-            (kwrooijen/org-edit-subtree)
-            (goto-char (point-min))))))))
+          (when marker
+            (with-current-buffer (marker-buffer marker)
+              (goto-char marker)
+              (kwrooijen/org-edit-subtree)
+              (goto-char (point-min)))))))))
 
 (defun kwrooijen/org-todo-find-done-work ()
   "Select a DONE or CANCELLED :work: task and edit it."
