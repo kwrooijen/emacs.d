@@ -150,18 +150,22 @@ Creates a git worktree and starts agent-shell with the heading body as input."
         (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
           (with-temp-file ticket-file
             (insert body))))
-      ;; Start agent-shell in worktree
-      (let ((default-directory worktree-path))
-        (agent-shell '(4)))
-      ;; Tell agent to read ticket.org
-      (when (and body (not (string-empty-p body)))
-        (run-with-timer 1.5 nil
-                        (lambda (wpath)
-                          (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
-                            (agent-shell-insert :text "Read ticket.org and enter plan mode"
-                                                :submit t
-                                                :shell-buffer buf)))
-                        worktree-path)))))
+      ;; Start agent-shell in worktree, or switch to existing one
+      (let ((existing (org-agent-shell--find-shell-buffer worktree-path))
+            (display-buffer-overriding-action '((display-buffer-use-some-window))))
+        (if existing
+            (pop-to-buffer existing)
+          (let ((default-directory worktree-path))
+            (agent-shell '(4)))
+          ;; Tell agent to read ticket.org
+          (when (and body (not (string-empty-p body)))
+            (run-with-timer 1.5 nil
+                            (lambda (wpath)
+                              (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
+                                (agent-shell-insert :text "Read ticket.org and enter plan mode"
+                                                    :submit t
+                                                    :shell-buffer buf)))
+                            worktree-path)))))))
 
 (defun org-agent-shell-open-shell ()
   "Switch to the agent-shell buffer for the current heading's worktree."
@@ -169,20 +173,22 @@ Creates a git worktree and starts agent-shell with the heading body as input."
   (let* ((worktree-path (org-agent-shell--worktree-path))
          (buf (org-agent-shell--find-shell-buffer worktree-path)))
     (if buf
-        (pop-to-buffer buf)
+        (pop-to-buffer buf '((display-buffer-use-some-window)))
       (user-error "No agent-shell found for %s" worktree-path))))
 
 (defun org-agent-shell-open-magit ()
   "Open magit-status in the worktree directory."
   (interactive)
-  (let ((default-directory (org-agent-shell--worktree-path)))
+  (let ((default-directory (org-agent-shell--worktree-path))
+        (display-buffer-overriding-action '((display-buffer-use-some-window))))
     (magit-status)))
 
 (defun org-agent-shell-diff ()
   "Show full branch diff from base branch."
   (interactive)
   (let ((default-directory (org-agent-shell--worktree-path))
-        (branch (org-entry-get nil "BRANCH")))
+        (branch (org-agent-shell--get-property "BRANCH"))
+        (display-buffer-overriding-action '((display-buffer-use-some-window))))
     (unless branch
       (user-error "No :BRANCH: property found"))
     (magit-diff-range (format "%s...%s" org-agent-shell-base-branch branch))))

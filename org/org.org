@@ -464,7 +464,7 @@ Org agenda files. All TODOs go in here.
   "c X"  'org-clock-multi-clock-cancel-all
   "a l"  'org-agent-shell-launch
   "a s"  'org-agent-shell-open-shell
-  "a m"  'org-agent-shell-open-magit
+  "a g"  'org-agent-shell-open-magit
   "a d"  'org-agent-shell-diff
   "a r"  'org-agent-shell-resend
   "a v"  'org-agent-shell-review
