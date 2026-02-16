@@ -117,7 +117,13 @@ Creates a git worktree and starts agent-shell with the heading body as input."
     (unless branch
       (user-error "No :BRANCH: property found"))
     (let* ((project-path (expand-file-name project))
-           (worktree-name (or worktree (agent-shell-worktree--generate-name)))
+           (worktree-name (or worktree
+                              (let ((clean-branch (replace-regexp-in-string
+                                                   "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
+                                                   "" branch)))
+                                (concat (file-name-nondirectory
+                                         (directory-file-name project-path))
+                                        "_" clean-branch))))
            (worktree-path (expand-file-name
                            worktree-name
                            (file-name-concat project-path
