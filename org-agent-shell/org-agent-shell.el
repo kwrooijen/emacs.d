@@ -179,7 +179,10 @@ Creates a git worktree and starts agent-shell with the heading body as input."
   (let* ((worktree-path (org-agent-shell--worktree-path))
          (buf (org-agent-shell--find-shell-buffer worktree-path)))
     (if buf
-        (pop-to-buffer buf '((display-buffer-use-some-window)))
+        (let ((win (get-buffer-window buf)))
+          (if (and win (window-live-p win))
+              (select-window win)
+            (pop-to-buffer buf '((display-buffer-use-some-window)))))
       (user-error "No agent-shell found for %s" worktree-path))))
 
 (defun org-agent-shell-open-magit ()
