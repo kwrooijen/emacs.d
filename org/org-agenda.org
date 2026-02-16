@@ -25,7 +25,8 @@ Automatically save any org buffers when making changes in org agenda.
   "Set the heading at point to IN PROGRESS."
   (save-excursion
     (org-back-to-heading t)
-    (org-todo "IN PROGRESS")))
+    (unless (string= (org-get-todo-state) "IN PROGRESS")
+      (org-todo "IN PROGRESS"))))
 
 (advice-add 'org-clock-multi-clock-in :after #'kwrooijen/org-clock-multi-set-in-progress)
 
