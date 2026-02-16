@@ -22,6 +22,8 @@
   `(let* ((org-clock-multi-clocks nil)  ; Start with clean state
           (org-clock-multi-persist-file (make-temp-file "org-clock-multi-test-persist-"))
           (--org-file-- (make-temp-file "org-clock-multi-test-org-" nil ".org"))
+          ;; Include temp file in agenda-files so --with-heading-at-key can find it
+          (org-agenda-files (list --org-file--))
           ;; Save original state to restore after test
           (--orig-clocks-- org-clock-multi-clocks))
      (unwind-protect
@@ -129,7 +131,8 @@
         (persist-file (make-temp-file "org-clock-multi-test-persist-")))
     (unwind-protect
         (let ((org-clock-multi-clocks nil)
-              (org-clock-multi-persist-file persist-file))
+              (org-clock-multi-persist-file persist-file)
+              (org-agenda-files (list org-file)))
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
           (with-current-buffer (find-file-noselect org-file)
@@ -163,6 +166,7 @@
     (unwind-protect
         (let ((org-clock-multi-clocks nil)
               (org-clock-multi-persist-file persist-file)
+              (org-agenda-files (list org-file))
               saved-marker)
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
@@ -360,7 +364,8 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
         (org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
     (unwind-protect
         (let ((org-clock-multi-persist-file test-file)
-              (org-clock-multi-clocks nil))
+              (org-clock-multi-clocks nil)
+              (org-agenda-files (list org-file)))
           ;; Create an org file and clock in
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
@@ -375,11 +380,10 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
             (setq org-clock-multi-clocks nil)
             (org-clock-multi-load-state)
             (should (= 1 (length org-clock-multi-clocks)))
-            ;; Verify key structure (file . id)
+            ;; Verify key is a CLOCK_MULTI_ID string
             (let* ((clock (car org-clock-multi-clocks))
                    (key (car clock)))
-              (should (stringp (car key)))  ; file path
-              (should (stringp (cdr key)))))) ; UUID
+              (should (stringp key)))))
       ;; Cleanup
       (delete-file test-file)
       (delete-file org-file)
@@ -392,7 +396,8 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
   "Test that CLOCK_MULTI_ID property is created on clock-in."
   (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
     (unwind-protect
-        (let ((org-clock-multi-clocks nil))
+        (let ((org-clock-multi-clocks nil)
+              (org-agenda-files (list org-file)))
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
           (with-current-buffer (find-file-noselect org-file)
@@ -414,7 +419,8 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
   "Test that existing CLOCK_MULTI_ID is reused, not regenerated."
   (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
     (unwind-protect
-        (let ((org-clock-multi-clocks nil))
+        (let ((org-clock-multi-clocks nil)
+              (org-agenda-files (list org-file)))
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
           (with-current-buffer (find-file-noselect org-file)
@@ -436,7 +442,8 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
   "Test that same heading cannot be clocked in twice using UUID."
   (let ((org-file (make-temp-file "org-clock-multi-test-org-" nil ".org")))
     (unwind-protect
-        (let ((org-clock-multi-clocks nil))
+        (let ((org-clock-multi-clocks nil)
+              (org-agenda-files (list org-file)))
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
           (with-current-buffer (find-file-noselect org-file)
@@ -550,7 +557,8 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
     (unwind-protect
         (let ((org-clock-multi-persist-file test-file)
               (org-clock-multi-clocks nil)
-              (org-clock-multi-paused nil))
+              (org-clock-multi-paused nil)
+              (org-agenda-files (list org-file)))
           ;; Create an org file, clock in, and pause
           (with-temp-file org-file
             (insert "* TODO Test task\n"))
@@ -567,10 +575,9 @@ CLOCK: [2024-01-14 Sun 09:00]--[2024-01-14 Sun 10:00] =>  1:00
             (org-clock-multi-load-state)
             ;; Paused state should be restored
             (should (= 1 (length org-clock-multi-paused)))
-            ;; Verify key structure (file . id)
+            ;; Verify key is a CLOCK_MULTI_ID string
             (let ((key (car org-clock-multi-paused)))
-              (should (stringp (car key)))  ; file path
-              (should (stringp (cdr key)))) ; UUID
+              (should (stringp key)))
             ;; The task should still be paused
             (should (org-clock-multi-paused-p))))
       ;; Cleanup

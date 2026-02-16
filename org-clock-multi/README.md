@@ -50,7 +50,9 @@ Load or require `org-clock-multi.el`. State is automatically loaded on startup f
 
 ## How It Works
 
-Each heading is identified by a `CLOCK_MULTI_ID` property (UUID generated via `org-id-new`). Active clocks are stored as `(key . start-minutes)` pairs where `key` is `(file . id)`. State is persisted to disk so clocks survive Emacs restarts.
+Each heading is identified by a `CLOCK_MULTI_ID` property (UUID generated via `org-id-new`). Active clocks are stored as `(id . start-minutes)` pairs where `id` is the `CLOCK_MULTI_ID` string. Headings are located by searching `org-agenda-files`. State is persisted to disk so clocks survive Emacs restarts.
+
+**Note:** Currently only headings in `org-agenda-files` are supported.
 
 LOGBOOK entries are written using `org-clock-find-position` and match org-clock's exact format, so `org-clock-sum` and agenda clock reports work normally.
 

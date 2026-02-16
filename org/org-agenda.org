@@ -43,24 +43,18 @@ Automatically save any org buffers when making changes in org agenda.
 (defun kwrooijen/org-clock-multi-skip-unless-clocked-or-paused ()
   "Skip function for agenda: skip unless heading is clocked or paused."
   (let ((dominated t))
-    (let* ((file (buffer-file-name))
-           (id (org-entry-get nil "CLOCK_MULTI_ID")))
-      (when (and file id)
-        (let ((key (cons file id)))
-          ;; Show if clocked in OR paused
-          (when (or (org-clock-multi--find-clock-by-key key)
-                    (member key org-clock-multi-paused))
-            (setq dominated nil)))))
+    (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
+      (when id
+        (when (or (org-clock-multi--find-clock-by-key id)
+                  (member id org-clock-multi-paused))
+          (setq dominated nil))))
     (when dominated
       (org-end-of-subtree t))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (setq org-agenda-custom-commands
-      '(("c" "My custom agenda"
-         ((agenda "")
-          (tags-todo "work")))
-        ("D" "Done tasks"
+      '(("D" "Done tasks"
          todo "DONE")
         ("k" "Currently clocked"
          ((alltodo "" ((org-agenda-skip-function

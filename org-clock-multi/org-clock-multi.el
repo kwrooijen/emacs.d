@@ -11,6 +11,10 @@
 ;; This package enables multiple simultaneous org clocks by maintaining
 ;; a shadow clock system alongside org-clock.  It reuses org-clock internals
 ;; for LOGBOOK writing to ensure compatibility.
+;;
+;; NOTE: Headings are identified by CLOCK_MULTI_ID and located by searching
+;; `org-agenda-files'.  Clocking into headings outside of agenda files is
+;; currently not supported.
 
 ;;; Code:
 
@@ -38,12 +42,14 @@
 
 (defvar org-clock-multi-clocks nil
   "List of active clocks.
-Each entry is a cons cell (KEY . START-MINUTES) where KEY is (file . id)
-and START-MINUTES is the clock-in time in minutes since epoch.")
+Each entry is a cons cell (ID . START-MINUTES) where ID is a
+CLOCK_MULTI_ID string and START-MINUTES is the clock-in time in
+minutes since epoch.")
 
 (defvar org-clock-multi-paused nil
-  "List of paused clock keys.
-Each entry is a KEY (file . id) for a task that was clocked out but paused.")
+  "List of paused clock IDs.
+Each entry is a CLOCK_MULTI_ID string for a task that was clocked out
+but paused.")
 
 (defun org-clock-multi-save-state ()
   "Save clock state to `org-clock-multi-persist-file'."
@@ -57,13 +63,6 @@ Each entry is a KEY (file . id) for a task that was clocked out but paused.")
     (prin1 org-clock-multi-paused (current-buffer))
     (insert "\n")))
 
-(defun org-clock-multi--filter-existing-files (entries key-fn)
-  "Filter ENTRIES, keeping only those where KEY-FN returns an existing file."
-  (cl-remove-if-not (lambda (entry)
-                      (let ((file (funcall key-fn entry)))
-                        (and file (file-exists-p file))))
-                    entries))
-
 (defun org-clock-multi-load-state ()
   "Load clock state from `org-clock-multi-persist-file'."
   (when (file-exists-p org-clock-multi-persist-file)
@@ -72,10 +71,8 @@ Each entry is a KEY (file . id) for a task that was clocked out but paused.")
       (goto-char (point-min))
       (let ((clocks (read (current-buffer)))
             (paused (read (current-buffer))))
-        (setq org-clock-multi-clocks
-              (org-clock-multi--filter-existing-files clocks #'caar))
-        (setq org-clock-multi-paused
-              (org-clock-multi--filter-existing-files paused #'car))))))
+        (setq org-clock-multi-clocks clocks)
+        (setq org-clock-multi-paused paused)))))
 
 ;;; Core Functions
 
@@ -91,14 +88,14 @@ Returns the ID string."
 
 (defun org-clock-multi--heading-key ()
   "Return a unique key for the heading at point.
-Returns (file . id) cons cell."
+Returns the CLOCK_MULTI_ID string."
   (save-excursion
     (org-back-to-heading t)
-    (cons (buffer-file-name) (org-clock-multi--get-or-create-id))))
+    (org-clock-multi--get-or-create-id)))
 
 (defun org-clock-multi--find-clock-by-key (key)
   "Find clock entry by KEY in `org-clock-multi-clocks'.
-KEY is (file . id). Returns the clock cons cell or nil."
+KEY is a CLOCK_MULTI_ID string. Returns the clock cons cell or nil."
   (cl-find-if (lambda (clock)
                 (equal key (car clock)))
               org-clock-multi-clocks))
@@ -150,30 +147,36 @@ If the task was paused, removes it from the paused list."
 
 (defmacro org-clock-multi--with-heading-at-key (key &rest body)
   "Execute BODY with point at the heading identified by KEY.
-KEY is (file . id). BODY is only executed if the heading is found.
+KEY is a CLOCK_MULTI_ID string. Searches `org-agenda-files' to locate
+the heading. BODY is only executed if the heading is found.
 Returns nil if the heading cannot be located."
   (declare (indent 1) (debug t))
-  (let ((file-sym (gensym "file-"))
-        (id-sym (gensym "id-"))
-        (buf-sym (gensym "buf-")))
-    `(let ((,file-sym (car ,key))
-           (,id-sym (cdr ,key)))
-       (when (and ,file-sym (file-exists-p ,file-sym))
-         (let ((,buf-sym (or (find-buffer-visiting ,file-sym)
-                             (find-file-noselect ,file-sym))))
-           (with-current-buffer ,buf-sym
-             (org-with-wide-buffer
-              (goto-char (point-min))
-              (when (re-search-forward
-                     (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$"
-                             (regexp-quote ,id-sym))
-                     nil t)
-                (org-back-to-heading t)
-                ,@body))))))))
+  (let ((id-sym (gensym "id-"))
+        (file-sym (gensym "file-"))
+        (buf-sym (gensym "buf-"))
+        (found-sym (gensym "found-")))
+    `(let ((,id-sym ,key)
+           (,found-sym nil))
+       (cl-block nil
+         (dolist (,file-sym (org-agenda-files))
+           (when (file-exists-p ,file-sym)
+             (let ((,buf-sym (or (find-buffer-visiting ,file-sym)
+                                 (find-file-noselect ,file-sym))))
+               (with-current-buffer ,buf-sym
+                 (org-with-wide-buffer
+                  (goto-char (point-min))
+                  (when (re-search-forward
+                         (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$"
+                                 (regexp-quote ,id-sym))
+                         nil t)
+                    (org-back-to-heading t)
+                    (setq ,found-sym (progn ,@body))
+                    (cl-return ,found-sym)))))))
+         ,found-sym))))
 
 (defun org-clock-multi--write-clock-entry (key start-minutes)
   "Write a LOGBOOK clock entry for heading at KEY with START-MINUTES.
-KEY is (file . id). START-MINUTES is minutes since epoch.
+KEY is a CLOCK_MULTI_ID string. START-MINUTES is minutes since epoch.
 Uses org-clock's format for compatibility."
   (let* ((end-minutes (org-clock-multi--current-minutes))
          (start-time (org-clock-multi--minutes-to-time start-minutes))
@@ -280,13 +283,11 @@ Returns (label . key) or nil if the heading cannot be found."
   (let* ((key (car clock))
          (start-minutes (cdr clock))
          (elapsed (- (org-clock-multi--current-minutes) start-minutes))
-         (heading (org-clock-multi--get-heading-for-key key))
-         (file (car key)))
+         (heading (org-clock-multi--get-heading-for-key key)))
     (when heading
-      (cons (format "%s (%s) [%s]"
+      (cons (format "%s (%s)"
                     heading
-                    (org-duration-from-minutes elapsed)
-                    (file-name-nondirectory file))
+                    (org-duration-from-minutes elapsed))
             key))))
 
 (defun org-clock-multi-clock-goto ()
@@ -299,8 +300,8 @@ Returns (label . key) or nil if the heading cannot be found."
            (selected (completing-read "Clock: " candidates nil t)))
       (when selected
         (let ((key (cdr (assoc selected candidates))))
-          (find-file (car key))
           (org-clock-multi--with-heading-at-key key
+            (switch-to-buffer (current-buffer))
             (org-show-entry)
             (org-reveal)))))))
 
@@ -364,14 +365,12 @@ Extracts the heading marker from the current agenda line."
         (let ((marker (or (org-get-at-bol 'org-hd-marker)
                           (org-get-at-bol 'org-marker))))
           (when marker
-            (let ((key (with-current-buffer (marker-buffer marker)
-                         (save-excursion
-                           (goto-char marker)
-                           (org-back-to-heading t)
-                           (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
-                             (when id
-                               (cons (buffer-file-name) id)))))))
-              (when (and key (org-clock-multi--find-clock-by-key key))
+            (let ((id (with-current-buffer (marker-buffer marker)
+                        (save-excursion
+                          (goto-char marker)
+                          (org-back-to-heading t)
+                          (org-entry-get nil "CLOCK_MULTI_ID")))))
+              (when (and id (org-clock-multi--find-clock-by-key id))
                 (let ((bol (line-beginning-position))
                       (eol (line-end-position)))
                   (add-text-properties bol eol
