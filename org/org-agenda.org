@@ -153,6 +153,11 @@ When TAG is non-nil, only show tasks that have that tag."
   (interactive)
   (kwrooijen/org-todo-find--throw-action 'clock-pause))
 
+(defun kwrooijen/org-todo-find--open-shell ()
+  "Open the agent-shell for the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'open-shell))
+
 (defun kwrooijen/org-todo-find--preview ()
   "Preview the currently selected candidate without closing the minibuffer."
   (interactive)
@@ -179,6 +184,7 @@ When TAG is non-nil, only show tasks that have that tag."
     (define-key map (kbd "C-i") #'kwrooijen/org-todo-find--clock-in)
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
+    (define-key map (kbd "C-s") #'kwrooijen/org-todo-find--open-shell)
     (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
@@ -321,7 +327,13 @@ Press C-t to change the TODO state of the selected entry."
                      (save-excursion
                        (goto-char marker)
                        (org-clock-multi-clock-pause))))
-                 (setq keep-going t))))))))))
+                 (setq keep-going t))
+                ('open-shell
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-agent-shell-open-shell)))))))))))))
 
 (defun kwrooijen/org-todo-find-done-work ()
   "Select a DONE or CANCELLED :work: task and edit it."
