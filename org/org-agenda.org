@@ -158,29 +158,19 @@ When TAG is non-nil, only show tasks that have that tag."
   (interactive)
   (when-let* ((cand (nth vertico--index vertico--candidates))
               (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
-    (let* ((old (get-buffer "*org-todo-preview*"))
-           (popup-win (and old (get-buffer-window old)))
-           ;; Create the edit-indirect buffer without displaying it
-           (buf (save-window-excursion
+    (let* ((buf (save-window-excursion
                   (with-current-buffer (marker-buffer marker)
                     (goto-char marker)
                     (kwrooijen/org-edit-subtree)
                     (goto-char (point-min))
-                    (current-buffer)))))
-      (cond
-       ;; Same buffer and already visible — do nothing
-       ((and (eq buf old) popup-win (window-live-p popup-win)))
-       ;; Same buffer but not visible — re-display it
-       ((eq buf old)
-        (popwin:display-buffer buf))
-       ;; Different buffer — swap it in
-       (t
-        (when old (kill-buffer old))
-        (with-current-buffer buf
-          (rename-buffer "*org-todo-preview*"))
-        (if (and popup-win (window-live-p popup-win))
-            (set-window-buffer popup-win buf)
-          (popwin:display-buffer buf)))))
+                    (current-buffer))))
+           (win (get-buffer-window buf)))
+      (if (and win (window-live-p win))
+          ;; Already visible — do nothing
+          nil
+        ;; Close existing popwin popup, then display the new buffer
+        (popwin:close-popup-window)
+        (popwin:display-buffer buf)))
     (select-window (active-minibuffer-window))))
 
 (defvar kwrooijen/org-todo-find-map
