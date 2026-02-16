@@ -127,6 +127,19 @@ When TAG is non-nil, only show tasks that have that tag."
 (defvar kwrooijen/org-todo-find--candidates nil
   "Current candidates for `kwrooijen/org-todo-find-and-edit'.")
 
+(defun kwrooijen/org-todo-find--kill-edit-indirect (marker)
+  "Kill any edit-indirect buffer covering MARKER's position.
+Signals an error if the edit-indirect buffer has unsaved changes."
+  (with-current-buffer (marker-buffer marker)
+    (when-let* ((ov (edit-indirect--search-for-edit-indirect
+                     (marker-position marker) (1+ (marker-position marker))))
+                (buf (overlay-get ov 'edit-indirect-buffer)))
+      (when (buffer-live-p buf)
+        (when (buffer-modified-p buf)
+          (user-error "Edit-indirect buffer has unsaved changes — save or abort it first"))
+        (with-current-buffer buf
+          (edit-indirect-abort))))))
+
 (defun kwrooijen/org-todo-find--throw-action (action)
   "Throw ACTION for the currently selected candidate."
   (when-let* ((cand (nth vertico--index vertico--candidates))
@@ -301,28 +314,36 @@ Press C-t to change the TODO state of the selected entry."
                      (kwrooijen/org-edit-subtree)
                      (goto-char (point-min)))))
                 ('change-state
-                 (let ((marker (cdr result)))
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
                    (with-current-buffer (marker-buffer marker)
                      (save-excursion
                        (goto-char marker)
                        (org-todo))))
                  (setq keep-going t))
                 ('clock-in
-                 (let ((marker (cdr result)))
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
                    (with-current-buffer (marker-buffer marker)
                      (save-excursion
                        (goto-char marker)
                        (org-clock-multi-clock-in))))
                  (setq keep-going t))
                 ('clock-out
-                 (let ((marker (cdr result)))
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
                    (with-current-buffer (marker-buffer marker)
                      (save-excursion
                        (goto-char marker)
                        (org-clock-multi-clock-out))))
                  (setq keep-going t))
                 ('clock-pause
-                 (let ((marker (cdr result)))
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
                    (with-current-buffer (marker-buffer marker)
                      (save-excursion
                        (goto-char marker)
