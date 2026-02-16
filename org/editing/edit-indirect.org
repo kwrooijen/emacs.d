@@ -11,12 +11,16 @@ Edit regions in separate buffers, like org-edit-special but for any region.
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-edit-subtree ()
   "Edit the current org subtree in an indirect buffer.
-Use C-c C-c to commit changes, C-c C-k to abort."
+Use C-c C-c to commit changes, C-c C-k to abort.
+If an indirect edit buffer already exists for this subtree, switch to it."
   (interactive)
   (org-back-to-heading t)
-  (let ((beg (point))
-        (end (save-excursion (org-end-of-subtree t) (point))))
-    (edit-indirect-region beg end t)
-    (org-mode)
-    (org-show-all)))
+  (let* ((beg (point))
+         (end (save-excursion (org-end-of-subtree t) (point)))
+         (existing (edit-indirect--search-for-edit-indirect beg end)))
+    (if existing
+        (switch-to-buffer (overlay-get existing 'edit-indirect-buffer))
+      (edit-indirect-region beg end t)
+      (org-mode)
+      (org-show-all))))
 #+END_SRC
