@@ -186,13 +186,21 @@ Creates a git worktree and starts agent-shell with the heading body as input."
 (defun org-agent-shell-diff ()
   "Show full branch diff from base branch."
   (interactive)
-  (let ((default-directory (org-agent-shell--worktree-path))
-        (branch (org-agent-shell--get-property "BRANCH"))
-        (display-buffer-overriding-action '((display-buffer-use-some-window)))
-        (magit-section-initial-visibility-alist '((file . hide))))
+  (let* ((default-directory (org-agent-shell--worktree-path))
+         (branch (org-agent-shell--get-property "BRANCH"))
+         (display-buffer-overriding-action '((display-buffer-use-some-window)))
+         (magit-section-initial-visibility-alist '((file . hide)))
+         (range (format "%s...%s" org-agent-shell-base-branch branch))
+         (stat (shell-command-to-string (format "git diff --stat %s" range))))
     (unless branch
       (user-error "No :BRANCH: property found"))
-    (magit-diff-range (format "%s...%s" org-agent-shell-base-branch branch))))
+    (magit-diff-range range)
+    (with-current-buffer (magit-get-mode-buffer 'magit-diff-mode)
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-min))
+          (insert (propertize stat 'face 'magit-diff-file-heading)
+                  "\n"))))))
 
 (defun org-agent-shell-resend ()
   "Rewrite ticket.org and tell the agent-shell to re-read it."
