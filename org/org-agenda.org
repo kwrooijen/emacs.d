@@ -167,14 +167,20 @@ When TAG is non-nil, only show tasks that have that tag."
                     (kwrooijen/org-edit-subtree)
                     (goto-char (point-min))
                     (current-buffer)))))
-      (when old (kill-buffer old))
-      (with-current-buffer buf
-        (rename-buffer "*org-todo-preview*"))
-      (if (and popup-win (window-live-p popup-win))
-          ;; Reuse the existing popup window
-          (set-window-buffer popup-win buf)
-        ;; First preview — let popwin create the popup
-        (popwin:display-buffer buf)))
+      (cond
+       ;; Same buffer and already visible — do nothing
+       ((and (eq buf old) popup-win (window-live-p popup-win)))
+       ;; Same buffer but not visible — re-display it
+       ((eq buf old)
+        (popwin:display-buffer buf))
+       ;; Different buffer — swap it in
+       (t
+        (when old (kill-buffer old))
+        (with-current-buffer buf
+          (rename-buffer "*org-todo-preview*"))
+        (if (and popup-win (window-live-p popup-win))
+            (set-window-buffer popup-win buf)
+          (popwin:display-buffer buf)))))
     (select-window (active-minibuffer-window))))
 
 (defvar kwrooijen/org-todo-find-map
