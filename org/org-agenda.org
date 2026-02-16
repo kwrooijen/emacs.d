@@ -208,8 +208,21 @@ Press C-t to change the TODO state of the selected entry."
                         (id (org-entry-get nil "CLOCK_MULTI_ID"))
                         (clocked (and id (org-clock-multi--find-clock-by-key id) t))
                         (paused (and id (not clocked) (member id org-clock-multi-paused) t))
-                        (marker (point-marker)))
-                   (push (list tag-str state closed heading marker clocked paused) entries)))))))
+                        (marker (point-marker))
+                        (project (org-entry-get nil "PROJECT" t))
+                        (worktree (org-entry-get nil "WORKTREE"))
+                        (agent-status
+                         (if (and project worktree)
+                             (let* ((wt-path (expand-file-name
+                                              worktree
+                                              (file-name-concat (expand-file-name project)
+                                                                agent-shell-worktree--subdirectory)))
+                                    (shell-buf (org-agent-shell--find-shell-buffer wt-path)))
+                               (if shell-buf
+                                   (agent-shell-manager--get-combined-status shell-buf)
+                                 (propertize "No Shell" 'face 'font-lock-comment-face)))
+                           "")))
+                   (push (list tag-str state closed heading marker clocked paused agent-status) entries)))))))
         (if (null entries)
             (message "No %s tasks found" (string-join states "/"))
           (setq entries (sort entries (lambda (a b)
@@ -222,7 +235,8 @@ Press C-t to change the TODO state of the selected entry."
                                            ((and (not pa) pb) nil)
                                            (t (string> (nth 2 a) (nth 2 b))))))))
           (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
-          (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
+          (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
+                (max-agent-width (apply #'max (mapcar (lambda (e) (string-width (nth 7 e))) entries))))
             (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
             (let* ((candidates
                     (mapcar
@@ -234,11 +248,15 @@ Press C-t to change the TODO state of the selected entry."
                               (marker (nth 4 entry))
                               (clocked (nth 5 entry))
                               (paused (nth 6 entry))
+                              (agent-status (nth 7 entry))
                               (padded-tag (string-pad tag-str max-tag-width))
+                              (padded-agent (string-pad agent-status max-agent-width))
                               (padded-state (propertize (string-pad state max-state-width)
                                                         'face (org-get-todo-face state)))
                               (padded-closed (string-pad closed max-closed-width))
                               (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                             "  "
+                                             padded-agent
                                              "  "
                                              padded-state
                                              "  "
