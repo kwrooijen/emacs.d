@@ -148,11 +148,17 @@ When TAG is non-nil, only show tasks that have that tag."
   (interactive)
   (kwrooijen/org-todo-find--throw-action 'clock-out))
 
+(defun kwrooijen/org-todo-find--clock-pause ()
+  "Pause the clock for the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-pause))
+
 (defvar kwrooijen/org-todo-find-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-t") #'kwrooijen/org-todo-find--change-state)
     (define-key map (kbd "C-i") #'kwrooijen/org-todo-find--clock-in)
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
+    (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
 
@@ -178,17 +184,21 @@ Press C-t to change the TODO state of the selected entry."
                         (tag-str (if tags (string-join tags ":") ""))
                         (state (or (org-get-todo-state) ""))
                         (closed (or (org-entry-get nil "CLOSED") ""))
-                        (clocked (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
-                                   (and id (org-clock-multi--find-clock-by-key id) t)))
+                        (id (org-entry-get nil "CLOCK_MULTI_ID"))
+                        (clocked (and id (org-clock-multi--find-clock-by-key id) t))
+                        (paused (and id (not clocked) (member id org-clock-multi-paused) t))
                         (marker (point-marker)))
-                   (push (list tag-str state closed heading marker clocked) entries)))))))
+                   (push (list tag-str state closed heading marker clocked paused) entries)))))))
         (if (null entries)
             (message "No %s tasks found" (string-join states "/"))
           (setq entries (sort entries (lambda (a b)
-                                        (let ((ca (nth 5 a)) (cb (nth 5 b)))
+                                        (let ((ca (nth 5 a)) (cb (nth 5 b))
+                                              (pa (nth 6 a)) (pb (nth 6 b)))
                                           (cond
                                            ((and ca (not cb)) t)
                                            ((and (not ca) cb) nil)
+                                           ((and pa (not pb)) t)
+                                           ((and (not pa) pb) nil)
                                            (t (string> (nth 2 a) (nth 2 b))))))))
           (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
           (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries))))
@@ -202,6 +212,7 @@ Press C-t to change the TODO state of the selected entry."
                               (heading (nth 3 entry))
                               (marker (nth 4 entry))
                               (clocked (nth 5 entry))
+                              (paused (nth 6 entry))
                               (padded-tag (string-pad tag-str max-tag-width))
                               (padded-state (propertize (string-pad state max-state-width)
                                                         'face (org-get-todo-face state)))
@@ -214,14 +225,17 @@ Press C-t to change the TODO state of the selected entry."
                                              "  " heading)))
                          (when clocked
                            (put-text-property 0 1 'kwrooijen/clocked t label))
+                         (when paused
+                           (put-text-property 0 1 'kwrooijen/paused t label))
                          (cons label marker)))
                      entries))
                    (kwrooijen/org-todo-find--candidates candidates)
                    (group-fn (lambda (cand transform)
                                (if transform cand
-                                 (if (get-text-property 0 'kwrooijen/clocked cand)
-                                     "Clocked In"
-                                   "Tasks"))))
+                                 (cond
+                                  ((get-text-property 0 'kwrooijen/clocked cand) "Clocked In")
+                                  ((get-text-property 0 'kwrooijen/paused cand) "Paused")
+                                  (t "Tasks")))))
                    (collection (lambda (str pred action)
                                  (if (eq action 'metadata)
                                      `(metadata (display-sort-function . identity)
@@ -261,6 +275,13 @@ Press C-t to change the TODO state of the selected entry."
                      (save-excursion
                        (goto-char marker)
                        (org-clock-multi-clock-out))))
+                 (setq keep-going t))
+                ('clock-pause
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-pause))))
                  (setq keep-going t))))))))))
 
 (defun kwrooijen/org-todo-find-done-work ()
