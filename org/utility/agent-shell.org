@@ -146,15 +146,39 @@ TOTAL counts all live agent-shell buffers."
   "Switch to an agent-shell buffer using completing-read."
   (interactive)
   (let* ((buffers (seq-filter #'buffer-live-p (agent-shell-buffers)))
-         (candidates
+         (entries
           (mapcar (lambda (buf)
                     (let* ((name (buffer-name buf))
-                           (status (agent-shell-manager--get-status buf)))
-                      (cons (format "%s [%s]" name status) buf)))
+                           (status (agent-shell-manager--get-combined-status buf))
+                           (dir (abbreviate-file-name
+                                 (with-current-buffer buf default-directory))))
+                      (list status dir name buf)))
                   buffers)))
-    (if (null candidates)
+    (if (null entries)
         (message "No agent-shell buffers")
-      (let* ((selected (completing-read "Switch to agent: " candidates nil t))
+      (let* ((max-status-width (apply #'max (mapcar (lambda (e) (string-width (nth 0 e))) entries)))
+             (max-dir-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
+             (candidates
+              (mapcar (lambda (entry)
+                        (let* ((status (nth 0 entry))
+                               (dir (nth 1 entry))
+                               (name (nth 2 entry))
+                               (buf (nth 3 entry))
+                               (padded-status (string-pad status max-status-width))
+                               (padded-name (string-pad name max-dir-width))
+                               (label (concat padded-status
+                                              "  "
+                                              padded-name
+                                              "  "
+                                              (propertize dir 'face 'kwrooijen/faded-fg-face))))
+                          (cons label buf)))
+                      entries))
+             (collection (lambda (str pred action)
+                           (if (eq action 'metadata)
+                               '(metadata (display-sort-function . identity)
+                                          (cycle-sort-function . identity))
+                             (complete-with-action action (mapcar #'car candidates) str pred))))
+             (selected (completing-read "Switch to agent: " collection nil t))
              (buffer (cdr (assoc selected candidates))))
         (when buffer
           (pop-to-buffer buffer))))))
