@@ -56,6 +56,12 @@ When in an edit-indirect buffer, look up the property in the parent buffer."
             (org-entry-get nil property t))))
     (org-entry-get nil property t)))
 
+(defun org-agent-shell--base-branch ()
+  "Return the base branch for the current heading.
+Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
+  (or (org-agent-shell--get-property "BASE")
+      org-agent-shell-base-branch))
+
 (defun org-agent-shell--worktree-path ()
   "Compute the worktree path for the current heading."
   (let ((project (org-agent-shell--get-property "PROJECT"))
@@ -148,7 +154,7 @@ Creates a git worktree and starts agent-shell with the heading body as input."
                             (format "git worktree add -b %s %s %s 2>&1"
                                     (shell-quote-argument branch)
                                     (shell-quote-argument worktree-path)
-                                    (shell-quote-argument org-agent-shell-base-branch))))))
+                                    (shell-quote-argument (org-agent-shell--base-branch)))))))
             (unless (file-exists-p worktree-path)
               (user-error "Failed to create worktree: %s" output)))))
       ;; Write ticket.org in worktree
@@ -199,7 +205,7 @@ Creates a git worktree and starts agent-shell with the heading body as input."
          (branch (org-agent-shell--get-property "BRANCH"))
          (display-buffer-overriding-action '((display-buffer-use-some-window)))
          (magit-section-initial-visibility-alist '((file . hide)))
-         (range (format "%s...%s" org-agent-shell-base-branch branch))
+         (range (format "%s...%s" (org-agent-shell--base-branch) branch))
          (stat (shell-command-to-string (format "git diff --stat %s" range))))
     (unless branch
       (user-error "No :BRANCH: property found"))
@@ -251,8 +257,8 @@ With prefix argument, also relaunch."
     (let ((default-directory worktree-path))
       (shell-command-to-string
        (format "git reset --hard %s"
-               (shell-quote-argument org-agent-shell-base-branch))))
-    (message "Reset %s to %s" branch org-agent-shell-base-branch)
+               (shell-quote-argument (org-agent-shell--base-branch)))))
+    (message "Reset %s to %s" branch (org-agent-shell--base-branch))
     ;; Optionally relaunch
     (when (y-or-n-p "Relaunch agent-shell? ")
       (org-agent-shell-launch))))
