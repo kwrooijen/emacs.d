@@ -10,7 +10,7 @@
 ;; Extract clock data from org agenda files and export to various formats.
 ;;
 ;; Extraction returns a list of plists:
-;;   (:date "2025-12-01" :tags ("work" "tool2match") :hours 1 :minutes 7)
+;;   (:date "2025-12-01" :tags ("work" "company1") :hours 1 :minutes 7)
 ;;
 ;; Export functions consume this data to produce CSV, bar charts, etc.
 
