@@ -390,6 +390,7 @@ modes. These keys are configurable through the variables
   "s" '(:ignore t :which-key "Search")
   "b" '(:ignore t :which-key "Buffers")
   "f" '(:ignore t :which-key "Files")
+  "d" '(:ignore t :which-key "Denote")
   "p" '(:ignore t :which-key "Project")
   "w" '(:ignore t :which-key "Window")
   "r" '(:ignore t :which-key "Resume")
@@ -453,10 +454,11 @@ Window keys
   "w t" '(transpose-window-layout :repeat t)
   "w c" '(window-layout-rotate-clockwise :repeat t)
   "w C" '(window-layout-rotate-anticlockwise :repeat t)
-  "w a" 'window-layout-flip-leftright)
-  "w d" 'window-layout-flip-leftright)
-  "w w" 'window-layout-flip-topdown)
-  "w s" 'window-layout-flip-topdown))
+  "w a" 'window-layout-flip-leftright
+  "w d" 'window-layout-flip-leftright
+  "w w" 'window-layout-flip-topdown
+  "w s" 'window-layout-flip-topdown
+  "w i" 'widen)
 #+END_SRC
 
 Resume keys
@@ -475,6 +477,7 @@ Resume keys
 #+BEGIN_SRC emacs-lisp
 (general-define-key
  :keymaps 'minibuffer-mode-map
+ "M--" 'describe-key
  "M-v" 'clipboard-yank
  "M-k" 'previous-line-or-history-element
  "M-j" 'next-line-or-history-element)
@@ -492,7 +495,8 @@ Navigation
 (kwrooijen/leader
   "f r" '(kwrooijen/dired-project-root :which-key "Open project root in Dired")
   "f f" '(find-file :which-key "Find File")
-  "f d" '(dired-jump :which-key "Open current directory"))
+  "f d" '(dired-jump :which-key "Open current directory")
+  "f c" '(org-clock-multi-clock-goto :which-key "Go to active clock"))
 #+END_SRC
 
 Buffer
@@ -533,74 +537,177 @@ Help
 #+LEXICAL_BINDING: nil
 #+PRIORITY: 2
 
-M-x ~kwrooijen/hex-colors-enable~
+* Nord Theme
+:PROPERTIES:
+:PACKAGE: nord-theme
+:STRAIGHT: (:host github :repo "nordtheme/emacs")
+:END:
 
-#FFFFFF
-#ECEFF4
-#2E3440
-#2D323E
-#3B4252
-#434C5E
-#616E88
-#81A1C1
-#D08770
-#BF616A
-#FFC16D
+A modular theming framework built on the Nord color palette.
 
- :strong     "#FFFFFF"
- :foreground "#ECEFF4"
- :subtle     "#434C5E"
- :faded      "#616E88"
- :salient    "#81A1C1"
- :popout     "#D08770"
- :error      "#BF616A"
- :warning    "#FFC16D"
+** Color Reference
 
- ;; == Tokyo
- :background "#222436"
- :darken     "#1e2030"
- :highlight  "#2f334d")
+Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
 
-* Functions
+| Semantic    | Hex     | Description                          |
+|-------------+---------+--------------------------------------|
+| strong      | #FFFFFF | Primary emphasis, bold text          |
+| foreground  | #ECEFF4 | Default text                         |
+| subtle      | #434C5E | Secondary, muted elements            |
+| faded       | #616E88 | De-emphasized, comments              |
+| salient     | #81A1C1 | Accent, links, keywords              |
+| popout      | #D08770 | Strings, special callouts            |
+| error       | #BF616A | Error states                         |
+| warning     | #FFC16D | Warning states                       |
+| success     | #A3BE8C | Success states                       |
+| info        | #88C0D0 | Informational highlights             |
+| background  | #222436 | Main background                      |
+| darken      | #1e2030 | Darker background (sidebars, blocks) |
+| highlight   | #2f334d | Selection, cursor line               |
+
+** Init :init:
+
+*** Palette Definition
 
 #+BEGIN_SRC emacs-lisp
+(require 'color)
 
-(defun kwrooijen/define-face (face color &optional color2)
-  ;; TODO create combinations
-  ;; face/darken-       ;; darken foreground
-  ;; face/-darken       ;; darken background
-  ;; face/darken-darken ;; darken foreground, darken background
-  ;; face/subtle-darken ;; subtle foreground, darken background
-;; e.g. darken-white, white-darken, subtle-popout, highlight-foreground.
+(defgroup kwrooijen/theme nil
+  "Kwrooijen theme configuration."
+  :group 'faces)
 
-  (eval `(defface ,(intern (format "kwrooijen/%s-bg-face" face)) `((t (:background ,color))) ""))
-  (eval `(defface ,(intern (format "kwrooijen/%s-fg-face" face)) `((t (:foreground ,color))) ""))
-  (eval `(defface ,(intern (format "kwrooijen/%s-fb-face" face)) `((t (:foreground ,color :background ,(or color2 color)))) "")))
+(defvar kwrooijen/palette-dark
+  '(:strong     "#FFFFFF"
+    :foreground "#ECEFF4"
+    :subtle     "#434C5E"
+    :faded      "#616E88"
+    :salient    "#81A1C1"
+    :popout     "#D08770"
+    :error      "#BF616A"
+    :warning    "#FFC16D"
+    :success    "#A3BE8C"
+    :info       "#88C0D0"
+    :background "#222436"
+    :darken     "#1e2030"
+    :highlight  "#2f334d")
+  "Dark theme palette.")
 
-(defun kwrooijen/set-theme (&rest opts)
-  (kwrooijen/define-face 'background (plist-get opts :background))
-  (kwrooijen/define-face 'foreground (plist-get opts :foreground))
-  (kwrooijen/define-face 'highlight (plist-get opts :highlight))
-  (kwrooijen/define-face 'subtle (plist-get opts :subtle))
-  (kwrooijen/define-face 'strong (plist-get opts :strong))
-  (kwrooijen/define-face 'salient (plist-get opts :salient))
-  (kwrooijen/define-face 'popout (plist-get opts :popout))
-  (kwrooijen/define-face 'faded (plist-get opts :faded))
-  (kwrooijen/define-face 'darken (plist-get opts :darken))
-  (kwrooijen/define-face 'faded-darken (plist-get opts :faded) (plist-get opts :darken))
-  (kwrooijen/define-face 'error (plist-get opts :error))
-  (kwrooijen/define-face 'warning (plist-get opts :error)))
+(defvar kwrooijen/palette-light
+  '(:strong     "#000000"
+    :foreground "#101010"
+    :subtle     "#9099AB"
+    :faded      "#7A8599"
+    :salient    "#3B6EA8"
+    :popout     "#C35D2A"
+    :error      "#C33C54"
+    :warning    "#AC8300"
+    :success    "#6A9A3A"
+    :info       "#2C9A9A"
+    :background "#FAFAFA"
+    :darken     "#F0F0F0"
+    :highlight  "#E5E5E5")
+  "Light theme palette (basic, can be improved).")
+
+(defvar kwrooijen/palette kwrooijen/palette-dark
+  "Active color palette.")
+
+(defvar kwrooijen/theme-variant 'nord
+  "Base theme to load (nord).")
+
+(defvar kwrooijen/font "Roboto Mono"
+  "Default font family.")
+#+END_SRC
+
+*** Color Access API
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen-color (name)
+  "Get color NAME from the active palette.
+NAME should be a keyword like :salient, :error, etc."
+  (plist-get kwrooijen/palette name))
+
+(defun kwrooijen-colors ()
+  "Return list of all color names in the palette."
+  (cl-loop for (key _val) on kwrooijen/palette by #'cddr
+           collect key))
+#+END_SRC
+
+*** Color Transformation Functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/color-increase-brightness (hex &optional percent)
+  "Adjust brightness of HEX by PERCENT (default 10).
+Positive values brighten, negative values darken.
+Returns a #RRGGBB string."
+  (let* ((p (/ (or percent 10) 100.0))
+         (rgb (color-name-to-rgb hex))
+         (adjusted
+          (mapcar
+           (lambda (c)
+             (cond
+              ((> p 0) (min 1.0 (+ c (* (- 1.0 c) p))))
+              ((< p 0) (max 0.0 (* c (+ 1.0 p))))
+              (t c)))
+           rgb)))
+    (apply #'color-rgb-to-hex (append adjusted (list 2)))))
+
+(defun kwrooijen/color-increase-saturation (hex &optional percent)
+  "Adjust saturation of HEX by PERCENT (default 10).
+Returns a #RRGGBB string."
+  (let* ((p (/ (or percent 10) 100.0))
+         (rgb (color-name-to-rgb hex))
+         (hsl (apply #'color-rgb-to-hsl rgb))
+         (h (nth 0 hsl))
+         (s (nth 1 hsl))
+         (l (nth 2 hsl))
+         (new-s (min 1.0 (+ s (* (- 1.0 s) p))))
+         (new-rgb (color-hsl-to-rgb h new-s l)))
+    (apply #'color-rgb-to-hex (append new-rgb (list 2)))))
+#+END_SRC
+
+*** Face Generation System
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/face-registry '()
+  "Registry of all generated theme faces.")
+
+(defun kwrooijen/define-face (name color &optional bg-color)
+  "Define faces for semantic NAME with COLOR.
+Creates three faces:
+  - kwrooijen/NAME-fg-face (foreground only)
+  - kwrooijen/NAME-bg-face (background only)
+  - kwrooijen/NAME-fb-face (foreground + background)
+Optional BG-COLOR sets a different background for fb-face."
+  (let ((fg-face (intern (format "kwrooijen/%s-fg-face" name)))
+        (bg-face (intern (format "kwrooijen/%s-bg-face" name)))
+        (fb-face (intern (format "kwrooijen/%s-fb-face" name))))
+    ;; Define faces if they don't exist
+    (unless (facep fg-face)
+      (eval `(defface ,fg-face '((t (:foreground ,color))) "")))
+    (unless (facep bg-face)
+      (eval `(defface ,bg-face '((t (:background ,color))) "")))
+    (unless (facep fb-face)
+      (eval `(defface ,fb-face '((t (:foreground ,color :background ,(or bg-color color)))) "")))
+    ;; Update face attributes
+    (set-face-attribute fg-face nil :foreground color)
+    (set-face-attribute bg-face nil :background color)
+    (set-face-attribute fb-face nil
+                        :foreground color
+                        :background (or bg-color color))
+    ;; Register faces
+    (cl-pushnew fg-face kwrooijen/face-registry)
+    (cl-pushnew bg-face kwrooijen/face-registry)
+    (cl-pushnew fb-face kwrooijen/face-registry)))
 
 (defun kwrooijen/reset-face-attributes (&rest faces)
-  "Reset all attributes of the given FACE."
+  "Reset all attributes of FACES to unspecified."
   (dolist (face faces)
     (set-face-attribute
      face nil
      :foreground 'unspecified
+     :background 'unspecified
      :inherit 'unspecified
      :stipple 'unspecified
-     :background 'unspecified
-     :foreground 'unspecified
      :inverse-video 'unspecified
      :box 'unspecified
      :strike-through 'unspecified
@@ -614,6 +721,8 @@ M-x ~kwrooijen/hex-colors-enable~
      :family 'unspecified)))
 
 (defun kwrooijen/reset-inherit-face! (&rest face-pairs)
+  "Reset FACE-PAIRS and set inheritance.
+FACE-PAIRS is a list of (face inherit-face) pairs."
   (dolist (face-pair (-partition 2 face-pairs))
     (let ((face (car face-pair))
           (inherit-face (cadr face-pair)))
@@ -621,114 +730,133 @@ M-x ~kwrooijen/hex-colors-enable~
       (set-face-attribute face nil :inherit inherit-face))))
 #+END_SRC
 
-* Nord
-:PROPERTIES:
-:PACKAGE: nord-theme
-:STRAIGHT: (:host github :repo "nordtheme/emacs")
-:END:
+*** Theme Application
 
-Install the Roboto font
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/apply-palette (palette)
+  "Apply PALETTE to generate all base faces."
+  (setq kwrooijen/palette palette)
+  ;; Generate base semantic faces
+  (kwrooijen/define-face 'background  (plist-get palette :background))
+  (kwrooijen/define-face 'foreground  (plist-get palette :foreground))
+  (kwrooijen/define-face 'strong      (plist-get palette :strong))
+  (kwrooijen/define-face 'faded       (plist-get palette :faded))
+  (kwrooijen/define-face 'subtle      (plist-get palette :subtle))
+  (kwrooijen/define-face 'salient     (plist-get palette :salient))
+  (kwrooijen/define-face 'popout      (plist-get palette :popout))
+  (kwrooijen/define-face 'error       (plist-get palette :error))
+  (kwrooijen/define-face 'warning     (plist-get palette :warning))
+  (kwrooijen/define-face 'success     (plist-get palette :success))
+  (kwrooijen/define-face 'info        (plist-get palette :info))
+  (kwrooijen/define-face 'darken      (plist-get palette :darken))
+  (kwrooijen/define-face 'highlight   (plist-get palette :highlight))
+  ;; Composite faces (foreground + different background)
+  (kwrooijen/define-face 'faded-darken
+                         (plist-get palette :faded)
+                         (plist-get palette :darken))
+  ;; Update theme default face
+  (custom-theme-set-faces
+   kwrooijen/theme-variant
+   `(default ((t (:foreground ,(plist-get palette :foreground)
+                  :background ,(plist-get palette :background)))))))
 
-#+BEGIN_SRC bash
-brew tap homebrew/cask-fonts
-brew install --cask font-roboto-mono
+(defun kwrooijen/apply-core-faces ()
+  "Apply theme faces to core Emacs faces."
+  ;; Bold
+  (kwrooijen/reset-inherit-face! 'bold 'kwrooijen/strong-fg-face)
+  (set-face-attribute 'bold nil :weight 'bold)
+  ;; Basic UI faces
+  (kwrooijen/reset-inherit-face!
+   'secondary-selection 'kwrooijen/darken-bg-face
+   'region              'kwrooijen/highlight-bg-face
+   'highlight           'kwrooijen/highlight-bg-face
+   'success             'kwrooijen/success-fg-face
+   'error               'kwrooijen/error-fg-face
+   'warning             'kwrooijen/warning-fg-face
+   'button              'kwrooijen/popout-fg-face
+   'fringe              'kwrooijen/background-bg-face
+   'minibuffer-prompt   'kwrooijen/salient-fg-face
+   'header-line         'kwrooijen/foreground-fg-face)
+  ;; Search faces
+  (kwrooijen/reset-inherit-face!
+   'isearch        'kwrooijen/faded-bg-face
+   'lazy-highlight 'kwrooijen/subtle-bg-face
+   'match          'bold)
+  ;; Font-lock faces
+  (kwrooijen/reset-inherit-face!
+   'font-lock-comment-face       'kwrooijen/faded-fg-face
+   'font-lock-doc-face           'kwrooijen/faded-fg-face
+   'font-lock-string-face        'kwrooijen/popout-fg-face
+   'font-lock-constant-face      'kwrooijen/salient-fg-face
+   'font-lock-warning-face       'kwrooijen/popout-fg-face
+   'font-lock-function-name-face 'kwrooijen/strong-fg-face
+   'font-lock-variable-name-face 'kwrooijen/strong-fg-face
+   'font-lock-builtin-face       'kwrooijen/salient-fg-face
+   'font-lock-type-face          'kwrooijen/salient-fg-face
+   'font-lock-keyword-face       'kwrooijen/salient-fg-face)
+  ;; Dired
+  (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face))
+
+(defun kwrooijen/set-dark-theme ()
+  "Activate dark theme."
+  (interactive)
+  (kwrooijen/apply-palette kwrooijen/palette-dark)
+  (kwrooijen/apply-core-faces)
+  (set-frame-parameter nil 'background-color (kwrooijen-color :background)))
+
+(defun kwrooijen/set-light-theme ()
+  "Activate light theme."
+  (interactive)
+  (kwrooijen/apply-palette kwrooijen/palette-light)
+  (kwrooijen/apply-core-faces)
+  (set-frame-parameter nil 'background-color (kwrooijen-color :background)))
+
+(defun kwrooijen/toggle-theme ()
+  "Toggle between dark and light themes."
+  (interactive)
+  (if (equal kwrooijen/palette kwrooijen/palette-dark)
+      (kwrooijen/set-light-theme)
+    (kwrooijen/set-dark-theme)))
 #+END_SRC
 
+*** Initialize Theme
 
-** init :init:
 #+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/theme 'nord)
-
-(defvar kwrooijen/font "Roboto Mono")
-
+;; Load base nord theme
 (let ((inhibit-message t)
       (message-log-max nil))
-  (load-theme kwrooijen/theme t))
+  (load-theme kwrooijen/theme-variant t))
 
-(set-face-attribute 'default nil :family kwrooijen/font)
+;; Set font
+(set-face-attribute 'default nil
+                    :family kwrooijen/font
+                    :weight 'thin)
 
-(kwrooijen/set-theme
- ;; == Original
- :strong     "#FFFFFF"
- :foreground "#ECEFF4"
- ;; :background "#2E3440"
- ;; :darken     "#2D323E"
- ;; :highlight  "#3B4252"
- :subtle     "#434C5E"
- :faded      "#616E88"
- :salient    "#81A1C1"
- :popout     "#D08770"
- :error      "#BF616A"
- :warning    "#FFC16D"
-
- ;; == Tokyo
- :background "#222436"
- :darken     "#1e2030"
- :highlight  "#2f334d")
-
-(set-frame-parameter nil 'background-color
-                        (face-attribute 'kwrooijen/background-bg-face :background))
-(custom-theme-set-faces
- kwrooijen/theme
- `(default ((()
-             (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)
-              :background ,(face-attribute 'kwrooijen/background-bg-face :background))))))
-
-(set-face-attribute 'button nil :box 'unspecified)
-
-(kwrooijen/reset-inherit-face!
- 'isearch        'kwrooijen/faded-bg-face
- 'lazy-highlight 'kwrooijen/subtle-bg-face)
-
-(kwrooijen/reset-inherit-face!
- 'error   'kwrooijen/error-fg-face
- 'warning 'kwrooijen/warning-fg-face)
-
-(kwrooijen/reset-inherit-face!
- 'font-lock-comment-face       'kwrooijen/faded-fg-face
- 'font-lock-doc-face           'kwrooijen/faded-fg-face
- 'font-lock-string-face        'kwrooijen/popout-fg-face
- 'font-lock-constant-face      'kwrooijen/salient-fg-face
- 'font-lock-warning-face       'kwrooijen/popout-fg-face
- 'font-lock-function-name-face 'kwrooijen/strong-fg-face
- 'font-lock-variable-name-face 'kwrooijen/strong-fg-face
- 'font-lock-builtin-face       'kwrooijen/salient-fg-face
- 'font-lock-type-face          'kwrooijen/salient-fg-face
- 'font-lock-keyword-face       'kwrooijen/salient-fg-face)
-
-(kwrooijen/reset-inherit-face! 'match 'bold)
-(kwrooijen/reset-inherit-face! 'minibuffer-prompt 'kwrooijen/salient-fg-face)
-
-(kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face)
-
-(set-face-attribute 'highlight nil :foreground 'unspecified)
-(set-face-attribute 'bold nil :foreground "#ffffff" :weight 'bold)
-
-(set-face-attribute 'fringe nil :inherit 'kwrooijen/background-bg-face
-:background 'unspecified)
-
-(kwrooijen/reset-inherit-face! 'header-line 'kwrooijen/foreground-fg-face)
+;; Apply dark theme
+(kwrooijen/set-dark-theme)
 #+END_SRC
 
+* Font Size
+:PROPERTIES:
+:PACKAGE: frame
+:END:
 
-* Theme
+** Init :init:
+
 #+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/default-font-size
-  200
-  "Default font size."
+(defcustom kwrooijen/default-font-size 200
+  "Default font size (in 1/10 pt)."
   :type 'integer
-  :group 'kwrooijen)
+  :group 'kwrooijen/theme)
 
-(defcustom kwrooijen/font-step-size
-  20
-  "Font size step size."
+(defcustom kwrooijen/font-step-size 20
+  "Font size adjustment step."
   :type 'integer
-  :group 'kwrooijen)
+  :group 'kwrooijen/theme)
 
 (defun kwrooijen/font-size-set (size)
-  "Adjust the global font size by DELTA."
-  (let ((current-size (face-attribute 'default :height)))
-    (set-face-attribute 'default nil :height size)))
+  "Set global font SIZE."
+  (set-face-attribute 'default nil :height size))
 
 (defun kwrooijen/font-size-increase ()
   "Increase global font size."
@@ -741,7 +869,7 @@ brew install --cask font-roboto-mono
   (kwrooijen/font-size-set (- (face-attribute 'default :height) kwrooijen/font-step-size)))
 
 (defun kwrooijen/font-size-reset ()
-  "Decrease global font size."
+  "Reset global font size to default."
   (interactive)
   (kwrooijen/font-size-set kwrooijen/default-font-size))
 
@@ -753,72 +881,94 @@ brew install --cask font-roboto-mono
  "C-x C-0" 'kwrooijen/font-size-reset)
 #+END_SRC
 
+* Window Divider
+:PROPERTIES:
+:PACKAGE: frame
+:END:
 
-* Helper functions
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'window-divider             'kwrooijen/background-fb-face
+ 'window-divider-first-pixel 'kwrooijen/background-fb-face
+ 'window-divider-last-pixel  'kwrooijen/background-fb-face
+ 'vertical-border            'kwrooijen/background-fb-face)
+
+(setq window-divider-default-right-width 24)
+(setq window-divider-default-places 'right-only)
+(window-divider-mode 1)
+#+END_SRC
+
+* Utilities
+
+** Hex Color Preview
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/hex-colors-enable ()
+  "Enable hex color preview in current buffer."
   (interactive)
   (font-lock-add-keywords
    nil
    '(("#[[:xdigit:]]\\{6\\}"
       (0 (put-text-property (match-beginning 0) (match-end 0)
                             'face (list :foreground (match-string-no-properties 0)))))))
-  (font-lock-mode -1)
-  (font-lock-mode 1))
+  (font-lock-flush))
 
 (defun kwrooijen/hex-colors-disable ()
+  "Disable hex color preview in current buffer."
   (interactive)
   (font-lock-remove-keywords
    nil
    '(("#[[:xdigit:]]\\{6\\}"
       (0 (put-text-property (match-beginning 0) (match-end 0)
                             'face (list :foreground (match-string-no-properties 0)))))))
-  (font-lock-mode -1)
-  (font-lock-mode 1))
-  #+END_SRC
+  (font-lock-flush))
+#+END_SRC
 
-* Iedit :config:
+* Package: Iedit :config:
 :PROPERTIES:
 :PACKAGE: iedit
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/reset-inherit-face! 'iedit-occurrence 'kwrooijen/salient-bg-face)
-(set-face-attribute 'iedit-occurrence nil :foreground "#FFFFFF")
-#+END_SRC
+(set-face-attribute 'iedit-occurrence nil :foreground (kwrooijen-color :strong))
 
-Recenter screen when iedit is used.
-
-#+BEGIN_SRC emacs-lisp
 (advice-add 'iedit-next-occurrence :after #'kwrooijen/recenter)
 (advice-add 'iedit-prev-occurrence :after #'kwrooijen/recenter)
 #+END_SRC
 
-* Magit :config:
+* Package: Magit :config:
 :PROPERTIES:
 :PACKAGE: magit
 :DEFER: t
 :END:
 
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-face-attributes 'magit-section-highlight)
-(set-face-attribute 'magit-section-highlight nil :foreground 'unspecified :inherit 'highlight)
+(kwrooijen/reset-inherit-face!
+ 'magit-diff-context-highlight    'kwrooijen/darken-bg-face
+ 'magit-section-highlight         'kwrooijen/highlight-bg-face
+ 'magit-diff-hunk-heading-highlight 'kwrooijen/background-bg-face
+ 'magit-diff-hunk-heading         'kwrooijen/background-bg-face)
 #+END_SRC
 
-
-* Org :config:
+* Package: Org :config:
 :PROPERTIES:
 :PACKAGE: org
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
-
+;; Block styling
 (kwrooijen/reset-inherit-face!
- 'org-block              'kwrooijen/darken-bg-face
- 'org-block-begin-line   'kwrooijen/faded-darken-fb-face
- 'org-block-end-line     'kwrooijen/faded-darken-fb-face)
+ 'org-block            'kwrooijen/darken-bg-face
+ 'org-quote            'kwrooijen/darken-bg-face
+ 'org-block-begin-line 'kwrooijen/faded-darken-fb-face
+ 'org-block-end-line   'kwrooijen/faded-darken-fb-face)
 
+;; Faded faces (de-emphasized)
 (kwrooijen/reset-inherit-face!
  'org-agenda-clocking          'kwrooijen/faded-fg-face
  'org-agenda-column-dateline   'kwrooijen/faded-fg-face
@@ -836,7 +986,6 @@ Recenter screen when iedit is used.
  'org-checkbox-statistics-done 'kwrooijen/faded-fg-face
  'org-checkbox-statistics-todo 'kwrooijen/faded-fg-face
  'org-clock-overlay            'kwrooijen/faded-fg-face
- 'org-code                     'kwrooijen/salient-fg-face
  'org-column                   'kwrooijen/faded-fg-face
  'org-column-title             'kwrooijen/faded-fg-face
  'org-date                     'kwrooijen/faded-fg-face
@@ -856,9 +1005,7 @@ Recenter screen when iedit is used.
  'org-meta-line                'kwrooijen/faded-fg-face
  'org-mode-line-clock          'kwrooijen/faded-fg-face
  'org-mode-line-clock-overrun  'kwrooijen/faded-fg-face
- 'org-priority                 'kwrooijen/faded-fg-face
  'org-property-value           'kwrooijen/faded-fg-face
- 'org-quote                    'kwrooijen/faded-fg-face
  'org-scheduled                'kwrooijen/faded-fg-face
  'org-scheduled-previously     'kwrooijen/faded-fg-face
  'org-sexp-date                'kwrooijen/faded-fg-face
@@ -868,6 +1015,7 @@ Recenter screen when iedit is used.
  'org-time-grid                'kwrooijen/faded-fg-face
  'org-verse                    'kwrooijen/faded-fg-face)
 
+;; Foreground faces (normal text)
 (kwrooijen/reset-inherit-face!
  'org-agenda-calendar-event 'kwrooijen/foreground-fg-face
  'org-done                  'kwrooijen/foreground-fg-face
@@ -881,154 +1029,185 @@ Recenter screen when iedit is used.
  'org-level-8               'kwrooijen/foreground-fg-face
  'org-upcoming-deadline     'kwrooijen/foreground-fg-face)
 
+;; Popout faces (attention-grabbing)
 (kwrooijen/reset-inherit-face!
  'org-tag      'kwrooijen/popout-fg-face
  'org-verbatim 'kwrooijen/popout-fg-face
  'org-warning  'kwrooijen/popout-fg-face)
 
+;; Strong faces (emphasis)
 (kwrooijen/reset-inherit-face!
  'org-agenda-current-time 'kwrooijen/strong-fg-face
  'org-agenda-structure    'kwrooijen/strong-fg-face)
 
+;; Salient faces (accent)
+(kwrooijen/reset-inherit-face!
+ 'org-code     'kwrooijen/salient-fg-face
+ 'org-link     'kwrooijen/salient-fg-face
+ 'org-table    'kwrooijen/salient-fg-face
+ 'org-todo     'kwrooijen/salient-fg-face)
+
+;; Error faces
+(kwrooijen/reset-inherit-face!
+ 'org-priority 'kwrooijen/error-fg-face)
+#+END_SRC
+
+* Package: Org Agenda :config:
+:PROPERTIES:
+:PACKAGE: org-agenda
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
 (kwrooijen/reset-inherit-face!
  'org-agenda-calendar-sexp 'kwrooijen/salient-fg-face
  'org-agenda-date          'kwrooijen/salient-fg-face
- 'org-link                 'kwrooijen/salient-fg-face
- 'org-table                'kwrooijen/salient-fg-face
- 'org-todo                 'kwrooijen/salient-fg-face)
+ 'org-agenda-clocking      'kwrooijen/warning-fg-face)
 #+END_SRC
 
-* Paren :config:
+* Package: Org Habit :config:
+:PROPERTIES:
+:PACKAGE: org-habit
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'org-habit-clear-future-face    'kwrooijen/salient-fb-face
+ 'org-habit-alert-face           'kwrooijen/warning-fb-face
+ 'org-habit-overdue-future-face  'kwrooijen/error-fb-face)
+#+END_SRC
+
+* Package: Paren :config:
 :PROPERTIES:
 :PACKAGE: paren
 :DEFER: t
 :END:
 
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'show-paren-match 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'show-paren-mismatch 'kwrooijen/error-fg-face)
-(kwrooijen/reset-inherit-face! 'show-paren-match-expression 'kwrooijen/popout-fg-face)
+(kwrooijen/reset-inherit-face!
+ 'show-paren-match            'kwrooijen/salient-fg-face
+ 'show-paren-mismatch         'kwrooijen/error-fg-face
+ 'show-paren-match-expression 'kwrooijen/popout-fg-face)
 #+END_SRC
 
-* Web Mode :config:
+* Package: Web Mode :config:
 :PROPERTIES:
 :PACKAGE: web-mode
 :DEFER: t
 :END:
 
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'web-mode-string-face 'font-lock-string-face)
-(kwrooijen/reset-inherit-face! 'web-mode-html-attr-value-face 'font-lock-string-face)
-(kwrooijen/reset-inherit-face! 'web-mode-symbol-face 'font-lock-keyword-face)
-(kwrooijen/reset-inherit-face! 'web-mode-builtin-face 'kwrooijen/strong-fg-face)
-(kwrooijen/reset-inherit-face! 'web-mode-variable-name-face 'font-lock-variable-name-face)
-(kwrooijen/reset-inherit-face! 'web-mode-variable-name-face 'font-lock-variable-name-face)
-(kwrooijen/reset-inherit-face! 'web-mode-current-element-highlight-face 'underline)
+(kwrooijen/reset-inherit-face!
+ 'web-mode-string-face                    'font-lock-string-face
+ 'web-mode-html-attr-value-face           'font-lock-string-face
+ 'web-mode-symbol-face                    'font-lock-keyword-face
+ 'web-mode-builtin-face                   'kwrooijen/strong-fg-face
+ 'web-mode-variable-name-face             'font-lock-variable-name-face
+ 'web-mode-current-element-highlight-face 'underline)
 #+END_SRC
 
 ** Init :init:
+
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
 #+END_SRC
 
-* Window divider
-:PROPERTIES:
-:PACKAGE: frame
-:END:
-
-** Init :init:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'window-divider             'kwrooijen/background-fb-face
- 'window-divider-first-pixel 'kwrooijen/background-fb-face
- 'window-divider-last-pixel  'kwrooijen/background-fb-face
- 'vertical-border            'kwrooijen/background-fb-face)
-
-;; Vertical window divider
-(setq window-divider-default-right-width 24)
-(setq window-divider-default-places 'right-only)
-(window-divider-mode 1)
-#+END_SRC
-
-* Evil Highlight Persist :config:
+* Package: Evil Highlight Persist :config:
 :PROPERTIES:
 :PACKAGE: evil-search-highlight-persist
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
 (kwrooijen/reset-inherit-face! 'evil-search-highlight-persist-highlight-face 'highlight)
 #+END_SRC
 
-* HL Line :config:
+* Package: HL Line :config:
 :PROPERTIES:
 :PACKAGE: hl-line
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'hl-line 'kwrooijen/highlight-bg-face)
+(kwrooijen/reset-inherit-face! 'hl-line 'kwrooijen/highlight-bg-face)
 #+END_SRC
 
-* Anzu Overlay :config:
+* Package: Anzu :config:
 :PROPERTIES:
-:PACKAGE: anzu-overlay
+:PACKAGE: anzu
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'anzu-overlay-face nil
-  :foreground (face-attribute 'kwrooijen/salient-fg-face :foreground)
-  :inherit 'kwrooijen/highlight-bg-face)
+(set-face-attribute 'anzu-mode-line nil
+                    :foreground (kwrooijen-color :salient))
 #+END_SRC
 
-* Diredfl :config:
+* Package: Diredfl :config:
 :PROPERTIES:
 :PACKAGE: diredfl
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'diredfl-file-name 'kwrooijen/foreground-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-file-suffix 'kwrooijen/foreground-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-dir-name 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-dir-heading 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-dir-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-date-time 'kwrooijen/faded-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-read-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-write-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-exec-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-number 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-no-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-other-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-link-priv 'kwrooijen/subtle-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-symlink 'kwrooijen/faded-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-compressed-file-name 'kwrooijen/faded-fg-face)
-(kwrooijen/reset-inherit-face! 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face!
+ 'diredfl-file-name              'kwrooijen/foreground-fg-face
+ 'diredfl-file-suffix            'kwrooijen/foreground-fg-face
+ 'diredfl-dir-name               'kwrooijen/salient-fg-face
+ 'diredfl-dir-heading            'kwrooijen/salient-fg-face
+ 'diredfl-dir-priv               'kwrooijen/subtle-fg-face
+ 'diredfl-date-time              'kwrooijen/faded-fg-face
+ 'diredfl-read-priv              'kwrooijen/subtle-fg-face
+ 'diredfl-write-priv             'kwrooijen/subtle-fg-face
+ 'diredfl-exec-priv              'kwrooijen/subtle-fg-face
+ 'diredfl-number                 'kwrooijen/subtle-fg-face
+ 'diredfl-no-priv                'kwrooijen/subtle-fg-face
+ 'diredfl-other-priv             'kwrooijen/subtle-fg-face
+ 'diredfl-link-priv              'kwrooijen/subtle-fg-face
+ 'diredfl-symlink                'kwrooijen/faded-fg-face
+ 'diredfl-compressed-file-name   'kwrooijen/faded-fg-face
+ 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
+
 (kwrooijen/reset-face-attributes 'diredfl-ignored-file-name)
 #+END_SRC
 
-
-* Ediff
+* Package: Ediff :config:
 :PROPERTIES:
-:PACKAGE:  ediff
-:END:
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'ediff-even-diff-A 'default)
-(kwrooijen/reset-inherit-face! 'ediff-even-diff-B 'default)
-(kwrooijen/reset-inherit-face! 'ediff-odd-diff-A 'org-warning)
-(kwrooijen/reset-inherit-face! 'ediff-odd-diff-B 'org-warning)
-
-#+END_SRC
-
-
-* Pulse :config:
-:PROPERTIES:
-:PACKAGE:  pulse
+:PACKAGE: ediff
 :DEFER: t
 :END:
+
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'pulse-highlight-face 'kwrooijen/salient-bg-face)
-(kwrooijen/reset-inherit-face! 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
+(kwrooijen/reset-inherit-face!
+ 'ediff-even-diff-A 'default
+ 'ediff-even-diff-B 'default
+ 'ediff-odd-diff-A  'org-warning
+ 'ediff-odd-diff-B  'org-warning)
+#+END_SRC
+
+* Package: Pulse :config:
+:PROPERTIES:
+:PACKAGE: pulse
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face!
+ 'pulse-highlight-face       'kwrooijen/salient-bg-face
+ 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
+#+END_SRC
+
+* Package: Shr :config:
+:PROPERTIES:
+:PACKAGE: shr
+:DEFER: t
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'shr-text nil
+                    :family kwrooijen/font
+                    :weight 'light)
 #+END_SRC
 
 #+STARTUP: showeverything
@@ -1101,6 +1280,13 @@ type (by default) `xs`. Configurable through
 
 #+PRIORITY: 3
 * Functions
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/find-and-load-file (file)
+  (let ((file-path (expand-file-name file)))
+    (when (file-exists-p file-path)
+      (load-file file-path))))
+#+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/upgrade-packages ()
@@ -1222,6 +1408,18 @@ type (by default) `xs`. Configurable through
   (interactive)
   (let ((project-root (project-root (project-current t))))
     (dired project-root)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/remove-empty-lines ()
+  "Remove all empty lines in the current buffer or region."
+  (interactive)
+  (let ((start (if (use-region-p) (region-beginning) (point-min)))
+        (end (if (use-region-p) (region-end) (point-max))))
+    (save-excursion
+      (goto-char start)
+      (while (re-search-forward "^[[:space:]]*\n" end t)
+        (replace-match "")))))
 #+END_SRC
 
 #+PRIORITY: 4
@@ -1555,6 +1753,38 @@ Enable for all programming modes. Would this be ok for lisp modes?
  "[" #'avy-goto-char)
 #+END_SRC
 
+* Edit Indirect
+:PROPERTIES:
+:PACKAGE:  edit-indirect
+:STRAIGHT: t
+:END:
+
+Edit regions in separate buffers, like org-edit-special but for any region.
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-edit-subtree ()
+  "Edit the current org subtree in an indirect buffer.
+Use C-c C-c to commit changes, C-c C-k to abort.
+If an indirect edit buffer already exists for this subtree, switch to it."
+  (interactive)
+  (org-back-to-heading t)
+  (let* ((beg (point))
+         (end (save-excursion (org-end-of-subtree t) (point)))
+         (existing (edit-indirect--search-for-edit-indirect beg end)))
+    (if existing
+        (switch-to-buffer (overlay-get existing 'edit-indirect-buffer))
+      (edit-indirect-region beg end t)
+      (org-mode)
+      (org-show-all)
+      (add-hook 'kill-buffer-query-functions
+                (lambda ()
+                  (or (not (buffer-modified-p))
+                      (yes-or-no-p "Edit-indirect buffer has unsaved changes. Kill anyway? ")))
+                nil t))))
+#+END_SRC
+
 #+STARTUP: showeverything
 
 #+BEGIN_SRC emacs-lisp
@@ -1582,6 +1812,10 @@ Recenter screen when searching forward / backwards
 (advice-add 'evil-search-previous :after #'kwrooijen/recenter)
 #+END_SRC
 
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(minibuffer-setup . #'evil-insert-state)
+#+END_SRC
 
 ** Bindings :general:
 
@@ -1644,6 +1878,29 @@ Evil collection makes it very hard to override the `[` key.
 #+BEGIN_SRC emacs-lisp
 (global-evil-search-highlight-persist t)
 (advice-add 'keyboard-quit :before #'evil-search-highlight-persist-remove-all)
+#+END_SRC
+
+
+* Hl Line
+:PROPERTIES:
+:PACKAGE:  hl-line
+:DEFER: t
+:END:
+
+** Config :config:
+
+Disable hl-line-mode when entering visual mode, since hl-line and
+visual use the same background.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/hl-line-off ()
+  (hl-line-mode -1))
+
+(defun kwrooijen/hl-line-on ()
+  (hl-line-mode 1))
+
+(add-hook 'evil-visual-state-entry-hook #'kwrooijen/hl-line-off)
+(add-hook 'evil-visual-state-exit-hook  #'kwrooijen/hl-line-on)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -2407,11 +2664,11 @@ strings?). Making it safe to enable in programming modes.
     (apply orig-fun args)))
 #+END_SRC
 
-** General :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-"a" 'aidermacs-transient-menu)
-#+END_SRC
+# ** General :general:
+# #+BEGIN_SRC emacs-lisp
+# (kwrooijen/leader
+# "a" 'aidermacs-transient-menu)
+# #+END_SRC
 
 * Eca
 :PROPERTIES:
@@ -2601,6 +2858,8 @@ Manage windows that pop up on your screen.
 (push '(minitest-compilation-mode :width 0.5 :position right :noselect t :stick t) popwin:special-display-config)
 (push '("*eshell*"           :height 15 :position bottom :stick t) popwin:special-display-config)
 (push '("^.*\\-eshell\\*.*$" :height 15 :position bottom :stick t :regexp t) popwin:special-display-config)
+(push '("^.**Agenda Commands*" :height 15 :position bottom :stick t) popwin:special-display-config)
+(push '("\\*edit-indirect .*\\*" :height 0.4 :position bottom :stick t :noselect t :regexp t) popwin:special-display-config)
 #+END_SRC
 
 #+STARTUP: showeverthing
@@ -3702,7 +3961,9 @@ Highlight the tags of the current element.
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/modeline-border
-  '()
+  `((t (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)))
+    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+    (t (:height 1.5)))
   "Face for the active window border."
   :group 'kwrooijen/modeline)
 
@@ -3750,14 +4011,14 @@ Highlight the tags of the current element.
  'mode-line-inactive  'kwrooijen/darken-bg-face
  'mode-line-highlight 'unspecified)
 
-(set-face-attribute 'kwrooijen/modeline-border nil :height 1.5)
-(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5)
+(set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
+(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'kwrooijen/darken-fg-face)
 #+END_SRC
 
 ** Active bar
 
 #+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/modeline-raise 0.20)
+(defvar kwrooijen/modeline-raise 0.15)
 
 (defun kwrooijen/modeline-r (s face)
   "Apply face and vertical raise to a modeline string."
@@ -3769,11 +4030,17 @@ Highlight the tags of the current element.
 
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
+(set-face-attribute  'kwrooijen/modeline-border nil
+        :foreground (face-attribute 'kwrooijen/foreground-fg-face :foreground)
+        :background (face-attribute 'kwrooijen/darken-bg-face :background)
+        :height 1.5)
+(set-face-attribute  'kwrooijen/modeline-border-inactive nil
+        :foreground (face-attribute 'kwrooijen/darken-fg-face :foreground)
+        :background (face-attribute 'kwrooijen/darken-fg-face :background)
+        :height 1.5)
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
-    (propertize kwrooijen/modeline-inactive-border 'face
-                `(:foreground ,(face-attribute 'kwrooijen/modeline-border-inactive :foreground)
-                  :height ,(face-attribute 'kwrooijen/modeline-border-inactive :height)))))
+    (propertize kwrooijen/modeline-inactive-border 'face 'kwrooijen/modeline-border-inactive)))
 
 (defun kwrooijen/modeline--set-selected-window (&rest _)
   (unless (minibuffer-window-active-p (selected-window))
@@ -3800,8 +4067,8 @@ Highlight the tags of the current element.
             (pcase state
               ('normal  'success)
               ('visual  'region)
-              ('insert  'warning)
-              ('replace 'error)
+              ('insert  'error)
+              ('replace 'warning)
               (_ 'kwrooijen/modeline-evil))))
       (kwrooijen/modeline-r tag face))))
 #+END_SRC
@@ -3840,20 +4107,42 @@ Highlight the tags of the current element.
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
-                     `(:foreground ,(face-attribute 'kwrooijen/warning-fg-face :foreground))
+                     `(:foreground ,(face-attribute 'kwrooijen/error-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
     (kwrooijen/modeline-r " %b" face)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/weekday-p (&optional time)
+  "Return t if TIME (or now) is Monday through Friday."
+  (let ((day-of-week (nth 6 (decode-time time))))
+    (<= 1 day-of-week 5)))
+
+(defun kwrooijen/clocked-today ()
+  (let ((clocked-today (kwrooijen/org-clock-clocked-today)))
+    (format "%d:%02d"
+            (/ (floor clocked-today) 60)
+            (% (floor clocked-today) 60))))
+
+(defun kwrooijen/clocked-today-percentage ()
+  (format "%d％"
+          (round
+           (* 100.0
+              (/ (float (kwrooijen/org-clock-clocked-today))
+                 480.0)))))
+
+
+(defun kwrooijen/clocked-session ()
+  (format "%d:%02d"
+          (/ (org-clock-get-clocked-time) 60)
+          (% (org-clock-get-clocked-time) 60)))
+
 (defun kwrooijen/modeline-org-clock ()
-  (when (and (org-clocking-p)
-           (org-clock-get-clocked-time))
-      (kwrooijen/modeline-r
-       (format " [%d:%02d]"
-               (/ (org-clock-get-clocked-time) 60)
-               (% (org-clock-get-clocked-time) 60))
-       'kwrooijen/faded-fg-face)))
+  (when (kwrooijen/weekday-p)
+    (let* ((clock-count (length org-clock-multi-clocks))
+           (clocked-in-p (> clock-count 0))
+           (face (if clocked-in-p 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
+      (kwrooijen/modeline-r (format " [%d | %s | %s]" clock-count (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -3905,6 +4194,7 @@ Center spacing
 
 (defcustom kwrooijen/modeline-right
   (list
+   '(:eval (when (fboundp 'kwrooijen/modeline-agent-shell) (kwrooijen/modeline-agent-shell)))
    '(:eval (kwrooijen/modeline-org-clock))
    '(:eval (kwrooijen/modeline-zoom))
    '(:eval (kwrooijen/modeline-git-branch))
@@ -3947,6 +4237,388 @@ If not a file buffer, return the buffer name."
               (file-relative-name fname proj-root)))
      (fname (file-name-nondirectory fname))
      (t (buffer-name)))))
+#+END_SRC
+
+* Agent Shell
+:PROPERTIES:
+:PACKAGE:  agent-shell
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-preferred-agent-config (agent-shell-anthropic-make-claude-code-config))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "l l" 'agent-shell
+ "l m" 'agent-shell-set-session-model)
+#+END_SRC
+
+
+* Agent Review
+:PROPERTIES:
+:PACKAGE:  agent-review
+:STRAIGHT: (agent-review :host github :repo "nineluj/agent-review")
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'agent-review-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-review ()
+  "Run agent-review with Claude Code as the default agent."
+  (interactive)
+  (agent-review (agent-shell-anthropic-make-claude-code-config)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'agent-review
+  (general-define-key
+   :states '(normal)
+   :keymaps 'agent-review-mode-map
+   "m" #'agent-review-mark
+   "u" #'agent-review-unmark
+   "r" #'agent-review-refresh
+   "M" #'agent-review-mark-all
+   "U" #'agent-review-unmark-all
+   "c" #'agent-review-copy-issues
+   "E" #'agent-review-send-to-agent-shell)
+
+  (evil-define-key 'normal agent-review-mode-map (kbd "<tab>") #'agent-review-jump-to-issue))
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "l r" 'kwrooijen/agent-review)
+#+END_SRC
+
+
+* Agent Shell Manager
+:PROPERTIES:
+:PACKAGE:  agent-shell-manager
+:STRAIGHT: (agent-shell-manager :host github :repo "jethrokuan/agent-shell-manager")
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-manager-side nil)
+#+END_SRC
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(push '("*Agent-Shell Buffers*" :height 6 :position bottom :stick t :dedicated t) popwin:special-display-config)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'agent-shell-manager-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell--active-project-dirs ()
+  "Return list of project directories that have an active agent-shell."
+  (let ((dirs nil))
+    (dolist (buf (agent-shell-buffers))
+      (when (buffer-live-p buf)
+        (let ((name (buffer-name buf)))
+          (when (string-match " Agent @ \\(.+\\)$" name)
+            (push (file-truename (match-string 1 name)) dirs)))))
+    dirs))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell-start-in-project ()
+  "Start agent-shell in a selected project and switch to it.
+Projects that already have an active agent-shell are excluded from the list.
+Uses Claude Code as the default agent."
+  (interactive)
+  (let* ((active-dirs (kwrooijen/agent-shell--active-project-dirs))
+         (all-projects (project-known-project-roots))
+         (available-projects
+          (seq-filter (lambda (proj)
+                        (not (member (file-truename proj) active-dirs)))
+                      all-projects)))
+    (if (null available-projects)
+        (message "No projects available (all have active agent-shells)")
+      (let* ((selected (completing-read "Start agent-shell in project: " available-projects nil t))
+             (default-directory selected))
+        (agent-shell-start :config (agent-shell-anthropic-make-claude-code-config))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell--count-by-status ()
+  "Return (WORKING . TOTAL) count of agent-shell buffers.
+WORKING counts agents that are actively working (not waiting for input).
+TOTAL counts all live agent-shell buffers."
+  (let ((working 0)
+        (total 0))
+    (dolist (buf (agent-shell-buffers))
+      (when (buffer-live-p buf)
+        (let ((status (agent-shell-manager--get-status buf)))
+          (unless (string= status "killed")
+            (setq total (1+ total))
+            (when (string= status "working")
+              (setq working (1+ working)))))))
+    (cons working total)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/modeline-agent-shell ()
+  "Return modeline segment showing agent-shell status as [WORKING/TOTAL]."
+  (when (fboundp 'agent-shell-buffers)
+    (let* ((counts (kwrooijen/agent-shell--count-by-status))
+           (working (car counts))
+           (total (cdr counts)))
+      (when (> total 0)
+        (let ((face (if (< working total)
+                        'kwrooijen/popout-fg-face
+                      'kwrooijen/faded-fg-face)))
+          (kwrooijen/modeline-r (format " [%d/%d]" working total) face))))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agent-shell-switch-agent ()
+  "Switch to an agent-shell buffer using completing-read."
+  (interactive)
+  (let* ((buffers (seq-filter #'buffer-live-p (agent-shell-buffers)))
+         (entries
+          (mapcar (lambda (buf)
+                    (let* ((name (buffer-name buf))
+                           (status (agent-shell-manager--get-combined-status buf))
+                           (dir (abbreviate-file-name
+                                 (with-current-buffer buf default-directory))))
+                      (list status dir name buf)))
+                  buffers)))
+    (if (null entries)
+        (message "No agent-shell buffers")
+      (let* ((max-status-width (apply #'max (mapcar (lambda (e) (string-width (nth 0 e))) entries)))
+             (max-dir-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
+             (candidates
+              (mapcar (lambda (entry)
+                        (let* ((status (nth 0 entry))
+                               (dir (nth 1 entry))
+                               (name (nth 2 entry))
+                               (buf (nth 3 entry))
+                               (padded-status (string-pad status max-status-width))
+                               (padded-name (string-pad name max-dir-width))
+                               (label (concat padded-status
+                                              "  "
+                                              padded-name
+                                              "  "
+                                              (propertize dir 'face 'kwrooijen/faded-fg-face))))
+                          (cons label buf)))
+                      entries))
+             (collection (lambda (str pred action)
+                           (if (eq action 'metadata)
+                               '(metadata (display-sort-function . identity)
+                                          (cycle-sort-function . identity))
+                             (complete-with-action action (mapcar #'car candidates) str pred))))
+             (selected (completing-read "Switch to agent: " collection nil t))
+             (buffer (cdr (assoc selected candidates))))
+        (when buffer
+          (pop-to-buffer buffer))))))
+#+END_SRC
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "l s" 'agent-shell-manager-toggle
+ "l p" 'kwrooijen/agent-shell-start-in-project
+ "l b" 'kwrooijen/agent-shell-switch-agent)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'agent-shell-manager
+  (general-define-key
+   :states '(normal)
+   :keymaps 'agent-shell-manager-mode-map
+   (kbd "RET") #'agent-shell-manager-goto
+   "r" #'agent-shell-manager-refresh
+   "l" #'agent-shell-manager-view-traffic
+   "L" #'agent-shell-manager-toggle-logging
+   "p" #'kwrooijen/agent-shell-start-in-project
+   "C-c C-c" #'agent-shell-manager-interrupt)
+
+  (evil-define-key 'normal agent-shell-manager-mode-map (kbd "<tab>") #'agent-shell-manager-goto))
+#+END_SRC
+
+* Elfeed
+:PROPERTIES:
+:PACKAGE:  elfeed
+:STRAIGHT: t
+:END:
+** Custom :custom:
+Max body width (using shr renderer)
+
+#+BEGIN_SRC emacs-lisp
+(shr-width 80)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'elfeed-search-feed-face 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'elfeed-search-tag-face 'kwrooijen/popout-fg-face)
+(kwrooijen/reset-inherit-face! 'elfeed-search-date-face 'kwrooijen/faded-fg-face)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/find-and-load-file "~/.dotfiles/elfeed-feeds.el")
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/elfeed-default-tags '("saved"))
+
+(defun kwrooijen/elfeed-search-tag-all (tag)
+  "Apply TAG to all selected entries."
+  (interactive
+   (list
+    (intern
+     (completing-read
+      "Tag: "
+      kwrooijen/elfeed-default-tags
+      nil          ; predicate
+      nil))))      ; require-match → allow new tags
+(elfeed-search-tag-all tag))
+
+(defun kwrooijen/elfeed-entry-tags-at-point ()
+  "Return a list of tag names (strings) for the entry at point."
+  (when-let ((entry (elfeed-search-selected :single)))
+    (mapcar #'symbol-name (elfeed-entry-tags entry))))
+
+
+(defun kwrooijen/elfeed-search-untag-all (tag)
+  "Remove TAG from all selected Elfeed entries."
+  (interactive
+   (let ((tags (kwrooijen/elfeed-entry-tags-at-point)))
+     (unless tags
+       (user-error "No tags on entry"))
+     (list
+      (intern
+       (completing-read
+        "Remove tag: "
+        tags
+        nil
+        t)))))
+(elfeed-search-untag-all tag)
+  )
+
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "ay" '(elfeed :which-key "Elfeed"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states '(normal)
+ :keymaps 'elfeed-search-mode-map
+ "r" #'elfeed-search-untag-all-unread
+ "R" #'elfeed-search-tag-all-unread
+ "t" #'kwrooijen/elfeed-search-tag-all
+ "T" #'kwrooijen/elfeed-search-untag-all
+ "u" #'elfeed-update
+ "/" #'elfeed-search-live-filter
+ "?" #'elfeed-search-set-filter)
+#+END_SRC
+
+
+
+
+* Message
+:PROPERTIES:
+:PACKAGE:  message
+:END:
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/reset-inherit-face! 'message-header-to 'kwrooijen/salient-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-subject 'kwrooijen/strong-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-other 'kwrooijen/faded-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+#+END_SRC
+
+
+
+* Olivetti
+:PROPERTIES:
+:PACKAGE:  olivetti
+:STRAIGHT: t
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(elfeed-show-mode . olivetti-mode)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(olivetti-minimum-body-width 90)
+#+END_SRC
+
+
+* Eww
+:PROPERTIES:
+:PACKAGE:  eww
+:STRAIGHT: t
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(advice-add 'eww-readable :after
+            (lambda (&rest _)
+              (when (plist-get eww-data :readable)
+                (olivetti-mode 1))))
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(browse-url-browser-function 'eww-browse-url)
+#+END_SRC
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(eww-mode . pixel-scroll-precision-mode)
+#+END_SRC
+
+* Spray
+:PROPERTIES:
+:PACKAGE:  spray
+:STRAIGHT: t
+:END:
+
+A speed reading mode for Emacs
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/spray ()
+  "Copy current buffer into a new buffer and start spray-mode."
+  (interactive)
+  (let* ((source (current-buffer))
+         (text (with-current-buffer source
+                 (buffer-string)))
+         (buf (generate-new-buffer
+               (format "*spray: %s*" (buffer-name source)))))
+    (switch-to-buffer buf)
+    (insert text)
+    (goto-char (point-min))
+    (spray-mode 1)
+    (use-local-map (copy-keymap spray-mode-map))
+    (local-set-key (kbd "q") #'kill-current-buffer)
+    (local-set-key (kbd "SPC") #'spray-start/stop)))
 #+END_SRC
 
 * Dired
@@ -4082,6 +4754,13 @@ Remove diredfl-match-ignored-extensions
   "'" #'casual-csv-tmenu)
 #+END_SRC
 
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+  :states 'normal
+  :keymaps 'org-agenda-mode-map
+  "'" #'casual-agenda-tmenu)
+#+END_SRC
+
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (setq casual-dired-listing-switches '("--group-directories-first" "-laoh"))
@@ -4183,6 +4862,23 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 #+BEGIN_SRC emacs-lisp
 (magit-todos-mode 1)
 #+END_SRC
+
+# TODO Magit delta sometimes breaks, so we should have an easy way to toggle it.
+# * Magit Delta
+# :PROPERTIES:
+# :PACKAGE:  magit-delta
+# :STRAIGHT: t
+# :END:
+
+# ** Hook :hook:
+# #+BEGIN_SRC emacs-lisp
+# (magit-mode . magit-delta-mode)
+# #+END_SRC
+
+# ** Custom :custom:
+# #+BEGIN_SRC emacs-lisp
+# (magit-delta-delta-args '("--max-line-distance" "0.6" "--true-color" "always" "--color-only" "--syntax-theme" "Nord" ))
+# #+END_SRC
 
 * Anzu
 :PROPERTIES:
@@ -4604,8 +5300,938 @@ This is a major mode for Emacs providing editing conveniences for the
 OpenGL Shading Language (GLSL). It currently handles GLSL version 4.6,
 including many recent Vulkan extensions.
 
+* Denote
+:PROPERTIES:
+:PACKAGE:  denote
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+(dired-mode . denote-dired-mode)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "d n" 'denote
+ "d r" 'denote-rename-file
+ "d l" 'denote-link
+ "d b" 'denote-backlinks
+ "d d" 'denote-dired
+ "d g" 'denote-grep)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(setq denote-directory (expand-file-name "~/Documents/notes/"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(denote-rename-buffer-mode 1)
+#+END_SRC
+
+* Org Agenda
+:PROPERTIES:
+:PACKAGE:  org-agenda
+:END:
+
+** Config :config:
+
+Automatically save any org buffers when making changes in org agenda.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/agenda-org-save-all-org-buffers ()
+  (when (equal major-mode 'org-agenda-mode)
+    ;; TODO Inhibit messages
+    (org-save-all-org-buffers))
+  (when (equal major-mode 'org-mode)
+    ;; TODO Inhibit messages
+    (save-buffer)))
+
+(add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
+(add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
+(add-hook 'org-clock-out-hook               #'kwrooijen/agenda-org-save-all-org-buffers)
+
+;; Set TODO state to IN PROGRESS when clocking in
+(defun kwrooijen/org-clock-multi-set-in-progress ()
+  "Set the heading at point to IN PROGRESS."
+  (save-excursion
+    (org-back-to-heading t)
+    (unless (string= (org-get-todo-state) "IN PROGRESS")
+      (org-todo "IN PROGRESS"))))
+
+(advice-add 'org-clock-multi-clock-in :after #'kwrooijen/org-clock-multi-set-in-progress)
+
+;; Save org buffers after org-clock-multi operations
+(advice-add 'org-clock-multi-clock-in      :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-out     :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-out-all :after #'org-save-all-org-buffers)
+(advice-add 'org-clock-multi-clock-cancel  :after #'org-save-all-org-buffers)
+#+END_SRC
+
+
+
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-clock-multi-skip-unless-clocked-or-paused ()
+  "Skip function for agenda: skip unless heading is clocked or paused."
+  (let ((dominated t))
+    (let ((id (org-entry-get nil "CLOCK_MULTI_ID")))
+      (when id
+        (when (or (org-clock-multi--find-clock-by-key id)
+                  (member id org-clock-multi-paused))
+          (setq dominated nil))))
+    (when dominated
+      (org-end-of-subtree t))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setq org-agenda-custom-commands
+      '(("D" "Done tasks"
+         todo "DONE")
+        ("k" "Currently clocked"
+         ((alltodo "" ((org-agenda-skip-function
+                        #'kwrooijen/org-clock-multi-skip-unless-clocked-or-paused)))))))
+
+(org-todo-dashboard-install)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-agenda-done ()
+  (interactive)
+  (org-agenda nil "D"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(cl-defun kwrooijen/org-todo-select-and-change (&key from to tag)
+  "Select a task in state FROM and change it to state TO.
+When TAG is non-nil, only show tasks that have that tag."
+  (let (entries max-tag-width max-closed-width)
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (org-with-wide-buffer
+         (goto-char (point-min))
+         (while (re-search-forward org-heading-regexp nil t)
+           (when (and (equal (org-get-todo-state) from)
+                      (or (null tag)
+                          (member tag (org-get-tags))))
+             (let* ((heading (org-get-heading t t t t))
+                    (tags (org-get-tags))
+                    (tag-str (if tags (string-join tags ":") ""))
+                    (closed (or (org-entry-get nil "CLOSED") ""))
+                    (marker (point-marker)))
+               (push (list tag-str closed heading marker) entries)))))))
+    (if (null entries)
+        (message "No %s tasks found" from)
+      (setq entries (sort entries (lambda (a b)
+                                    (string> (nth 1 a) (nth 1 b)))))
+      (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
+      (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
+      (let* ((candidates
+              (mapcar
+               (lambda (entry)
+                 (let* ((tag-str (nth 0 entry))
+                        (closed (nth 1 entry))
+                        (heading (nth 2 entry))
+                        (marker (nth 3 entry))
+                        (padded-tag (string-pad tag-str max-tag-width))
+                        (padded-closed (string-pad closed max-closed-width))
+                        (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                       "  "
+                                       (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                       "  " heading)))
+                   (cons label marker)))
+               entries))
+             (collection (lambda (str pred action)
+                          (if (eq action 'metadata)
+                              '(metadata (display-sort-function . identity)
+                                         (cycle-sort-function . identity))
+                            (complete-with-action action (mapcar #'car candidates) str pred))))
+             (selection (completing-read (format "%s -> %s: " from to) collection nil t))
+             (marker (cdr (assoc selection candidates))))
+        (when marker
+          (with-current-buffer (marker-buffer marker)
+            (goto-char marker)
+            (org-todo to)
+            (save-buffer)
+            (kwrooijen/org-edit-subtree)))))))
+
+(defvar kwrooijen/org-todo-find--candidates nil
+  "Current candidates for `kwrooijen/org-todo-find-and-edit'.")
+
+(defun kwrooijen/org-todo-find--kill-edit-indirect (marker)
+  "Kill any edit-indirect buffer covering MARKER's position.
+Signals an error if the edit-indirect buffer has unsaved changes."
+  (with-current-buffer (marker-buffer marker)
+    (when-let* ((ov (edit-indirect--search-for-edit-indirect
+                     (marker-position marker) (1+ (marker-position marker))))
+                (buf (overlay-get ov 'edit-indirect-buffer)))
+      (when (buffer-live-p buf)
+        (when (buffer-modified-p buf)
+          (user-error "Edit-indirect buffer has unsaved changes — save or abort it first"))
+        (with-current-buffer buf
+          (edit-indirect-abort))))))
+
+(defun kwrooijen/org-todo-find--throw-action (action)
+  "Throw ACTION for the currently selected candidate."
+  (when-let* ((cand (nth vertico--index vertico--candidates))
+              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
+    (throw 'kwrooijen/org-todo-find--action (cons action marker))))
+
+(defun kwrooijen/org-todo-find--change-state ()
+  "Change the TODO state of the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'change-state))
+
+(defun kwrooijen/org-todo-find--clock-in ()
+  "Clock in the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-in))
+
+(defun kwrooijen/org-todo-find--clock-out ()
+  "Clock out the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-out))
+
+(defun kwrooijen/org-todo-find--clock-pause ()
+  "Pause the clock for the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'clock-pause))
+
+(defun kwrooijen/org-todo-find--open-shell ()
+  "Open the agent-shell for the currently selected candidate."
+  (interactive)
+  (kwrooijen/org-todo-find--throw-action 'open-shell))
+
+(defun kwrooijen/org-todo-find--preview ()
+  "Preview the currently selected candidate without closing the minibuffer."
+  (interactive)
+  (when-let* ((cand (nth vertico--index vertico--candidates))
+              (marker (cdr (assoc cand kwrooijen/org-todo-find--candidates))))
+    (let* ((buf (save-window-excursion
+                  (with-current-buffer (marker-buffer marker)
+                    (goto-char marker)
+                    (kwrooijen/org-edit-subtree)
+                    (goto-char (point-min))
+                    (current-buffer))))
+           (win (get-buffer-window buf)))
+      (if (and win (window-live-p win))
+          ;; Already visible — do nothing
+          nil
+        ;; Close existing popwin popup, then display the new buffer
+        (popwin:close-popup-window)
+        (popwin:display-buffer buf)))
+    (select-window (active-minibuffer-window))))
+
+(defvar kwrooijen/org-todo-find-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-t") #'kwrooijen/org-todo-find--change-state)
+    (define-key map (kbd "C-i") #'kwrooijen/org-todo-find--clock-in)
+    (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
+    (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
+    (define-key map (kbd "C-s") #'kwrooijen/org-todo-find--open-shell)
+    (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
+    map)
+  "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
+
+(cl-defun kwrooijen/org-todo-find-and-edit (&key states tag)
+  "Select a task in one of STATES and open it with edit-subtree.
+STATES is a list of todo state strings.
+When TAG is non-nil, only show tasks that have that tag.
+Press C-t to change the TODO state of the selected entry."
+  (let ((keep-going t))
+    (while keep-going
+      (setq keep-going nil)
+      (let (entries max-tag-width max-closed-width)
+        (dolist (file (org-agenda-files))
+          (with-current-buffer (find-file-noselect file)
+            (org-with-wide-buffer
+             (goto-char (point-min))
+             (while (re-search-forward org-heading-regexp nil t)
+               (when (and (member (org-get-todo-state) states)
+                          (or (null tag)
+                              (member tag (org-get-tags))))
+                 (let* ((heading (org-get-heading t t t t))
+                        (tags (org-get-tags))
+                        (tag-str (if tags (string-join tags ":") ""))
+                        (state (or (org-get-todo-state) ""))
+                        (closed (or (org-entry-get nil "CLOSED") ""))
+                        (id (org-entry-get nil "CLOCK_MULTI_ID"))
+                        (clocked (and id (org-clock-multi--find-clock-by-key id) t))
+                        (paused (and id (not clocked) (member id org-clock-multi-paused) t))
+                        (marker (point-marker))
+                        (project (org-entry-get nil "PROJECT" t))
+                        (worktree (org-entry-get nil "WORKTREE"))
+                        (agent-status
+                         (if (and project worktree)
+                             (let* ((wt-path (expand-file-name
+                                              worktree
+                                              (file-name-concat (expand-file-name project)
+                                                                agent-shell-worktree--subdirectory)))
+                                    (shell-buf (org-agent-shell--find-shell-buffer wt-path)))
+                               (if shell-buf
+                                   (agent-shell-manager--get-combined-status shell-buf)
+                                 (propertize "No Shell" 'face 'font-lock-comment-face)))
+                           "")))
+                   (push (list tag-str state closed heading marker clocked paused agent-status) entries)))))))
+        (if (null entries)
+            (message "No %s tasks found" (string-join states "/"))
+          (setq entries (sort entries (lambda (a b)
+                                        (let ((ca (nth 5 a)) (cb (nth 5 b))
+                                              (pa (nth 6 a)) (pb (nth 6 b)))
+                                          (cond
+                                           ((and ca (not cb)) t)
+                                           ((and (not ca) cb) nil)
+                                           ((and pa (not pb)) t)
+                                           ((and (not pa) pb) nil)
+                                           (t (string> (nth 2 a) (nth 2 b))))))))
+          (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
+          (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
+                (max-agent-width (apply #'max (mapcar (lambda (e) (string-width (nth 7 e))) entries))))
+            (setq max-closed-width (apply #'max (mapcar (lambda (e) (length (nth 2 e))) entries)))
+            (let* ((candidates
+                    (mapcar
+                     (lambda (entry)
+                       (let* ((tag-str (nth 0 entry))
+                              (state (nth 1 entry))
+                              (closed (nth 2 entry))
+                              (heading (nth 3 entry))
+                              (marker (nth 4 entry))
+                              (clocked (nth 5 entry))
+                              (paused (nth 6 entry))
+                              (agent-status (nth 7 entry))
+                              (padded-tag (string-pad tag-str max-tag-width))
+                              (padded-agent (string-pad agent-status max-agent-width))
+                              (padded-state (propertize (string-pad state max-state-width)
+                                                        'face (org-get-todo-face state)))
+                              (padded-closed (string-pad closed max-closed-width))
+                              (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                                             "  "
+                                             padded-agent
+                                             "  "
+                                             padded-state
+                                             "  "
+                                             (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                             "  " heading)))
+                         (when clocked
+                           (put-text-property 0 1 'kwrooijen/clocked t label))
+                         (when paused
+                           (put-text-property 0 1 'kwrooijen/paused t label))
+                         (cons label marker)))
+                     entries))
+                   (kwrooijen/org-todo-find--candidates candidates)
+                   (group-fn (lambda (cand transform)
+                               (if transform cand
+                                 (cond
+                                  ((get-text-property 0 'kwrooijen/clocked cand) "Clocked In")
+                                  ((get-text-property 0 'kwrooijen/paused cand) "Paused")
+                                  (t "Tasks")))))
+                   (collection (lambda (str pred action)
+                                 (if (eq action 'metadata)
+                                     `(metadata (display-sort-function . identity)
+                                                (cycle-sort-function . identity)
+                                                (group-function . ,group-fn))
+                                   (complete-with-action action (mapcar #'car candidates) str pred))))
+                   (result (catch 'kwrooijen/org-todo-find--action
+                             (minibuffer-with-setup-hook
+                                 (lambda () (use-local-map (make-composed-keymap
+                                                            kwrooijen/org-todo-find-map
+                                                            (current-local-map))))
+                               (cons 'select (completing-read "Select: " collection nil t))))))
+              (pcase (car result)
+                ('select
+                 (when-let* ((marker (cdr (assoc (cdr result) candidates))))
+                   (with-current-buffer (marker-buffer marker)
+                     (goto-char marker)
+                     (kwrooijen/org-edit-subtree)
+                     (goto-char (point-min)))))
+                ('change-state
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-todo))))
+                 (setq keep-going t))
+                ('clock-in
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-in))))
+                 (setq keep-going t))
+                ('clock-out
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-out))))
+                 (setq keep-going t))
+                ('clock-pause
+                 (let ((marker (cdr result))
+                       (edit-indirect--inhibit-read-only t))
+                   (kwrooijen/org-todo-find--kill-edit-indirect marker)
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-clock-multi-clock-pause))))
+                 (setq keep-going t))
+                ('open-shell
+                 (let ((marker (cdr result)))
+                   (with-current-buffer (marker-buffer marker)
+                     (save-excursion
+                       (goto-char marker)
+                       (org-agent-shell-open-shell)))))))))))))
+
+(defun kwrooijen/org-todo-find-done-work ()
+  "Select a DONE or CANCELLED :work: task and edit it."
+  (interactive)
+  (kwrooijen/org-todo-find-and-edit :states '("DONE" "CANCELLED") :tag "work"))
+
+(defun kwrooijen/org-todo-find-waiting-work ()
+  "Select a WAITING :work: task and edit it."
+  (interactive)
+  (kwrooijen/org-todo-find-and-edit :states '("WAITING") :tag "work"))
+
+(defun kwrooijen/org-todo-find-active-work ()
+  "Select a TODO or IN PROGRESS :work: task and edit it."
+  (interactive)
+  (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING") :tag "work"))
+
+(defun kwrooijen/org-todo-unarchive ()
+  "Select a DONE task and change it back to TODO."
+  (interactive)
+  (kwrooijen/org-todo-select-and-change :from "DONE" :to "TODO"))
+
+(defun kwrooijen/org-todo-unarchive-work ()
+  "Select a DONE :work: task and change it back to TODO."
+  (interactive)
+  (kwrooijen/org-todo-select-and-change :from "DONE" :to "TODO" :tag "work"))
+
+(defun kwrooijen/org-todo-unwait ()
+  "Select a WAITING task and change it back to TODO."
+  (interactive)
+  (kwrooijen/org-todo-select-and-change :from "WAITING" :to "TODO"))
+
+(defun kwrooijen/org-todo-unwait-work ()
+  "Select a WAITING :work: task and change it back to TODO."
+  (interactive)
+  (kwrooijen/org-todo-select-and-change :from "WAITING" :to "TODO" :tag "work"))
+#+END_SRC
+
+
+
+Custom loading bar for work.
+#+BEGIN_SRC emacs-lisp
+
+
+(defun kwrooijen/org-agenda-loading-bar ()
+  "Return a textual loading bar based on today's clocked minutes."
+  (let* ((max 480.0)
+         (current (float (kwrooijen/org-clock-clocked-today)))
+         (ratio (min 1.0 (/ current max)))
+         (width 30)
+         (filled (round (* width ratio)))
+         (empty (- width filled))
+         (percent (round (* 100 ratio))))
+    (format
+     "%s\n\nWork Progress: [%s%s] %d%% (%d / 480 min)\n\n%s\n\n"
+     (make-string (- (window-width) 1) ?─)
+     (make-string filled ?█)
+     (make-string empty ?░)
+     percent
+     (round current)
+     (make-string (- (window-width) 1) ?─))))
+
+(defun kwrooijen/org-agenda-insert-loading-bar ()
+  "Insert loading bar at the top of the agenda buffer."
+  ;; TODO only when current day is mon - fri
+  ;; (when (derived-mode-p 'org-agenda-mode)
+  ;;   (let ((inhibit-read-only t))
+  ;;     (goto-char (point-min))
+  ;;     (insert (kwrooijen/org-agenda-loading-bar))))
+)
+
+(add-hook 'org-agenda-finalize-hook
+          #'kwrooijen/org-agenda-insert-loading-bar)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-client-names ()
+  "Return a list of client names derived from org files."
+  (let ((dir (expand-file-name "~/Documents/org/todos/client/")))
+    (mapcar #'file-name-base
+            (directory-files dir nil "\\.org$"))))
+
+(defun kwrooijen/org-set-clockreport-match (client)
+  "Update only :match in `org-agenda-clockreport-parameter-plist`."
+  (interactive
+   (list (completing-read "Clockreport match: " (append (kwrooijen/org-client-names) '("work")) nil nil)))
+  (setq org-agenda-clockreport-parameter-plist
+        (plist-put org-agenda-clockreport-parameter-plist
+                   :match
+                   client))
+  (org-agenda-redo))
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'org-agenda-mode 'normal)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-agenda-edit-subtree ()
+  "Edit the subtree at point in an indirect buffer.
+Use C-c C-c to commit changes, C-c C-k to abort."
+  (interactive)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (buffer (marker-buffer marker))
+         (pos (marker-position marker)))
+    (with-current-buffer buffer
+      (goto-char pos)
+      (kwrooijen/org-edit-subtree))))
+
+(evil-define-key 'normal org-agenda-mode-map (kbd "<tab>") #'kwrooijen/org-agenda-edit-subtree)
+#+END_SRC
+
+Add functionality to toggle habits in agenda.
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/org-habit-shown-p t)
+
+(defun kwrooijen/org-habit-toggle ()
+  (interactive)
+  (setq kwrooijen/org-habit-shown-p (not kwrooijen/org-habit-shown-p))
+  (org-agenda-redo))
+
+(require 'org-habit)
+#+END_SRC
+
+** Custom :custom:
+
+Adjsut the org agenda format. We add `EFFORT` (`[%e]`) to the `agenda`
+view. (NOTE: Removed `%e` for now, to see how we can organize it nicely
+
+#+BEGIN_SRC emacs-lisp
+(setq org-agenda-prefix-format
+ '((agenda . "[%-5e] %-12:c%?-12t% s")
+   (todo . " %i %-12:c")
+   (tags . " %i %-12:c")
+   (search . " %i %-12:c")))
+#+END_SRC
+
+Don't show scheduled TODOs if they have been done today
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-todo-ignore-scheduled 'future)
+#+END_SRC
+
+Org agenda table, include ASANA in header for ticket ids
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-clockreport-parameter-plist
+ (list :maxlevel 2
+       :narrow nil
+       :properties '("ASANA")
+       :match "+work"
+       :indent nil
+       :tcolumns 1))
+#+END_SRC
+
+List of keywords which a TODO heading can have.
+
+#+BEGIN_SRC emacs-lisp
+(org-todo-keywords '((sequence
+                      "TODO(t)"
+                      "IN PROGRESS(p)"
+                      "WAITING(w)"
+                      "|"
+                      "CANCELLED(c!)"
+                      "DONE(d!)")))
+#+END_SRC
+
+Set the faces for specific org keywords
+
+#+BEGIN_SRC emacs-lisp
+(org-todo-keyword-faces
+      '(("TODO"        . (:inherit kwrooijen/salient-fg-face))
+        ("IN PROGRESS" . (:inherit kwrooijen/popout-fg-face))
+        ("WAITING"     . (:inherit kwrooijen/faded-fg-face))
+        ("DONE"        . (:inherit org-done))
+        ("CANCELLED"   . (:inherit org-done))))
+#+END_SRC
+
+
+Customize agenda renderer to optionally filter out habits.
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-skip-function-global
+ (lambda ()
+   (when (and (org-is-habit-p) (not kwrooijen/org-habit-shown-p))
+     (org-agenda-skip-entry-if 'todo 'any))))
+#+END_SRC
+
+
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+  "aa" '(org-agenda-list :which-key "Org Agenda")
+  "ao" '(org-agenda :which-key "Org Commands")
+  "at" '(org-todo-list :which-key "Org Todos")
+  "ad" '(kwrooijen/org-agenda-done :which-key "Org Done")
+  "ac" '(org-capture :which-key "Org Capture")
+  "aD" '(org-todo-dashboard-open :which-key "Dashboard")
+  "af" '(kwrooijen/org-todo-find-active-work :which-key "Find Active")
+  "au" '(kwrooijen/org-todo-find-done-work :which-key "Find Done")
+  "aw" '(kwrooijen/org-todo-find-waiting-work :which-key "Find Waiting"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+:states '(normal)
+:keymaps 'org-agenda-mode-map
+  (kbd "TAB") #'kwrooijen/org-agenda-edit-subtree
+  (kbd "RET") #'org-agenda-switch-to
+  (kbd "SPC") #'org-agenda-show-and-scroll-up
+
+  (kbd "C-k") #'org-agenda-kill
+  (kbd "C-n") #'org-agenda-next-line
+  (kbd "C-p") #'org-agenda-previous-line
+  ;; "C-_" #'org-agenda-undo
+  "!" #'org-agenda-toggle-deadlines
+  "#" #'org-agenda-dim-blocked-tasks
+  "$" #'org-agenda-archive
+  "%" #'org-agenda-bulk-mark-regexp
+  "+" #'org-agenda-priority-up
+  "," #'org-agenda-priority
+  "-" #'org-agenda-priority-down
+  "." #'org-agenda-goto-today
+  "/" #'org-agenda-filter
+  ":" #'org-agenda-set-tags
+  ";" #'kwrooijen/org-set-clockreport-match
+  "<" #'org-agenda-filter-by-category
+  "=" #'org-agenda-filter-by-regexp
+   ">" #'org-agenda-date-prompt
+  "?" #'org-agenda-show-the-flagging-note
+  "A" #'org-agenda-append-agenda
+  "B" #'org-agenda-bulk-action
+  "C" #'org-agenda-convert-date
+  "D" #'org-agenda-toggle-diary
+  "E" #'org-agenda-entry-text-mode
+  "F" #'org-agenda-follow-mode
+  "G" #'org-agenda-toggle-time-grid
+  "H" #'org-agenda-holidays
+  "I" #'org-clock-multi-agenda-clock-in
+  "K" #'org-habit-toggle-display-in-agenda
+  "L" #'org-agenda-recenter
+  "N" #'org-agenda-next-item
+  "O" #'org-clock-multi-agenda-clock-out
+  "P" #'org-clock-multi-agenda-clock-pause
+  "Q" #'org-agenda-Quit
+  "R" #'org-agenda-clockreport-mode
+  "V" #'org-clock-data-agenda-chart-mode
+  "S" #'org-agenda-sunrise-sunset
+  "T" #'org-agenda-show-tags
+  (kbd "M-m") #'org-agenda-bulk-unmark
+  (kbd "M-M") #'org-agenda-bulk-unmark-all
+  (kbd "C-o") #'org-clock-multi-agenda-clock-out-all
+  "m" #'org-agenda-bulk-mark
+  "M" #'org-agenda-bulk-mark-all
+  "X" #'org-clock-multi-agenda-clock-cancel
+  "[" #'org-agenda-manipulate-query-add
+  "\\" #'org-agenda-filter-by-tag
+  "]" #'org-agenda-manipulate-query-subtract
+  "^" #'org-agenda-filter-by-top-headline
+  "_" #'org-agenda-filter-by-effort
+  "a" #'org-agenda-archive-default-with-confirmation
+  "b" #'org-agenda-earlier
+  "c" #'org-agenda-goto-calendar
+  "d" #'org-agenda-day-view
+  "e" #'org-agenda-set-effort
+  "f" #'org-agenda-later
+  "g" #'org-agenda-redo-all
+  "H" #'org-agenda-holidays
+  "i" #'org-agenda-diary-entry
+  "n" #'org-agenda-goto-date
+  "p" #'org-agenda-capture
+  "L" #'org-agenda-log-mode
+  "o" #'org-agenda-month-view
+
+  "k" #'org-agenda-previous-line
+  "j" #'org-agenda-next-line
+  "l" #'evil-forward-char
+  "h" #'evil-backward-char
+
+  "q" #'org-agenda-quit
+  "r" #'org-agenda-redo
+  "s" #'org-save-all-org-buffers
+  "t" #'org-agenda-todo
+  "u" #'org-agenda-undo
+  "U" #'org-agenda-redo
+  "v" #'org-agenda-view-mode-dispatch
+  "w" #'org-agenda-week-view
+  "x" #'org-agenda-exit
+  "y" #'org-agenda-year-view
+  "z" #'org-agenda-add-note
+  "{" #'org-agenda-manipulate-query-add-re
+  "|" #'org-agenda-filter-remove-all
+  "}" #'org-agenda-manipulate-query-subtract-re
+  "~" #'org-agenda-limit-interactively
+  (kbd "DEL") #'org-agenda-show-scroll-down)
+#+END_SRC
+
+
+* Org Capture
+:PROPERTIES:
+:PACKAGE:  org-capture
+:END:
+
+** Init :init:
+
+Read org capture templates from other file.
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/find-and-load-file "~/.dotfiles/org-capture-templates.el")
+#+END_SRC
+
+
+* Calendar
+:PROPERTIES:
+:PACKAGE:  calendar
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'calendar-mode 'normal)
+#+END_SRC
+
+** General :general:
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :states '(normal)
+ :keymaps 'calendar-mode-map
+ (kbd "RET") #'org-calendar-select
+ "C-@" #'calendar-set-mark
+ "C-a" #'calendar-beginning-of-week
+ "h" #'calendar-backward-day
+ "l" #'calendar-forward-day
+ "j" #'calendar-forward-week
+ "k" #'calendar-backward-week
+ "C-e" #'calendar-end-of-week
+ "C-l" #'calendar-recenter
+ "C-v" #'calendar-scroll-left-three-months
+ (kbd "SPC") #'scroll-other-window
+ "-" #'negative-argument
+ "." #'calendar-goto-today
+ "<" #'calendar-scroll-right
+ ">" #'calendar-scroll-left
+ "?" #'calendar-goto-info-node
+ "D" #'diary-view-other-diary-entries
+ "M" #'calendar-lunar-phases
+ "S" #'calendar-sunrise-sunset
+ "[" #'calendar-backward-year
+ "]" #'calendar-forward-year
+ "a" #'calendar-list-holidays
+ "c" #'org-calendar-goto-agenda
+ "d" #'diary-view-entries
+ ;; "h" #'calendar-cursor-holidays
+ "m" #'diary-mark-entries
+ "o" #'calendar-other-month
+ "q" #'calendar-exit
+ "s" #'diary-show-all-entries
+ "u" #'calendar-unmark
+ "x" #'calendar-mark-holidays
+ "{" #'calendar-backward-month
+ "}" #'calendar-forward-month
+ ;; "DEL" #'scroll-other-window-down
+ ;; "S-SPC" #'scroll-other-window-down
+ ;; "C-SPC" #'calendar-set-mark
+
+ (kbd "C-c C-l") #'calendar-redraw
+
+ (kbd "C-x C-x") #'calendar-exchange-point-and-mark
+ (kbd "C-x <") #'calendar-scroll-right
+ (kbd "C-x >") #'calendar-scroll-left
+ (kbd "C-x [") #'calendar-backward-year
+ (kbd "C-x ]") #'calendar-forward-year
+
+ (kbd "M-<") #'calendar-beginning-of-year
+ (kbd "M-=") #'calendar-count-days-region
+ (kbd "M->") #'calendar-end-of-year
+ (kbd "M-a") #'calendar-beginning-of-month
+ (kbd "M-e") #'calendar-end-of-month
+ (kbd "M-v") #'calendar-scroll-right-three-months
+ (kbd "M-{") #'calendar-backward-month
+ (kbd "M-}") #'calendar-forward-month
+
+ "A a" #'appt-add
+ "A d" #'appt-delete
+
+ "H m" #'cal-html-cursor-month
+ "H y" #'cal-html-cursor-year
+
+ "g C" #'calendar-chinese-goto-date
+ "g D" #'calendar-goto-day-of-year
+ "g a" #'calendar-astro-goto-day-number
+ "g b" #'calendar-bahai-goto-date
+ "g c" #'calendar-iso-goto-date
+ "g d" #'calendar-goto-date
+ "g e" #'calendar-ethiopic-goto-date
+ "g f" #'calendar-french-goto-date
+ "g h" #'calendar-hebrew-goto-date
+ "g i" #'calendar-islamic-goto-date
+ "g j" #'calendar-julian-goto-date
+ "g k" #'calendar-coptic-goto-date
+ "g p" #'calendar-persian-goto-date
+ "g w" #'calendar-iso-goto-week
+
+ "i a" #'diary-insert-anniversary-entry
+ "i b" #'diary-insert-block-entry
+ "i c" #'diary-insert-cyclic-entry
+ "i d" #'diary-insert-entry
+ "i m" #'diary-insert-monthly-entry
+ "i w" #'diary-insert-weekly-entry
+ "i y" #'diary-insert-yearly-entry
+
+ "p C" #'calendar-chinese-print-date
+ "p a" #'calendar-astro-print-day-number
+ "p b" #'calendar-bahai-print-date
+ "p c" #'calendar-iso-print-date
+ "p d" #'calendar-print-day-of-year
+ "p e" #'calendar-ethiopic-print-date
+ "p f" #'calendar-french-print-date
+ "p h" #'calendar-hebrew-print-date
+ "p i" #'calendar-islamic-print-date
+ "p j" #'calendar-julian-print-date
+ "p k" #'calendar-coptic-print-date
+ "p m" #'calendar-mayan-print-date
+ "p o" #'calendar-print-other-dates
+ "p p" #'calendar-persian-print-date
+
+ "t M" #'cal-tex-cursor-month-landscape
+ "t Y" #'cal-tex-cursor-year-landscape
+ "t d" #'cal-tex-cursor-day
+ "t m" #'cal-tex-cursor-month
+ "t y" #'cal-tex-cursor-year
+
+ "t f W" #'cal-tex-cursor-filofax-week
+ "t f d" #'cal-tex-cursor-filofax-daily
+ "t f w" #'cal-tex-cursor-filofax-2week
+ "t f y" #'cal-tex-cursor-filofax-year
+
+ "t w 1" #'cal-tex-cursor-week
+ "t w 2" #'cal-tex-cursor-week2
+ "t w 3" #'cal-tex-cursor-week-iso
+ "t w 4" #'cal-tex-cursor-week-monday
+ "t w W" #'cal-tex-cursor-week2-summary)
+#+END_SRC
+
+
+* Org Clock
+:PROPERTIES:
+:PACKAGE:  org-clock
+:END:
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-clock--today-range ()
+  "Return (START . END) of today in Unix seconds."
+  (let* ((now (decode-time (current-time)))
+         (start (float-time
+                 (encode-time 0 0 0
+                              (nth 3 now)
+                              (nth 4 now)
+                              (nth 5 now)))))
+    (cons start (+ start 86400))))
+
+
+(defun kwrooijen/org-clock--today-start ()
+  "Return Unix time (seconds) for start of today."
+  (let* ((now (decode-time (current-time))))
+    (encode-time 0 0 0
+                 (nth 3 now)   ; day
+                 (nth 4 now)   ; month
+                 (nth 5 now)))) ; year
+
+(defun kwrooijen/org-clock--open-clocked-today ()
+  "Return minutes from currently running clocks that fall within today.
+Uses org-clock-multi-clocks for multiple simultaneous clocks.
+Note: Clock start times are stored in minutes since epoch."
+  (let ((total 0))
+    ;; Convert day boundaries to minutes for consistent comparison
+    (pcase-let* ((`(,day-start-sec . ,day-end-sec) (kwrooijen/org-clock--today-range))
+                 (day-start (floor (/ day-start-sec 60)))
+                 (day-end (floor (/ day-end-sec 60)))
+                 (now (floor (/ (float-time (current-time)) 60))))
+      (dolist (clock org-clock-multi-clocks)
+        (let ((clock-start (cdr clock)))  ; already in minutes
+          (when (< clock-start day-end)
+            (setq total (+ total
+                           (max 0 (- (min now day-end)
+                                     (max clock-start day-start)))))))))
+    (when (> total 0) total)))
+
+(defun kwrooijen/org-clock-clocked-today (&optional as-duration)
+  "Return total time clocked today across `org-agenda-files`.
+If AS-DURATION is non-nil, return an Org duration string."
+  (let* ((start (float-time (kwrooijen/org-clock--today-start)))
+         (end   (+ start 86400))
+         (minutes (or (kwrooijen/org-clock--open-clocked-today) 0)))
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (setq minutes
+              (+ minutes (org-clock-sum start end)))))
+    (if as-duration
+        (org-duration-from-minutes minutes)
+      minutes)))
+#+END_SRC
+
+* Org Clock Data
+:PROPERTIES:
+:PACKAGE:  org-clock-data
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-clock-data-bar-value 'earnings)
+#+END_SRC
 
 * Functions
+
+Org heading search
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/org-search-heading ()
+  "Jump to an Org heading using full outline paths."
+  (interactive)
+  (let (candidates)
+    (org-map-entries
+     (lambda ()
+       (let* ((pos (point))
+              (path (org-get-outline-path t t))
+              (display (string-join path " > ")))
+         (push (cons display pos) candidates)))
+     nil 'file)
+    (let* ((choice
+            (completing-read
+             "Heading: "
+             (mapcar #'car candidates)
+             nil t))
+           (pos (cdr (assoc choice candidates))))
+      (goto-char pos)
+      (org-show-context)
+      (org-show-entry)
+      (org-narrow-to-subtree))))
+#+END_SRC
+
+
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-table-current-line-columns ()
   "Return the columns of the current line in an Org table as a list of plain strings."
@@ -4754,11 +6380,7 @@ If on a:
                 (org-force-cycle-archived))
                ((or (org-element-property :todo-type context)
                     (org-element-property :scheduled context))
-                (org-todo
-                 (if (eq (org-element-property :todo-type context) 'done)
-                     (or (car (+org-get-todo-keywords-for (org-element-property :todo-keyword context)))
-                         'todo)
-                   'done))))
+                (org-todo)))
          ;; Update any metadata or inline previews in this subtree
          (org-update-checkbox-count)
          (org-update-parent-todo-statistics)
@@ -4804,11 +6426,12 @@ If on a:
                (org-call-with-arg 'org-table-recalculate (or arg t))))))
 
         (`table-cell
-         (org-table-blank-field)
+         ;; (org-table-blank-field)
          (org-table-recalculate arg)
-         (when (and (string-empty-p (string-trim (org-table-get-field)))
-                    (bound-and-true-p evil-local-mode))
-           (evil-change-state 'insert)))
+         ;; (when (and (string-empty-p (string-trim (org-table-get-field)))
+         ;;            (bound-and-true-p evil-local-mode))
+         ;;   (evil-change-state 'insert))
+)
 
         (`babel-call
          (org-babel-lob-execute-maybe))
@@ -4918,7 +6541,38 @@ holding export options."
 (org-duration-format (quote h:mm))
 #+END_SRC
 
+Improve M-RET on a heading line.
+Don't split the heading line, don't split the content in a heading line.
+
+#+BEGIN_SRC emacs-lisp
+(org-M-RET-may-split-line '((default . nil)))
+(org-insert-heading-respect-content t)
+#+END_SRC
+
+Improve Org TODO logging, place them in properties.
+
+#+BEGIN_SRC emacs-lisp
+(org-log-done t)
+(org-log-into-drawer t)
+#+END_SRC
+
+Org agenda files. All TODOs go in here.
+
+#+BEGIN_SRC emacs-lisp
+(org-agenda-files '("~/Documents/org/todos" "~/Documents/org/todos/client"))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(org-directory "~/Documents/org/notes/")
+#+END_SRC
+
+
+
 ** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(require 'org-clock)
+#+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/org-heading-1-next ()
@@ -4937,28 +6591,6 @@ holding export options."
 
 
 #+BEGIN_SRC emacs-lisp
-;; (require 'org-clock)
-;; (defun org-clock-get-clock-string ()
-;;   "Form a clock-string, that will be shown in the mode line.
-;; If an effort estimate was defined for the current item, use
-;; 01:30/01:50 format (clocked/estimated).
-;; If not, show simply the clocked time like 01:50."
-;;   (let ((clocked-time (org-clock-get-clocked-time)))
-;;     (if org-clock-effort
-;; 	(let* ((effort-in-minutes (org-duration-to-minutes org-clock-effort))
-;; 	       (work-done-str
-;; 		(propertize (org-duration-from-minutes clocked-time)
-;; 			    'face
-;; 			    (if (and org-clock-task-overrun
-;; 				     (not org-clock-task-overrun-text))
-;; 				'org-mode-line-clock-overrun
-;; 			      'org-mode-line-clock)))
-;; 	       (effort-str (org-duration-from-minutes effort-in-minutes)))
-;; 	  (format (propertize "[%s/%s]" 'face 'org-mode-line-clock)
-;; 		  work-done-str effort-str))
-;;       (format (propertize "[%s]" 'face 'org-mode-line-clock)
-;; 	      (org-duration-from-minutes clocked-time)))))
-
 (font-lock-add-keywords
  'org-mode
  '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
@@ -4971,9 +6603,6 @@ holding export options."
  'org-mode
  '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
  'append)
-
-(custom-set-faces
- '(bold ((t (:foreground "#ffffff" :weight bold)))))
 
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
@@ -5017,6 +6646,10 @@ holding export options."
 (kwrooijen/local-leader
   :keymaps 'org-mode-map
   "'" 'org-edit-special
+  "s s" 'kwrooijen/org-search-heading
+  ", ," 'org-priority
+  ", k" 'org-priority-up
+  ", j" 'org-priority-down
   "i i" 'kwrooijen/org-images-increase
   "i j" 'kwrooijen/org-images-decrease
   "f b"  'org/toggle-bold
@@ -5024,12 +6657,23 @@ holding export options."
   "f i"  'org/toggle-italic
   "t a"  'kwrooijen/org-focus-this-heading
   "t i"  'org-toggle-inline-images
-  "t e" 'kwrooijen/org-table-export
+  "t e"  'kwrooijen/org-table-export
   "c t"  'org-clock-update-time-maybe
-  "c i"  'org-clock-in
-  "c o"  'org-clock-out
+  "c s"  '(org-schedule :which-key "Org Schedule")
+  "c d"  '(org-deadline :which-key "Org Deadline")
+  "c i"  'org-clock-multi-clock-in
+  "c o"  'org-clock-multi-clock-out
+  "c O"  'org-clock-multi-clock-out-all
   "c r"  'org-clock-report
-  "c c"  'org-clock-goto)
+  "c x"  'org-clock-multi-clock-cancel
+  "c X"  'org-clock-multi-clock-cancel-all
+  "a l"  'org-agent-shell-launch
+  "a s"  'org-agent-shell-open-shell
+  "a g"  'org-agent-shell-open-magit
+  "a d"  'org-agent-shell-diff
+  "a r"  'org-agent-shell-resend
+  "a v"  'org-agent-shell-review
+  "a x"  'org-agent-shell-reset)
 #+END_SRC
 
 * Org Margin
@@ -5107,7 +6751,11 @@ holding export options."
                           ("#+begin_quote" . "“")
                           ("#+end_quote" . "”")
                           ("#+BEGIN_QUOTE" . "“")
-                          ("#+END_QUOTE" . "”")))
+                          ("#+END_QUOTE" . "”")
+                          ("#+begin_example" . "“")
+                          ("#+end_example" . "”")
+                          ("#+BEGIN_EXAMPLE" . "“")
+                          ("#+END_EXAMPLE" . "”")))
 #+END_SRC
 
 * Org Appear
@@ -5129,12 +6777,14 @@ holding export options."
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
-(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/org/notes/")))
+(consult-notes-file-dir-sources '(("Notes"  ?n  "~/Documents/notes/")
+                                  ("Old"  ?n  "~/Documents/org/notes/")))
 #+END_SRC
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
 (consult-notes-org-roam-mode)
+(consult-notes-denote-mode)
 #+END_SRC
 
 ** General :general:
@@ -5154,11 +6804,54 @@ holding export options."
 ((org-mode . org-fragtog-mode))
 #+END_SRC
 
+* Org Ql
+:PROPERTIES:
+:PACKAGE:  org-ql
+:STRAIGHT: t
+:END:
+
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(org-ql-views
+      `(("Notes"
+         :buffers-files
+,(directory-files
+ "~/Documents/notes"
+ t "\\.org$"))))
+#+END_SRC
+
 * Vertico
 :PROPERTIES:
 :PACKAGE:  vertico
 :STRAIGHT: t
 :END:
+
+** Config :config:
+
+
+#+BEGIN_SRC emacs-lisp
+;; (defun kwrooijen/consult-grep-fix-tab ()
+;;   (when (eq (completion-metadata-get
+;;              (completion-metadata (minibuffer-contents)
+;;                                   minibuffer-completion-table
+;;                                   minibuffer-completion-predicate)
+;;              'category)
+;;             'consult-grep)
+;;     (let ((map (make-sparse-keymap)))
+;;       (define-key map (kbd "TAB")   #'ignore)
+;;       (define-key map (kbd "<tab>") #'ignore)
+;;       (setq-local minor-mode-overriding-map-alist
+;;                   (cons `(vertico-mode . ,map)
+;;                         minor-mode-overriding-map-alist)))
+;;     ))
+
+;; (add-hook 'minibuffer-setup-hook #'kwrooijen/consult-grep-fix-tab)
+;; vertico-next-group is causing consult-rip-grep to break. Disabling it for now.
+;; Attempted to override the keybinding with a hook, but that doesn't seem to work.
+(defun vertico-next-group (&optional n) (interactive))
+#+END_SRC
+
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
@@ -5303,6 +6996,7 @@ No delays
  consult-notes-search-in-all-notes
  :preview-key "TAB")
 
+(kwrooijen/reset-inherit-face! 'consult-file 'kwrooijen/faded-fg-face)
 (set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
 (set-face-attribute 'consult-highlight-match nil :inherit 'bold)
 (set-face-attribute 'consult-preview-match nil :inherit 'bold)
@@ -5359,6 +7053,32 @@ No delays
          (funcall popwin-fn (find-file-noselect (car selected))))))))
 #+END_SRC
 
+Project find files
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-project-find-file ()
+  "Find a project file using `rg --files`, excluding .git/ but keeping .gitignore."
+  (interactive)
+  (let* ((root (project-root (project-current t)))
+         (default-directory root)
+         (rg (executable-find "rg")))
+    (unless rg
+      (user-error "ripgrep (rg) not found in PATH"))
+    (let* ((files (process-lines rg
+                                 "--files"
+                                 "--color=never"
+                                 "--hidden"
+                                 "--follow"
+                                 "--glob" "!.git/**"))
+           (choice (consult--read files
+                                  :prompt "Project file: "
+                                  :sort nil
+                                  :category 'file
+                                  :history 'file-name-history)))
+      (find-file (expand-file-name choice root)))))
+#+END_SRC
+
+
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
@@ -5367,19 +7087,11 @@ No delays
   "sp" '(consult-ripgrep :which-key "Grep in Project")
   "sP" '(kwrooijen/consult-ripgrep-symbol-at-point :which-key "Grep symbol in Project")
   "bb" '(consult-buffer :which-key "Switch buffer")
-   "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
+  "bp" '(kwrooijen/consult-peek-buffer :which-key "Peek buffer")
   "fb" '(consult-bookmark :which-key "Open bookmark")
   "ry" '(consult-yank-from-kill-ring :which-key "Kill ring")
   "pp" '(project-switch-project :which-key "Switch project")
-  "pf" '(project-find-file :which-key "Find file in project"))
-#+END_SRC
-
-Remove consult-map binding because otherwise Consult preview becomes
-buggy.
-
-#+BEGIN_SRC emacs-lisp
-(:keymaps 'consult-map
-  "TAB" #'ignore)
+  "pf" '(kwrooijen/consult-project-find-file :which-key "Find file in project"))
 #+END_SRC
 
 * Orderless
@@ -5563,12 +7275,23 @@ mode disables line truncation set up by variables `truncate-lines` and
   "Customization for minibuffer-aware dimming rules."
   :group 'convenience)
 
+(setq kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    magit-discard
+    anzu-query-replace
+    org-schedule
+    kwrooijen/consult-ripgrep-symbol-at-point)
+)
+
 (defcustom kwrooijen/minibuffer-dim-excluded-commands
   '(consult-line
     consult-yank-from-kill-ring
     consult-ripgrep
     magit-discard
     anzu-query-replace
+    org-schedule
     kwrooijen/consult-ripgrep-symbol-at-point)
 
   "Commands for which the original window should not be dimmed.
@@ -5674,8 +7397,8 @@ style. Similar to Solaire mode, but more flexible.
   (add-hook hook #'kwrooijen/subwindow-setup-hook))
 
 (defun minibuffer-subwindow-hook ()
- (face-remap-add-relative 'default '(:background "#1e2030"))
- (face-remap-add-relative 'minibuffer-prompt '(:background "#1e2030"))
+ (face-remap-add-relative 'default '(:inherit kwrooijen/darken-bg-face))
+ (face-remap-add-relative 'minibuffer-prompt '(:inherit kwrooijen/darken-bg-face))
  (set-window-margins (minibuffer-window) 2 2))
 
 (add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)

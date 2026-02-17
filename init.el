@@ -35,3 +35,7 @@
   (wisdom-boot))
 
 (kwrooijen/find-and-load-file "~/.wisdom.d/local-vars.el")
+
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-agent-shell"))
+(require 'org-agent-shell)
+
