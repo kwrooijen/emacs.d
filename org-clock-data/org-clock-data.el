@@ -38,8 +38,10 @@ Returns a list of plists with :date, :tags, :hours, :minutes,
 :start-hh, :start-mm, :end-hh, :end-mm.
 When TAG is non-nil, only include entries under headings with that tag.
 FROM and TO are date strings (YYYY-MM-DD) for filtering (inclusive).
+Includes currently running `org-clock-multi' clocks.
 Results are sorted by date ascending."
   (let (rows)
+    ;; Completed clock entries from LOGBOOK
     (dolist (file (org-agenda-files))
       (with-current-buffer (find-file-noselect file)
         (org-with-wide-buffer
@@ -68,6 +70,37 @@ Results are sorted by date ascending."
                                  :end-hh end-hh
                                  :end-mm end-mm)
                            rows))))))))))
+    ;; Running org-clock-multi clocks
+    (when (bound-and-true-p org-clock-multi-clocks)
+      (dolist (clock org-clock-multi-clocks)
+        (let* ((key (car clock))
+               (start-minutes (cdr clock))
+               (now-minutes (org-clock-multi--current-minutes))
+               (start-time (org-clock-multi--minutes-to-time start-minutes))
+               (now-time (current-time))
+               (date (format-time-string "%Y-%m-%d" start-time))
+               (start-hh (string-to-number (format-time-string "%H" start-time)))
+               (start-mm (string-to-number (format-time-string "%M" start-time)))
+               (end-hh (string-to-number (format-time-string "%H" now-time)))
+               (end-mm (string-to-number (format-time-string "%M" now-time)))
+               (elapsed (- now-minutes start-minutes))
+               (hours (/ elapsed 60))
+               (minutes (% elapsed 60)))
+          (when (and (or (null from) (org-string<= from date))
+                     (or (null to) (org-string<= date to)))
+            (org-clock-multi--with-heading-at-key key
+              (let ((tags (org-get-tags)))
+                (when (or (null tag)
+                          (member tag tags))
+                  (push (list :date date
+                              :tags tags
+                              :hours hours
+                              :minutes minutes
+                              :start-hh start-hh
+                              :start-mm start-mm
+                              :end-hh end-hh
+                              :end-mm end-mm)
+                        rows))))))))
     (sort rows (lambda (a b)
                  (string< (plist-get a :date) (plist-get b :date))))))
 
