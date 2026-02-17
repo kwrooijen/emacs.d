@@ -22,5 +22,10 @@ If an indirect edit buffer already exists for this subtree, switch to it."
         (switch-to-buffer (overlay-get existing 'edit-indirect-buffer))
       (edit-indirect-region beg end t)
       (org-mode)
-      (org-show-all))))
+      (org-show-all)
+      (add-hook 'kill-buffer-query-functions
+                (lambda ()
+                  (or (not (buffer-modified-p))
+                      (yes-or-no-p "Edit-indirect buffer has unsaved changes. Kill anyway? ")))
+                nil t))))
 #+END_SRC
