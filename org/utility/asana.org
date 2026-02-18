@@ -1,0 +1,18 @@
+* Request
+:PROPERTIES:
+:PACKAGE:  request
+:STRAIGHT: t
+:END:
+
+* Org Asana
+:PROPERTIES:
+:PACKAGE:  org-asana
+:END:
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "as" '(org-asana-pull :which-key "Asana Pull")
+ "aS" '(org-asana-redownload :which-key "Asana Redownload"))
+#+END_SRC
