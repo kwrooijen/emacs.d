@@ -296,6 +296,12 @@ Uses cached data when fresh (< 15 min).  With prefix arg, force re-fetch."
         (total-removed 0))
     (unless projects
       (user-error "No headings with :ASANA_PROJECT: found in org-agenda-files"))
+    ;; Check for unsaved buffers before doing any work
+    (dolist (proj projects)
+      (let ((buf (find-buffer-visiting (plist-get proj :file))))
+        (when (and buf (buffer-modified-p buf))
+          (user-error "Buffer %s has unsaved changes — save it first"
+                      (buffer-name buf)))))
     (dolist (proj projects)
       (let* ((gid (plist-get proj :gid))
              (file (plist-get proj :file))
