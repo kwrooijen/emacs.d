@@ -211,9 +211,13 @@ Returns a hash-table mapping GID strings to markers."
                         (when section
                           (concat ":ASANA_SECTION: " section "\n"))
                         ":END:"))
-         (body (when (and notes (not (string-empty-p (string-trim notes))))
-                 (concat "\n#+BEGIN_QUOTE\n"
-                         (string-trim notes)
+         (clean-notes (when notes
+                       (replace-regexp-in-string
+                        "[ \t]+$" ""
+                        (replace-regexp-in-string "\r" "" (string-trim notes)))))
+         (body (when (and clean-notes (not (string-empty-p clean-notes)))
+                 (concat "\n#+BEGIN_QUOTE ticket\n"
+                         clean-notes
                          "\n#+END_QUOTE"))))
     (concat stars " " state " " name "\n"
             props
@@ -238,24 +242,67 @@ Returns the number of inserted tasks."
            (cl-incf count)))))
     count))
 
-(defun org-asana--update-sections (existing-table tasks project-gid)
-  "Update :ASANA_SECTION: for existing headings.
+(defun org-asana--update-existing (existing-table tasks project-gid)
+  "Update :ASANA_SECTION: and ticket description for existing headings.
 EXISTING-TABLE maps GID to marker.  TASKS is the fetched task vector.
 Returns the number of updated entries."
   (let ((count 0))
     (seq-doseq (task tasks)
       (let* ((gid (alist-get 'gid task))
              (marker (gethash gid existing-table))
-             (section (org-asana--task-section task project-gid)))
-        (when (and marker section)
+             (section (org-asana--task-section task project-gid))
+             (notes (alist-get 'notes task))
+             (updated nil))
+        (when marker
           (with-current-buffer (marker-buffer marker)
             (org-with-wide-buffer
              (goto-char marker)
-             (let ((current (org-entry-get nil "ASANA_SECTION")))
-               (unless (equal current section)
-                 (org-entry-put nil "ASANA_SECTION" section)
-                 (cl-incf count))))))))
+             ;; Update section
+             (when section
+               (let ((current (org-entry-get nil "ASANA_SECTION")))
+                 (unless (equal current section)
+                   (org-entry-put nil "ASANA_SECTION" section)
+                   (setq updated t))))
+             ;; Update ticket description
+             (when notes
+               (when (org-asana--update-ticket-quote marker notes)
+                 (setq updated t))))))
+        (when updated
+          (cl-incf count))))
     count))
+
+(defun org-asana--update-ticket-quote (marker notes)
+  "Update the #+BEGIN_QUOTE ticket block under heading at MARKER with NOTES.
+If no ticket quote block exists, do nothing.  Returns non-nil if changed."
+  (with-current-buffer (marker-buffer marker)
+    (org-with-wide-buffer
+     (goto-char marker)
+     (let ((end (save-excursion (org-end-of-subtree t t) (point)))
+           (changed nil))
+       (when (re-search-forward "^#\\+BEGIN_QUOTE ticket$" end t)
+         (let ((quote-start (line-beginning-position))
+               (quote-end (when (re-search-forward "^#\\+END_QUOTE$" end t)
+                            (line-end-position))))
+           (when quote-end
+             (let* ((new-body (string-trim notes))
+                    (old-body (string-trim
+                               (buffer-substring-no-properties
+                                (save-excursion (goto-char quote-start)
+                                                (forward-line 1) (point))
+                                (save-excursion (goto-char quote-end)
+                                                (line-beginning-position))))))
+               (setq new-body (replace-regexp-in-string
+                               "[ \t]+$" ""
+                               (replace-regexp-in-string "\r" "" new-body)))
+               (unless (or (string-empty-p new-body)
+                           (string= old-body new-body))
+                 (delete-region quote-start quote-end)
+                 (goto-char quote-start)
+                 (insert "#+BEGIN_QUOTE ticket\n"
+                         new-body "\n"
+                         "#+END_QUOTE")
+                 (setq changed t))))))
+       changed))))
 
 (defun org-asana--handle-removed (existing-table fetched-ids)
   "Handle tasks in EXISTING-TABLE whose GID is not in FETCHED-IDS.
@@ -333,16 +380,16 @@ Uses cached data when fresh (< 15 min).  With prefix arg, force re-fetch."
           (setq total-new (+ total-new
                              (org-asana--insert-tasks marker child-level
                                                       (nreverse new-tasks))))
-          ;; Update sections on existing tasks
+          ;; Update sections and descriptions on existing tasks
           (setq total-updated (+ total-updated
-                                 (org-asana--update-sections existing tasks gid)))
+                                 (org-asana--update-existing existing tasks gid)))
           ;; Handle removed tasks
           (setq total-removed (+ total-removed
                                  (org-asana--handle-removed existing fetched-ids))))
         ;; Save the buffer
         (with-current-buffer (find-file-noselect file)
           (save-buffer))))
-    (message "org-asana: %d new, %d sections updated, %d removed"
+    (message "org-asana: %d new, %d updated, %d removed"
              total-new total-updated total-removed)))
 
 (defun org-asana-redownload ()
