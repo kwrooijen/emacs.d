@@ -371,6 +371,11 @@ Press C-t to change the TODO state of the selected entry."
   (interactive)
   (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING") :tag "work"))
 
+(defun kwrooijen/org-todo-find-all ()
+  "Select a TODO or IN PROGRESS :work: task and edit it."
+  (interactive)
+  (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING")))
+
 (defun kwrooijen/org-todo-unarchive ()
   "Select a DONE task and change it back to TODO."
   (interactive)
@@ -557,6 +562,7 @@ Customize agenda renderer to optionally filter out habits.
   "ac" '(org-capture :which-key "Org Capture")
   "aD" '(org-todo-dashboard-open :which-key "Dashboard")
   "af" '(kwrooijen/org-todo-find-active-work :which-key "Find Active")
+  "aF" '(kwrooijen/org-todo-find-all :which-key "Find all")
   "au" '(kwrooijen/org-todo-find-done-work :which-key "Find Done")
   "aw" '(kwrooijen/org-todo-find-waiting-work :which-key "Find Waiting"))
 #+END_SRC
