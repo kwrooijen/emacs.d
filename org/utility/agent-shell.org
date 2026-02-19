@@ -112,33 +112,39 @@ Uses Claude Code as the default agent."
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agent-shell--count-by-status ()
-  "Return (WORKING . TOTAL) count of agent-shell buffers.
-WORKING counts agents that are actively working (not waiting for input).
-TOTAL counts all live agent-shell buffers."
+  "Return (:working N :total N :waiting N) plist of agent-shell buffers."
   (let ((working 0)
-        (total 0))
+        (total 0)
+        (waiting 0))
     (dolist (buf (agent-shell-buffers))
       (when (buffer-live-p buf)
         (let ((status (agent-shell-manager--get-status buf)))
           (unless (string= status "killed")
             (setq total (1+ total))
             (when (string= status "working")
-              (setq working (1+ working)))))))
-    (cons working total)))
+              (setq working (1+ working)))
+            (when (string= status "waiting")
+              (setq waiting (1+ waiting)))))))
+    (list :working working :total total :waiting waiting)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-agent-shell ()
-  "Return modeline segment showing agent-shell status as [WORKING/TOTAL]."
+  "Return modeline segment showing agent-shell status as [WORKING/TOTAL].
+Prepends ! when any agent is waiting for permission."
   (when (fboundp 'agent-shell-buffers)
     (let* ((counts (kwrooijen/agent-shell--count-by-status))
-           (working (car counts))
-           (total (cdr counts)))
+           (working (plist-get counts :working))
+           (total (plist-get counts :total))
+           (waiting (plist-get counts :waiting)))
       (when (> total 0)
-        (let ((face (if (< working total)
-                        'kwrooijen/popout-fg-face
-                      'kwrooijen/faded-fg-face)))
-          (kwrooijen/modeline-r (format " [%d/%d]" working total) face))))))
+        (let* ((has-waiting (> waiting 0))
+               (face (cond
+                      (has-waiting 'kwrooijen/error-fg-face)
+                      ((> working 0) 'kwrooijen/popout-fg-face)
+                      (t 'kwrooijen/faded-fg-face)))
+               (prefix (if has-waiting "!" "")))
+          (kwrooijen/modeline-r (format " %s[%d/%d]" prefix working total) face))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
