@@ -88,6 +88,14 @@
     (setq kwrooijen/modeline-selected-window (selected-window))))
 
 (add-hook 'post-command-hook #'kwrooijen/modeline--set-selected-window)
+
+(defun kwrooijen/modeline--force-update-visual (&rest _)
+  "Force modeline update during evil visual state."
+  (when (and (bound-and-true-p evil-local-mode)
+             (eq evil-state 'visual))
+    (force-mode-line-update)))
+
+(add-hook 'post-command-hook #'kwrooijen/modeline--force-update-visual)
 #+END_SRC
 
 ** Segments
@@ -141,7 +149,15 @@
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-line-col ()
-  (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll))
+  (if (and (bound-and-true-p evil-local-mode)
+           (eq evil-state 'visual)
+           (use-region-p))
+      (let* ((beg (region-beginning))
+             (end (region-end))
+             (lines (count-lines beg end))
+             (chars (abs (- end beg))))
+        (kwrooijen/modeline-r (format " %d:%d" lines chars) 'kwrooijen/modeline-scroll))
+    (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
