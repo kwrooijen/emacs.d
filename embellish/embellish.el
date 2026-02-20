@@ -17,9 +17,11 @@
 ;; special buffers (REPLs, Magit, Dired, etc.) a distinct background
 ;; and padding.
 ;;
-;; Set `embellish-background-color' to a single color (e.g. "#1e2030")
-;; and it will be used for subwindow backgrounds, fringes, header lines,
-;; minibuffer, and window dividers.
+;; The subwindow background is controlled by the `embellish-subwindow-face'
+;; face.  When using `embellish-theme', this face is set automatically
+;; by the theme.  Without a theme, set it manually:
+;;
+;;   (set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
 ;;
 ;; Each feature group can be disabled entirely via its group toggle
 ;; (e.g. `embellish-chrome', `embellish-spacing'), or individual
@@ -34,14 +36,17 @@
   :group 'faces
   :prefix "embellish-")
 
-;;;; Background color
+;;;; Subwindow face
 
-(defcustom embellish-background-color nil
-  "Background color used for subwindows and window dividers.
-A hex color string (e.g. \"#1e2030\").  This single color is applied to
-subwindow backgrounds, fringes, header lines, the minibuffer, and
-window dividers.  When nil, no color styling is applied."
-  :type '(choice (const nil) color)
+(defface embellish-subwindow-face
+  '((t nil))
+  "Face used for subwindow background styling.
+The `:background' attribute of this face is applied to subwindow
+buffers (fringes, header lines, default background, minibuffer).
+Set via a theme (e.g. embellish-winter-night sets it to the darken
+color) or manually:
+
+  (set-face-attribute \\='embellish-subwindow-face nil :background \"#1e2030\")"
   :group 'embellish)
 
 ;;;; Group toggles
@@ -269,30 +274,41 @@ Uses a space/unicode toggle trick to prevent window size display."
 
 ;;;; Spacing implementation
 
+(defun embellish--update-divider-colors ()
+  "Update window divider colors to match the default face background."
+  (let ((bg (face-attribute 'default :background)))
+    (dolist (face '(window-divider
+                    window-divider-first-pixel
+                    window-divider-last-pixel
+                    vertical-border))
+      (set-face-attribute face nil
+                          :foreground bg
+                          :background bg))))
+
+(defun embellish--on-theme-change (&rest _)
+  "Hook run after a theme is loaded to update divider colors."
+  (when (and embellish-mode embellish-spacing)
+    (embellish--update-divider-colors)))
+
 (defun embellish--apply-spacing ()
   "Apply spacing settings."
   (when embellish-spacing
     (push `(internal-border-width . ,embellish-internal-border-width)
           default-frame-alist)
     (set-frame-parameter nil 'internal-border-width embellish-internal-border-width)
-    (let ((bg (face-attribute 'default :background)))
-      (dolist (face '(window-divider
-                      window-divider-first-pixel
-                      window-divider-last-pixel
-                      vertical-border))
-        (set-face-attribute face nil
-                            :foreground bg
-                            :background bg)))
+    (embellish--update-divider-colors)
     (setq window-divider-default-right-width embellish-window-divider-width)
     (setq window-divider-default-places embellish-window-divider-places)
-    (window-divider-mode 1)))
+    (window-divider-mode 1)
+    (add-hook 'enable-theme-functions #'embellish--on-theme-change)))
 
 (defun embellish--revert-spacing ()
   "Revert spacing settings."
   (setq default-frame-alist
         (assq-delete-all 'internal-border-width default-frame-alist))
   (set-frame-parameter nil 'internal-border-width 0)
-  (window-divider-mode -1))
+  (window-divider-mode -1)
+  (remove-hook 'enable-theme-functions #'embellish--on-theme-change))
 
 ;;;; Scrolling implementation
 
@@ -358,21 +374,29 @@ Each group can be disabled via `embellish-chrome', `embellish-spacing',
 (defvar-local embellish--subwindow-needs-style nil
   "Buffer-local flag indicating this buffer needs subwindow styling.")
 
+(defun embellish--subwindow-bg ()
+  "Return the background color for subwindow styling, or nil.
+Reads from the `:background' attribute of `embellish-subwindow-face'."
+  (let ((bg (face-attribute 'embellish-subwindow-face :background nil t)))
+    (unless (or (null bg) (eq bg 'unspecified))
+      bg)))
+
 (defun embellish--subwindow-style (win)
   "Apply subwindow styling to window WIN."
-  (when (and embellish--subwindow-needs-style embellish-background-color)
+  (when-let* ((bg (and embellish--subwindow-needs-style
+                      (embellish--subwindow-bg))))
     (set-window-fringes win
                         embellish-subwindow-fringe-width
                         embellish-subwindow-fringe-width)
     (setq header-line-format " ")
     (face-remap-add-relative 'fringe
-                              :foreground embellish-background-color
-                              :background embellish-background-color)
+                              :foreground bg
+                              :background bg)
     (face-remap-add-relative 'header-line
-                              :background embellish-background-color
+                              :background bg
                               :height embellish-subwindow-header-height)
     (face-remap-add-relative 'default
-                              :background embellish-background-color)))
+                              :background bg)))
 
 (defun embellish--subwindow-setup ()
   "Mark the current buffer as needing subwindow styling."
@@ -393,9 +417,9 @@ Each group can be disabled via `embellish-chrome', `embellish-spacing',
 
 (defun embellish--minibuffer-subwindow-hook ()
   "Apply subwindow styling to the minibuffer."
-  (when embellish-background-color
-    (face-remap-add-relative 'default :background embellish-background-color)
-    (face-remap-add-relative 'minibuffer-prompt :background embellish-background-color))
+  (when-let* ((bg (embellish--subwindow-bg)))
+    (face-remap-add-relative 'default :background bg)
+    (face-remap-add-relative 'minibuffer-prompt :background bg))
   (set-window-margins (minibuffer-window)
                       embellish-subwindow-minibuffer-margins
                       embellish-subwindow-minibuffer-margins))

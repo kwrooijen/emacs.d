@@ -206,8 +206,7 @@ strings?). Making it safe to enable in programming modes.
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'corfu-default 'kwrooijen/darken-bg-face)
-(kwrooijen/reset-inherit-face! 'corfu-current 'hl-line)
+;; Corfu face overrides handled by embellish-theme
 
 (add-hook 'corfu-mode-hook
           (lambda ()

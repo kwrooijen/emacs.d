@@ -98,7 +98,7 @@
   (let ((table (or buffer-display-table (make-display-table))))
     (set-display-table-slot
      table 'truncation
-     (make-glyph-code ?\  'kwrooijen/darken-fb-face))
+     (make-glyph-code ?\  'embellish-theme-darken-fb-face))
     (setq-local buffer-display-table table)))
 
 (advice-add #'vertico--display-candidates :around #'kwrooijen/vertico-add-top-padding)
@@ -173,13 +173,7 @@ No delays
  consult-notes-search-in-all-notes
  :preview-key "TAB")
 
-(kwrooijen/reset-inherit-face! 'consult-file 'kwrooijen/faded-fg-face)
-(set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
-(set-face-attribute 'consult-highlight-match nil :inherit 'bold)
-(set-face-attribute 'consult-preview-match nil :inherit 'bold)
-
-(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
-(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
+;; Consult face overrides handled by embellish-theme
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -291,10 +285,7 @@ Project find files
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'orderless-match-face-0 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-1 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-2 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-3 nil :inherit 'bold :foreground 'unspecified)
+;; Orderless face overrides handled by embellish-theme
 #+END_SRC
 
 
@@ -365,7 +356,7 @@ Project find files
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
+;; Wgrep face overrides handled by embellish-theme
 #+END_SRC
 
 

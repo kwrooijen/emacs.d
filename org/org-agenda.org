@@ -104,9 +104,9 @@ When TAG is non-nil, only show tasks that have that tag."
                         (marker (nth 3 entry))
                         (padded-tag (string-pad tag-str max-tag-width))
                         (padded-closed (string-pad closed max-closed-width))
-                        (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                        (label (concat (propertize padded-tag 'face 'embellish-theme-faded-fg-face)
                                        "  "
-                                       (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                       (propertize padded-closed 'face 'embellish-theme-faded-fg-face)
                                        "  " heading)))
                    (cons label marker)))
                entries))
@@ -273,13 +273,13 @@ Press C-t to change the TODO state of the selected entry."
                               (padded-state (propertize (string-pad state max-state-width)
                                                         'face (org-get-todo-face state)))
                               (padded-closed (string-pad closed max-closed-width))
-                              (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                              (label (concat (propertize padded-tag 'face 'embellish-theme-faded-fg-face)
                                              "  "
                                              padded-agent
                                              "  "
                                              padded-state
                                              "  "
-                                             (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                             (propertize padded-closed 'face 'embellish-theme-faded-fg-face)
                                              "  " heading)))
                          (when clocked
                            (put-text-property 0 1 'kwrooijen/clocked t label))
@@ -533,9 +533,9 @@ Set the faces for specific org keywords
 
 #+BEGIN_SRC emacs-lisp
 (org-todo-keyword-faces
-      '(("TODO"        . (:inherit kwrooijen/salient-fg-face))
-        ("IN PROGRESS" . (:inherit kwrooijen/popout-fg-face))
-        ("WAITING"     . (:inherit kwrooijen/faded-fg-face))
+      '(("TODO"        . (:inherit embellish-theme-salient-fg-face))
+        ("IN PROGRESS" . (:inherit embellish-theme-popout-fg-face))
+        ("WAITING"     . (:inherit embellish-theme-faded-fg-face))
         ("DONE"        . (:inherit org-done))
         ("CANCELLED"   . (:inherit org-done))))
 #+END_SRC

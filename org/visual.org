@@ -8,16 +8,12 @@
 Configure theme-dependent settings for embellish and enable
 subwindow mode. The base =embellish-mode= is enabled in =init.el=.
 
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(embellish-background-color (kwrooijen-color :darken))
-#+END_SRC
-
 ** Init :init:
 
 #+BEGIN_SRC emacs-lisp
-;; (embellish-mode 1)
-;; (embellish-subwindow-mode 1)
+(load-theme 'embellish-winter-night t)
+(embellish-mode 1)
+(embellish-subwindow-mode 1)
 #+END_SRC
 
 

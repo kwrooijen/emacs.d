@@ -10,8 +10,7 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (require 'em-ls)
 (require 'em-prompt)
-(set-face-attribute 'eshell-ls-directory nil :inherit 'dired-directory)
-(set-face-attribute 'eshell-prompt nil :foreground 'unspecified :inherit 'minibuffer-prompt)
+;; Eshell face overrides handled by embellish-theme
 #+END_SRC
 
 *** Functions

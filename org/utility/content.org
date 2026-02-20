@@ -12,9 +12,7 @@ Max body width (using shr renderer)
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'elfeed-search-feed-face 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'elfeed-search-tag-face 'kwrooijen/popout-fg-face)
-(kwrooijen/reset-inherit-face! 'elfeed-search-date-face 'kwrooijen/faded-fg-face)
+;; Elfeed face overrides handled by embellish-theme
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -93,11 +91,7 @@ Max body width (using shr renderer)
 :END:
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'message-header-to 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-subject 'kwrooijen/strong-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-other 'kwrooijen/faded-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+;; Message face overrides handled by embellish-theme
 #+END_SRC
 
 

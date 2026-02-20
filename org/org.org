@@ -407,6 +407,7 @@ Org agenda files. All TODOs go in here.
 ;; Get rid of the background on column views
 (set-face-attribute 'org-column nil :background 'unspecified)
 (set-face-attribute 'org-column-title nil :background 'unspecified)
+;; Org-level bold styling
 (set-face-attribute 'org-level-1 nil :bold t)
 (set-face-attribute 'org-level-2 nil :bold t)
 (set-face-attribute 'org-level-3 nil :bold t)

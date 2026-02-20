@@ -44,11 +44,7 @@ winum. For some reason I can't override the keybindings using General.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-;; (set-face-background 'diff-refine-added "#000000")
-;; (set-face-background 'diff-refine-removed "#000000")
-
-(set-face-background 'diff-refine-added "#276128")
-(set-face-background 'diff-refine-removed "#612828")
+;; Diff face overrides handled by embellish-theme
 #+END_SRC
 
 ** Hook :hook:

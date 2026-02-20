@@ -140,9 +140,9 @@ Prepends ! when any agent is waiting for permission."
       (when (> total 0)
         (let* ((has-waiting (> waiting 0))
                (face (cond
-                      (has-waiting 'kwrooijen/error-fg-face)
-                      ((> working 0) 'kwrooijen/popout-fg-face)
-                      (t 'kwrooijen/faded-fg-face)))
+                      (has-waiting 'embellish-theme-error-fg-face)
+                      ((> working 0) 'embellish-theme-popout-fg-face)
+                      (t 'embellish-theme-faded-fg-face)))
                (prefix (if has-waiting "!" "")))
           (kwrooijen/modeline-r (format " %s[%d/%d]" prefix working total) face))))))
 #+END_SRC
@@ -176,7 +176,7 @@ Prepends ! when any agent is waiting for permission."
                                               "  "
                                               padded-name
                                               "  "
-                                              (propertize dir 'face 'kwrooijen/faded-fg-face))))
+                                              (propertize dir 'face 'embellish-theme-faded-fg-face))))
                           (cons label buf)))
                       entries))
              (collection (lambda (str pred action)

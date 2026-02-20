@@ -2,15 +2,15 @@
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/modeline-border
-  `((t (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)))
-    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+  `((t (:foreground ,(face-attribute 'embellish-theme-foreground-fg-face :foreground)))
+    (t (:background ,(face-attribute 'embellish-theme-darken-fg-face :background)))
     (t (:height 1.5)))
   "Face for the active window border."
   :group 'kwrooijen/modeline)
 
 (defface kwrooijen/modeline-border-inactive
-  `((t (:foreground ,(face-attribute 'kwrooijen/darken-fg-face :foreground)))
-    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+  `((t (:foreground ,(face-attribute 'embellish-theme-darken-fg-face :foreground)))
+    (t (:background ,(face-attribute 'embellish-theme-darken-fg-face :background)))
     (t (:height 1.5)))
   "Face for the inactive window border."
   :group 'kwrooijen/modeline)
@@ -46,14 +46,10 @@
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-(kwrooijen/reset-inherit-face!
- 'mode-line           'kwrooijen/darken-bg-face
- 'mode-line-active    'kwrooijen/darken-bg-face
- 'mode-line-inactive  'kwrooijen/darken-bg-face
- 'mode-line-highlight 'unspecified)
+;; Mode line face overrides handled by embellish-theme
 
 (set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
-(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'kwrooijen/darken-fg-face)
+(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'embellish-theme-darken-fg-face)
 #+END_SRC
 
 ** Active bar
@@ -72,12 +68,12 @@
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
 (set-face-attribute  'kwrooijen/modeline-border nil
-        :foreground (face-attribute 'kwrooijen/foreground-fg-face :foreground)
-        :background (face-attribute 'kwrooijen/darken-bg-face :background)
+        :foreground (face-attribute 'embellish-theme-foreground-fg-face :foreground)
+        :background (face-attribute 'embellish-theme-darken-bg-face :background)
         :height 1.5)
 (set-face-attribute  'kwrooijen/modeline-border-inactive nil
-        :foreground (face-attribute 'kwrooijen/darken-fg-face :foreground)
-        :background (face-attribute 'kwrooijen/darken-fg-face :background)
+        :foreground (face-attribute 'embellish-theme-darken-fg-face :foreground)
+        :background (face-attribute 'embellish-theme-darken-fg-face :background)
         :height 1.5)
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
@@ -164,7 +160,7 @@
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
-                     `(:foreground ,(face-attribute 'kwrooijen/error-fg-face :foreground))
+                     `(:foreground ,(face-attribute 'embellish-theme-error-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
     (kwrooijen/modeline-r " %b" face)))
 #+END_SRC
@@ -198,7 +194,7 @@
   (when (kwrooijen/weekday-p)
     (let* ((clock-count (length org-clock-multi-clocks))
            (clocked-in-p (> clock-count 0))
-           (face (if clocked-in-p 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
+           (face (if clocked-in-p 'embellish-theme-warning-fg-face 'embellish-theme-faded-fg-face)))
       (kwrooijen/modeline-r (format " [%d | %s | %s]" clock-count (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
 #+END_SRC
 
@@ -218,7 +214,7 @@
          (affix (if (> zoom 0) "+" "-")))
     (unless (equal zoom 0)
       (kwrooijen/modeline-r (format " %s%s" zoom affix)
-                            'kwrooijen/popout-fg-face))))
+                            'embellish-theme-popout-fg-face))))
 #+END_SRC
 
 

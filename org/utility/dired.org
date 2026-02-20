@@ -38,8 +38,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-owner
-  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
-    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-subtle-fg-face))
+    (t                   (:inherit embellish-theme-subtle-fg-face)))
   "Face for the file owner field in Dired."
   :group 'diredfl)
 
@@ -49,8 +49,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-size
-  '((((background dark)) (:inherit kwrooijen/popout-fg-face))
-    (t                   (:inherit kwrooijen/popout-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-popout-fg-face))
+    (t                   (:inherit embellish-theme-popout-fg-face)))
   "Face for the file group field in Dired."
   :group 'diredfl)
 
@@ -59,8 +59,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-acl-flag
-  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
-    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-subtle-fg-face))
+    (t                   (:inherit embellish-theme-subtle-fg-face)))
   "Face for the ACL '+' flag in Dired permission strings."
   :group 'diredfl)
 

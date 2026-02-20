@@ -274,36 +274,36 @@ Bar length is based on `org-clock-data-bar-value' (time or earnings)."
                       (colored-info
                        (if earn-str
                            (let ((padded-earn (format (format "%%%ds" max-earn-width) earn-str)))
-                             (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
-                                     (propertize padded-time 'face `(:foreground ,(kwrooijen-color :info)))
-                                     (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
-                                     (propertize padded-earn 'face `(:foreground ,(kwrooijen-color :success)))
-                                     (propertize "]" 'face `(:foreground ,(kwrooijen-color :info)))))
-                         (concat (propertize "[" 'face `(:foreground ,(kwrooijen-color :info)))
-                                 (propertize padded-time 'face `(:foreground ,(kwrooijen-color :info)))
-                                 (propertize "]" 'face `(:foreground ,(kwrooijen-color :info)))))))
+                             (concat (propertize "[" 'face `(:foreground ,(embellish-theme-color :info)))
+                                     (propertize padded-time 'face `(:foreground ,(embellish-theme-color :info)))
+                                     (propertize " | " 'face `(:foreground ,(embellish-theme-color :info)))
+                                     (propertize padded-earn 'face `(:foreground ,(embellish-theme-color :success)))
+                                     (propertize "]" 'face `(:foreground ,(embellish-theme-color :info)))))
+                         (concat (propertize "[" 'face `(:foreground ,(embellish-theme-color :info)))
+                                 (propertize padded-time 'face `(:foreground ,(embellish-theme-color :info)))
+                                 (propertize "]" 'face `(:foreground ,(embellish-theme-color :info)))))))
                  (concat "  "
-                         (propertize (nth 0 r) 'face `(:foreground ,(kwrooijen-color :salient)))
+                         (propertize (nth 0 r) 'face `(:foreground ,(embellish-theme-color :salient)))
                          "  "
                          colored-info
                          " "
                          (propertize (make-string (nth 3 r) org-clock-data-bar-char)
-                                     'face `(:foreground ,(kwrooijen-color :subtle))))))
+                                     'face `(:foreground ,(embellish-theme-color :subtle))))))
              row-data))
            (total-hours (/ total-mins 60))
            (total-remaining (% total-mins 60))
            (total-time-str (format "%dh%02dm" total-hours total-remaining))
            (total-line
             (if (and org-clock-data-hourly-rates (> total-earnings 0))
-                (concat (propertize "  Total: " 'face `(:foreground ,(kwrooijen-color :salient)))
-                        (propertize total-time-str 'face `(:foreground ,(kwrooijen-color :info)))
-                        (propertize " | " 'face `(:foreground ,(kwrooijen-color :info)))
+                (concat (propertize "  Total: " 'face `(:foreground ,(embellish-theme-color :salient)))
+                        (propertize total-time-str 'face `(:foreground ,(embellish-theme-color :info)))
+                        (propertize " | " 'face `(:foreground ,(embellish-theme-color :info)))
                         (propertize (format "%s%.2f" org-clock-data-currency-symbol total-earnings)
-                                    'face `(:foreground ,(kwrooijen-color :success))))
-              (concat (propertize "  Total: " 'face `(:foreground ,(kwrooijen-color :salient)))
-                      (propertize total-time-str 'face `(:foreground ,(kwrooijen-color :info)))))))
+                                    'face `(:foreground ,(embellish-theme-color :success))))
+              (concat (propertize "  Total: " 'face `(:foreground ,(embellish-theme-color :salient)))
+                      (propertize total-time-str 'face `(:foreground ,(embellish-theme-color :info)))))))
       (concat (string-join lines "\n") "\n"
-              (propertize (make-string 40 ?─) 'face `(:foreground ,(kwrooijen-color :faded))) "\n"
+              (propertize (make-string 40 ?─) 'face `(:foreground ,(embellish-theme-color :faded))) "\n"
               total-line "\n"))))
 
 ;;; Agenda Integration

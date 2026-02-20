@@ -19,9 +19,8 @@ Every setting is individually configurable, and feature groups can be disabled e
 ```elisp
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
-  :custom
-  (embellish-background-color "#1e2030")
   :config
+  (set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
   (embellish-mode 1)
   (embellish-subwindow-mode 1))
 ```
@@ -34,7 +33,7 @@ Clone the repository and add it to your load path:
 (add-to-list 'load-path "/path/to/embellish")
 (require 'embellish)
 
-(setq embellish-background-color "#1e2030")
+(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
 (embellish-mode 1)
 (embellish-subwindow-mode 1)
 ```
@@ -47,19 +46,19 @@ Global minor mode that applies frame chrome, spacing, scrolling, and visual line
 
 ### `embellish-subwindow-mode`
 
-Global minor mode that styles special buffers with a distinct background and padding. Requires `embellish-background-color` to be set. Toggle with `M-x embellish-subwindow-mode`.
+Global minor mode that styles special buffers with a distinct background and padding. Reads the background color from the `embellish-subwindow-face` face. Toggle with `M-x embellish-subwindow-mode`.
 
 ## Configuration
 
-### Background color
+### Subwindow face
 
-A single color controls subwindow backgrounds, fringes, header lines, and the minibuffer.
+The `embellish-subwindow-face` face controls the background color used for subwindow buffers (fringes, header lines, default background, minibuffer). Set its `:background` attribute:
 
 ```elisp
-(setq embellish-background-color "#1e2030")
+(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
 ```
 
-When `nil` (default), no color styling is applied.
+When using `embellish-theme`, this face is set automatically by the theme (to the `:darken` palette color).
 
 ### Group toggles
 
@@ -135,7 +134,125 @@ Default hooks:
     messages-buffer-mode-hook))
 ```
 
-## Example: Minimal config
+## Embellish Theme
+
+`embellish-theme` is a theme engine that generates complete Emacs themes from 13 semantic colors. It ships with two built-in themes.
+
+### How it works
+
+A theme file calls `embellish-theme-generate` with a name and a color palette. This generates:
+
+1. A standard Emacs theme (works with `load-theme`, `disable-theme`, etc.)
+2. Face triplets for each semantic color (`-fg-face`, `-bg-face`, `-fb-face`) as side effects
+3. 150+ face assignments covering core Emacs, Org, Magit, Diredfl, Corfu, Consult, Orderless, Elfeed, and more
+4. The `embellish-subwindow-face` background (set to the `:darken` color)
+
+### The 13 semantic colors
+
+| Name | Description |
+|------|-------------|
+| `:strong` | Bold, primary emphasis |
+| `:foreground` | Default text |
+| `:subtle` | Muted, secondary elements |
+| `:faded` | De-emphasized, comments |
+| `:salient` | Accent, keywords, links |
+| `:popout` | Strings, special callouts |
+| `:error` | Error states |
+| `:warning` | Warning states |
+| `:success` | Success states |
+| `:info` | Informational highlights |
+| `:background` | Main background |
+| `:darken` | Darker background (sidebars, blocks) |
+| `:highlight` | Selection, cursor line |
+
+### Built-in themes
+
+- **`embellish-winter-night`** -- Dark theme with cool blue tones
+- **`embellish-winter-morning`** -- Light theme with warm neutral tones
+
+### Usage
+
+Load a theme with the standard Emacs mechanism:
+
+```elisp
+(load-theme 'embellish-winter-night t)
+```
+
+Switch themes at any time with `M-x load-theme`.
+
+### With use-package
+
+```elisp
+(use-package embellish
+  :straight (embellish :type git :host github :repo "kwrooijen/embellish")
+  :config
+  (require 'embellish-theme)
+  (add-to-list 'custom-theme-load-path "/path/to/embellish")
+  (load-theme 'embellish-winter-night t)
+  (embellish-mode 1)
+  (embellish-subwindow-mode 1))
+```
+
+The theme automatically sets `embellish-subwindow-face`, so no manual color configuration is needed.
+
+### Creating a custom theme
+
+Create a file named `my-theme-theme.el`:
+
+```elisp
+(require 'embellish-theme)
+
+(embellish-theme-generate 'my-theme
+  '(:strong     "#FFFFFF"
+    :foreground "#E0E0E0"
+    :subtle     "#555555"
+    :faded      "#888888"
+    :salient    "#6699CC"
+    :popout     "#CC9966"
+    :error      "#CC6666"
+    :warning    "#CCCC66"
+    :success    "#66CC66"
+    :info       "#66CCCC"
+    :background "#1A1A2E"
+    :darken     "#16162A"
+    :highlight  "#2A2A4E"))
+```
+
+Add the directory to `custom-theme-load-path` and load with `M-x load-theme RET my-theme`.
+
+### API
+
+```elisp
+;; Get a color from the active palette
+(embellish-theme-color :salient)  ;; => "#81A1C1"
+
+;; Get all color names
+(embellish-theme-colors)  ;; => (:strong :foreground ...)
+
+;; Color utilities
+(embellish-theme-brighten "#222436" 10)   ;; brighten by 10%
+(embellish-theme-saturate "#222436" 10)   ;; saturate by 10%
+```
+
+### Generated faces
+
+For each of the 13 semantic colors, three faces are generated:
+
+- `embellish-theme-NAME-fg-face` -- foreground only
+- `embellish-theme-NAME-bg-face` -- background only
+- `embellish-theme-NAME-fb-face` -- foreground + background
+
+Plus a composite: `embellish-theme-faded-darken-fb-face`.
+
+These can be used in your own config, e.g. to style a custom modeline:
+
+```elisp
+(set-face-attribute 'my-face nil :inherit 'embellish-theme-salient-fg-face)
+```
+
+## Examples
+
+### Minimal (appearance only, no theme)
 
 ```elisp
 (use-package embellish
@@ -144,33 +261,37 @@ Default hooks:
   (embellish-mode 1))
 ```
 
-This enables all defaults with no subwindow styling (since `embellish-background-color` is nil).
-
-## Example: Full config
+### Full (appearance + theme + subwindows)
 
 ```elisp
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
-  :custom
-  (embellish-background-color "#1e2030")
-  (embellish-internal-border-width 16)
-  (embellish-window-divider-width 16)
-  (embellish-subwindow-fringe-width 16)
-  (embellish-hide-fringes nil)
   :config
+  (require 'embellish-theme)
+  (add-to-list 'custom-theme-load-path "/path/to/embellish")
+  (load-theme 'embellish-winter-night t)
   (embellish-mode 1)
   (embellish-subwindow-mode 1))
 ```
 
-## Example: Disable a group
+### Disable a group
 
 ```elisp
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
   :custom
   (embellish-chrome nil)  ;; Keep toolbar, menubar, etc.
-  (embellish-background-color "#1e2030")
   :config
+  (require 'embellish-theme)
+  (add-to-list 'custom-theme-load-path "/path/to/embellish")
+  (load-theme 'embellish-winter-night t)
   (embellish-mode 1)
   (embellish-subwindow-mode 1))
+```
+
+### Manual subwindow color (no theme)
+
+```elisp
+(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
+(embellish-subwindow-mode 1)
 ```
