@@ -1,0 +1,438 @@
+;;; embellish.el --- Embellish your Emacs frame and windows -*- lexical-binding: t; -*-
+
+;; Author: Kevin van Rooijen
+;; Version: 0.1.0
+;; Package-Requires: ((emacs "27.1"))
+;; Keywords: faces, frames
+;; URL: https://github.com/kwrooijen/embellish
+
+;;; Commentary:
+
+;; Embellish provides a clean, minimal Emacs appearance by consolidating
+;; frame chrome, spacing, scrolling, and subwindow styling into a single
+;; configurable package.
+;;
+;; Enable `embellish-mode' for frame-level appearance (chrome, borders,
+;; dividers, scrolling).  Enable `embellish-subwindow-mode' to give
+;; special buffers (REPLs, Magit, Dired, etc.) a distinct background
+;; and padding.
+;;
+;; Set `embellish-background-color' to a single color (e.g. "#1e2030")
+;; and it will be used for subwindow backgrounds, fringes, header lines,
+;; minibuffer, and window dividers.
+;;
+;; Each feature group can be disabled entirely via its group toggle
+;; (e.g. `embellish-chrome', `embellish-spacing'), or individual
+;; settings can be toggled within an enabled group.
+
+;;; Code:
+
+;;;; Customization group
+
+(defgroup embellish nil
+  "Embellish your Emacs frame and windows."
+  :group 'faces
+  :prefix "embellish-")
+
+;;;; Background color
+
+(defcustom embellish-background-color nil
+  "Background color used for subwindows and window dividers.
+A hex color string (e.g. \"#1e2030\").  This single color is applied to
+subwindow backgrounds, fringes, header lines, the minibuffer, and
+window dividers.  When nil, no color styling is applied."
+  :type '(choice (const nil) color)
+  :group 'embellish)
+
+;;;; Group toggles
+
+(defcustom embellish-chrome t
+  "When non-nil, apply frame chrome settings.
+This controls the entire chrome group (toolbar, menubar, scrollbar,
+cursor, fringes, titlebar, proxy icon).  Set to nil to skip all
+chrome modifications.  Individual settings within the group can
+still be toggled when the group is enabled."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-spacing t
+  "When non-nil, apply spacing settings.
+This controls the entire spacing group (internal border, window
+divider).  Set to nil to skip all spacing modifications."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-scrolling t
+  "When non-nil, apply scrolling settings.
+This controls the entire scrolling group.  Set to nil to skip
+all scrolling modifications."
+  :type 'boolean
+  :group 'embellish)
+
+;;;; Frame chrome
+
+(defcustom embellish-hide-toolbar t
+  "When non-nil, disable the tool bar."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-menubar t
+  "When non-nil, disable the menu bar."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-scrollbar t
+  "When non-nil, disable the scroll bar."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-cursor-in-inactive-windows t
+  "When non-nil, hide the cursor in non-selected windows."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-disable-cursor-blink t
+  "When non-nil, disable cursor blinking."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-fringes t
+  "When non-nil, set all fringes to zero width."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-transparent-titlebar t
+  "When non-nil, use a transparent titlebar on macOS."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-title t
+  "When non-nil, hide the buffer name from the frame title bar.
+Uses a space/unicode toggle trick to prevent window size display."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-hide-proxy-icon t
+  "When non-nil, hide the macOS proxy icon in the title bar."
+  :type 'boolean
+  :group 'embellish)
+
+;;;; Spacing
+
+(defcustom embellish-internal-border-width 24
+  "Internal border width (pixels) for frame margins."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-window-divider-width 24
+  "Width (pixels) of the window divider."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-window-divider-places 'right-only
+  "Where to show window dividers."
+  :type '(choice (const right-only)
+                 (const bottom-only)
+                 (const t))
+  :group 'embellish)
+
+;;;; Scrolling
+
+(defcustom embellish-scroll-margin 1
+  "Number of lines of margin at top and bottom of a window."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-scroll-conservatively 10000
+  "Scroll conservatively when point moves off-screen."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-scroll-step 1
+  "Number of lines to scroll when point moves off-screen."
+  :type 'integer
+  :group 'embellish)
+
+;;;; Visual line mode
+
+(defcustom embellish-visual-line-mode t
+  "When non-nil, enable `global-visual-line-mode'."
+  :type 'boolean
+  :group 'embellish)
+
+;;;; Subwindow styling
+
+(defcustom embellish-subwindow-fringe-width 24
+  "Fringe width (pixels) for subwindow buffers."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-subwindow-header-height 190
+  "Header line height for subwindow padding."
+  :type 'integer
+  :group 'embellish)
+
+(defcustom embellish-subwindow-hooks
+  '(cider-repl-mode-hook
+    magit-mode-hook
+    dired-mode-hook
+    sql-interactive-mode-hook
+    eshell-mode-hook
+    inf-ruby-mode-hook
+    messages-buffer-mode-hook)
+  "List of mode hooks that trigger subwindow styling."
+  :type '(repeat symbol)
+  :group 'embellish)
+
+(defcustom embellish-subwindow-style-transient t
+  "When non-nil, also style transient popup buffers."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-subwindow-style-minibuffer t
+  "When non-nil, style the minibuffer with the subwindow background."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-subwindow-minibuffer-margins 2
+  "Left and right margin width for the minibuffer."
+  :type 'integer
+  :group 'embellish)
+
+;;;; Internal state
+
+(defvar embellish--title-hook-fn nil
+  "Stored function for the frame title toggle hook.")
+
+(defvar embellish--saved-frame-title-format nil
+  "Saved `frame-title-format' before embellish modified it.")
+
+(defvar embellish--saved-scroll-margin nil)
+(defvar embellish--saved-scroll-conservatively nil)
+(defvar embellish--saved-scroll-step nil)
+(defvar embellish--saved-auto-window-vscroll nil)
+
+(defvar embellish--saved-scroll-error-top-bottom nil)
+(defvar embellish--saved-scroll-preserve-screen-position nil)
+
+;;;; Frame chrome implementation
+
+(defun embellish--apply-chrome ()
+  "Apply frame chrome settings."
+  (when embellish-chrome
+    (when embellish-hide-toolbar
+      (tool-bar-mode -1))
+    (when embellish-hide-menubar
+      (menu-bar-mode -1))
+    (when embellish-hide-scrollbar
+      (scroll-bar-mode -1))
+    (when embellish-disable-cursor-blink
+      (blink-cursor-mode -1))
+    (when embellish-hide-cursor-in-inactive-windows
+      (setq-default cursor-in-non-selected-windows nil))
+    (when embellish-hide-fringes
+      (set-fringe-mode 0)
+      (setq left-fringe-width 0)
+      (setq right-fringe-width 0))
+    (when embellish-transparent-titlebar
+      (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t)))
+    (when embellish-hide-title
+      (setq embellish--saved-frame-title-format frame-title-format)
+      (setq-default frame-title-format " ")
+      (setq embellish--title-hook-fn
+            (lambda (_frame)
+              (if (equal frame-title-format " ")
+                  (setq frame-title-format "\u3164")
+                (setq frame-title-format " "))))
+      (add-hook 'window-size-change-functions embellish--title-hook-fn))
+    (when embellish-hide-proxy-icon
+      (setq-default ns-use-proxy-icon nil))))
+
+(defun embellish--revert-chrome ()
+  "Revert frame chrome settings."
+  (tool-bar-mode 1)
+  (menu-bar-mode 1)
+  (scroll-bar-mode 1)
+  (blink-cursor-mode 1)
+  (setq-default cursor-in-non-selected-windows t)
+  (set-fringe-mode nil)
+  (setq left-fringe-width nil)
+  (setq right-fringe-width nil)
+  (setq default-frame-alist
+        (assq-delete-all 'ns-transparent-titlebar default-frame-alist))
+  (when embellish--title-hook-fn
+    (remove-hook 'window-size-change-functions embellish--title-hook-fn)
+    (setq embellish--title-hook-fn nil))
+  (when embellish--saved-frame-title-format
+    (setq-default frame-title-format embellish--saved-frame-title-format))
+  (setq-default ns-use-proxy-icon t))
+
+;;;; Spacing implementation
+
+(defun embellish--apply-spacing ()
+  "Apply spacing settings."
+  (when embellish-spacing
+    (push `(internal-border-width . ,embellish-internal-border-width)
+          default-frame-alist)
+    (set-frame-parameter nil 'internal-border-width embellish-internal-border-width)
+    (let ((bg (face-attribute 'default :background)))
+      (dolist (face '(window-divider
+                      window-divider-first-pixel
+                      window-divider-last-pixel
+                      vertical-border))
+        (set-face-attribute face nil
+                            :foreground bg
+                            :background bg)))
+    (setq window-divider-default-right-width embellish-window-divider-width)
+    (setq window-divider-default-places embellish-window-divider-places)
+    (window-divider-mode 1)))
+
+(defun embellish--revert-spacing ()
+  "Revert spacing settings."
+  (setq default-frame-alist
+        (assq-delete-all 'internal-border-width default-frame-alist))
+  (set-frame-parameter nil 'internal-border-width 0)
+  (window-divider-mode -1))
+
+;;;; Scrolling implementation
+
+(defun embellish--apply-scrolling ()
+  "Apply scrolling settings."
+  (when embellish-scrolling
+    (setq embellish--saved-scroll-margin scroll-margin)
+    (setq embellish--saved-scroll-conservatively scroll-conservatively)
+    (setq embellish--saved-scroll-step scroll-step)
+    (setq embellish--saved-auto-window-vscroll auto-window-vscroll)
+    (setq embellish--saved-scroll-error-top-bottom scroll-error-top-bottom)
+    (setq embellish--saved-scroll-preserve-screen-position scroll-preserve-screen-position)
+    (setq scroll-margin embellish-scroll-margin
+          scroll-conservatively embellish-scroll-conservatively
+          scroll-step embellish-scroll-step
+          auto-window-vscroll nil
+          scroll-error-top-bottom t
+          scroll-preserve-screen-position t)))
+
+(defun embellish--revert-scrolling ()
+  "Revert scrolling settings."
+  (setq scroll-margin (or embellish--saved-scroll-margin 0))
+  (setq scroll-conservatively (or embellish--saved-scroll-conservatively 0))
+  (setq scroll-step (or embellish--saved-scroll-step 0))
+  (setq auto-window-vscroll (or embellish--saved-auto-window-vscroll t))
+  (setq scroll-error-top-bottom embellish--saved-scroll-error-top-bottom)
+  (setq scroll-preserve-screen-position embellish--saved-scroll-preserve-screen-position))
+
+;;;; Visual line mode implementation
+
+(defun embellish--apply-visual-line ()
+  "Apply visual line mode."
+  (when embellish-visual-line-mode
+    (global-visual-line-mode 1)))
+
+(defun embellish--revert-visual-line ()
+  "Revert visual line mode."
+  (global-visual-line-mode -1))
+
+;;;; embellish-mode
+
+;;;###autoload
+(define-minor-mode embellish-mode
+  "Global minor mode for a clean, minimal Emacs appearance.
+Applies frame chrome, spacing, scrolling, and visual line settings.
+Each group can be disabled via `embellish-chrome', `embellish-spacing',
+`embellish-scrolling', and `embellish-visual-line-mode'."
+  :global t
+  :group 'embellish
+  (if embellish-mode
+      (progn
+        (embellish--apply-chrome)
+        (embellish--apply-spacing)
+        (embellish--apply-scrolling)
+        (embellish--apply-visual-line))
+    (embellish--revert-chrome)
+    (embellish--revert-spacing)
+    (embellish--revert-scrolling)
+    (embellish--revert-visual-line)))
+
+;;;; Subwindow implementation
+
+(defvar-local embellish--subwindow-needs-style nil
+  "Buffer-local flag indicating this buffer needs subwindow styling.")
+
+(defun embellish--subwindow-style (win)
+  "Apply subwindow styling to window WIN."
+  (when (and embellish--subwindow-needs-style embellish-background-color)
+    (set-window-fringes win
+                        embellish-subwindow-fringe-width
+                        embellish-subwindow-fringe-width)
+    (setq header-line-format " ")
+    (face-remap-add-relative 'fringe
+                              :foreground embellish-background-color
+                              :background embellish-background-color)
+    (face-remap-add-relative 'header-line
+                              :background embellish-background-color
+                              :height embellish-subwindow-header-height)
+    (face-remap-add-relative 'default
+                              :background embellish-background-color)))
+
+(defun embellish--subwindow-setup ()
+  "Mark the current buffer as needing subwindow styling."
+  (setq embellish--subwindow-needs-style t))
+
+(defun embellish--subwindow-setup-transient ()
+  "Mark a transient buffer as needing subwindow styling."
+  (when (and (boundp 'transient--buffer-name)
+             (get-buffer (or transient--buffer-name "")))
+    (with-current-buffer (get-buffer (or transient--buffer-name ""))
+      (setq embellish--subwindow-needs-style t))))
+
+(defun embellish--subwindow-restyle ()
+  "Restyle all visible windows that need subwindow styling."
+  (dolist (win (window-list))
+    (with-current-buffer (window-buffer win)
+      (embellish--subwindow-style win))))
+
+(defun embellish--minibuffer-subwindow-hook ()
+  "Apply subwindow styling to the minibuffer."
+  (when embellish-background-color
+    (face-remap-add-relative 'default :background embellish-background-color)
+    (face-remap-add-relative 'minibuffer-prompt :background embellish-background-color))
+  (set-window-margins (minibuffer-window)
+                      embellish-subwindow-minibuffer-margins
+                      embellish-subwindow-minibuffer-margins))
+
+(defun embellish--subwindow-add-hooks ()
+  "Register all subwindow hooks."
+  (add-hook 'window-configuration-change-hook #'embellish--subwindow-restyle)
+  (dolist (hook embellish-subwindow-hooks)
+    (add-hook hook #'embellish--subwindow-setup))
+  (when embellish-subwindow-style-transient
+    (add-hook 'transient-setup-buffer-hook #'embellish--subwindow-setup-transient))
+  (when embellish-subwindow-style-minibuffer
+    (add-hook 'minibuffer-setup-hook #'embellish--minibuffer-subwindow-hook))
+  (when (buffer-live-p (get-buffer "*Messages*"))
+    (with-current-buffer "*Messages*"
+      (setq embellish--subwindow-needs-style t))))
+
+(defun embellish--subwindow-remove-hooks ()
+  "Remove all subwindow hooks."
+  (remove-hook 'window-configuration-change-hook #'embellish--subwindow-restyle)
+  (dolist (hook embellish-subwindow-hooks)
+    (remove-hook hook #'embellish--subwindow-setup))
+  (remove-hook 'transient-setup-buffer-hook #'embellish--subwindow-setup-transient)
+  (remove-hook 'minibuffer-setup-hook #'embellish--minibuffer-subwindow-hook))
+
+;;;###autoload
+(define-minor-mode embellish-subwindow-mode
+  "Global minor mode for styling subwindow buffers.
+Gives special buffers (REPLs, Magit, Dired, etc.) a distinct
+background and padding.  Set `embellish-background-color' to a
+hex color string to control the styling color."
+  :global t
+  :group 'embellish
+  (if embellish-subwindow-mode
+      (embellish--subwindow-add-hooks)
+    (embellish--subwindow-remove-hooks)))
+
+(provide 'embellish)
+
+;;; embellish.el ends here

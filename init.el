@@ -16,6 +16,9 @@
 
 (straight-use-package 'org)
 
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/embellish"))
+(require 'embellish)
+
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
 (require 'org-clock-multi)
 

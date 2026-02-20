@@ -238,7 +238,7 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
    'error               'kwrooijen/error-fg-face
    'warning             'kwrooijen/warning-fg-face
    'button              'kwrooijen/popout-fg-face
-   'fringe              'kwrooijen/background-bg-face
+   ;; 'fringe              'kwrooijen/background-bg-face
    'minibuffer-prompt   'kwrooijen/salient-fg-face
    'header-line         'kwrooijen/foreground-fg-face)
   ;; Search faces
@@ -343,25 +343,6 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
  "C-x C-=" 'kwrooijen/font-size-increase
  "C-x C--" 'kwrooijen/font-size-decrease
  "C-x C-0" 'kwrooijen/font-size-reset)
-#+END_SRC
-
-* Window Divider
-:PROPERTIES:
-:PACKAGE: frame
-:END:
-
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'window-divider             'kwrooijen/background-fb-face
- 'window-divider-first-pixel 'kwrooijen/background-fb-face
- 'window-divider-last-pixel  'kwrooijen/background-fb-face
- 'vertical-border            'kwrooijen/background-fb-face)
-
-(setq window-divider-default-right-width 24)
-(setq window-divider-default-places 'right-only)
-(window-divider-mode 1)
 #+END_SRC
 
 * Utilities

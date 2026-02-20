@@ -77,75 +77,10 @@ Disable the default mode-line on startup
 
 ** User interface
 
-*** Simplify
-#+BEGIN_SRC emacs-lisp
-(tool-bar-mode 0)
-(menu-bar-mode 0)
-(scroll-bar-mode 0)
-(blink-cursor-mode 0)
-(setq-default cursor-in-non-selected-windows nil)
-#+END_SRC
-
-Completely disable fringes
-
-#+BEGIN_SRC emacs-lisp
-(set-fringe-mode 0)
-(setq left-fringe-width 0)
-(setq right-fringe-width 0)
-#+END_SRC
-
-Make Emacs title bar the same color as the background (macOS)
-#+BEGIN_SRC emacs-lisp
-(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
-#+END_SRC
-
-Remove buffer name from title bar. Weird trick to get the frame title
-to not display most of the time. We keep switching the title from
-regular space to unicode U+3164. This will prevent the window size
-from being displayed in the title bar.
-
-#+BEGIN_SRC emacs-lisp
-(setq-default frame-title-format " ")
-(add-hook 'window-size-change-functions
-          (lambda (_frame)
-            (if (equal frame-title-format " ")
-                (setq frame-title-format "ㅤ")
-              (setq frame-title-format " "))))
-#+END_SRC
-
-Remove proxy icon from title bar
-#+BEGIN_SRC emacs-lisp
-(setq-default ns-use-proxy-icon nil)
-#+END_SRC
-
-*** Enhance
-
 Show the current column in the mode-line
 
 #+BEGIN_SRC emacs-lisp
 (column-number-mode 1)
-#+END_SRC
-
-Add margins around the frame
-
-#+BEGIN_SRC emacs-lisp
-(push '(internal-border-width . 24) default-frame-alist)
-#+END_SRC
-
-** Scrolling
-*** Smooth scrolling
-#+BEGIN_SRC emacs-lisp
-(setq redisplay-dont-pause t
-      scroll-margin 1
-      scroll-conservatively 10000
-      scroll-step 1
-      auto-window-vscroll nil)
-#+END_SRC
-
-*** Scroll
-#+BEGIN_SRC emacs-lisp
-(setq scroll-error-top-bottom t
-      scroll-preserve-screen-position t)
 #+END_SRC
 
 ** Programming preferences

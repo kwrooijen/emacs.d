@@ -1,3 +1,27 @@
+#+PRIORITY: 3
+
+* Embellish
+:PROPERTIES:
+:PACKAGE: embellish
+:END:
+
+Configure theme-dependent settings for embellish and enable
+subwindow mode. The base =embellish-mode= is enabled in =init.el=.
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(embellish-background-color (kwrooijen-color :darken))
+#+END_SRC
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+;; (embellish-mode 1)
+;; (embellish-subwindow-mode 1)
+#+END_SRC
+
+
+
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
@@ -17,23 +41,6 @@
 ** hook :hook:
 #+BEGIN_SRC emacs-lisp
 (prog-mode . hl-todo-mode)
-#+END_SRC
-
-* Visual line mode
-:PROPERTIES:
-:PACKAGE: simple
-:END:
-
-When Visual Line mode is enabled, `word-wrap` is turned on, and simple
-editing commands are redefined to act on visual lines, not logical
-lines.  See Info node `Visual Line Mode` for details.  Turning on this
-mode disables line truncation set up by variables `truncate-lines` and
-`truncate-partial-width-windows'.
-
-** Init
-
-#+BEGIN_SRC emacs-lisp
-(global-visual-line-mode 1)
 #+END_SRC
 
 * Highlight numbers
@@ -134,71 +141,4 @@ the selected window will be restored (not dimmed)."
 ((prog-mode . hl-line-mode)
  (text-mode . hl-line-mode)
  (messages-buffer-mode . hl-line-mode))
-#+END_SRC
-
-
-* Subwindow
-
-Give subwindows (magit, repl, shell, minibuffer, etc) a different
-style. Similar to Solaire mode, but more flexible.
-
-#+BEGIN_SRC emacs-lisp
-(defvar-local kwrooijen/subwindow-needs-style nil)
-
-(defun kwrooijen/subwindow-styling (win)
-  (when kwrooijen/subwindow-needs-style
-    (set-window-fringes win 24 24)
-    (setq header-line-format " ")
-    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
-    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
-    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
-
-(defun kwrooijen/subwindow-setup-hook ()
-  (setq kwrooijen/subwindow-needs-style t))
-
-(defun kwrooijen/subwindow-setup-hook-transient ()
-  ;; Transient has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (or transient--buffer-name ""))
-    (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-restyle ()
-  (dolist (win (window-list))
-    (with-current-buffer (window-buffer win)
-      (kwrooijen/subwindow-styling win))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/subwindow-hook-list
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook
-    messages-buffer-mode-hook)
-  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
-  :type '(repeat symbol)
-  :group 'kwrooijen)
-
-(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
-
-(dolist (hook kwrooijen/subwindow-hook-list)
-  (add-hook hook #'kwrooijen/subwindow-setup-hook))
-
-(defun minibuffer-subwindow-hook ()
- (face-remap-add-relative 'default '(:inherit kwrooijen/darken-bg-face))
- (face-remap-add-relative 'minibuffer-prompt '(:inherit kwrooijen/darken-bg-face))
- (set-window-margins (minibuffer-window) 2 2))
-
-(add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)
-
-(when (buffer-live-p (get-buffer "*Messages*"))
-  (with-current-buffer "*Messages*"
-    (setq kwrooijen/subwindow-needs-style t)))
 #+END_SRC
