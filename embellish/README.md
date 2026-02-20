@@ -250,6 +250,50 @@ These can be used in your own config, e.g. to style a custom modeline:
 (set-face-attribute 'my-face nil :inherit 'embellish-theme-salient-fg-face)
 ```
 
+## Embellish Font
+
+`embellish-font` manages font family, weight, size, and zoom keybindings.
+
+### Usage
+
+```elisp
+(require 'embellish-font)
+(embellish-font-apply)
+```
+
+Call `embellish-font-apply` after loading to set the default face. It does not auto-apply on require.
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `embellish-font-family` | `"Roboto Mono"` | Font family |
+| `embellish-font-weight` | `'thin` | Font weight |
+| `embellish-font-size` | `200` | Font size (1/10 pt) |
+| `embellish-font-step` | `20` | Size adjustment step |
+
+### Keybindings
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `C-x C-=` | `embellish-font-size-increase` | Increase font size by step |
+| `C-x C--` | `embellish-font-size-decrease` | Decrease font size by step |
+| `C-x C-0` | `embellish-font-size-reset` | Reset to default size |
+
+### With use-package
+
+```elisp
+(use-package embellish
+  :straight (embellish :type git :host github :repo "kwrooijen/embellish")
+  :custom
+  (embellish-font-family "Iosevka")
+  (embellish-font-weight 'light)
+  (embellish-font-size 160)
+  :config
+  (require 'embellish-font)
+  (embellish-font-apply))
+```
+
 ## Examples
 
 ### Minimal (appearance only, no theme)

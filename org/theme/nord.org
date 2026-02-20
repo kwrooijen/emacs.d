@@ -29,63 +29,6 @@ Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
 | darken      | #1e2030 | Darker background (sidebars, blocks) |
 | highlight   | #2f334d | Selection, cursor line               |
 
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/font "Roboto Mono"
-  "Default font family.")
-
-;; Set font
-(set-face-attribute 'default nil
-                    :family kwrooijen/font
-                    :weight 'thin)
-#+END_SRC
-
-* Font Size
-:PROPERTIES:
-:PACKAGE: frame
-:END:
-
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/default-font-size 200
-  "Default font size (in 1/10 pt)."
-  :type 'integer
-  :group 'kwrooijen/theme)
-
-(defcustom kwrooijen/font-step-size 20
-  "Font size adjustment step."
-  :type 'integer
-  :group 'kwrooijen/theme)
-
-(defun kwrooijen/font-size-set (size)
-  "Set global font SIZE."
-  (set-face-attribute 'default nil :height size))
-
-(defun kwrooijen/font-size-increase ()
-  "Increase global font size."
-  (interactive)
-  (kwrooijen/font-size-set (+ (face-attribute 'default :height) kwrooijen/font-step-size)))
-
-(defun kwrooijen/font-size-decrease ()
-  "Decrease global font size."
-  (interactive)
-  (kwrooijen/font-size-set (- (face-attribute 'default :height) kwrooijen/font-step-size)))
-
-(defun kwrooijen/font-size-reset ()
-  "Reset global font size to default."
-  (interactive)
-  (kwrooijen/font-size-set kwrooijen/default-font-size))
-
-(kwrooijen/font-size-set kwrooijen/default-font-size)
-
-(general-define-key
- "C-x C-=" 'kwrooijen/font-size-increase
- "C-x C--" 'kwrooijen/font-size-decrease
- "C-x C-0" 'kwrooijen/font-size-reset)
-#+END_SRC
-
 * Utilities
 
 ** Hex Color Preview
@@ -132,6 +75,6 @@ Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
 
 #+BEGIN_SRC emacs-lisp
 (set-face-attribute 'shr-text nil
-                    :family kwrooijen/font
+                    :family embellish-font-family
                     :weight 'light)
 #+END_SRC

@@ -210,7 +210,7 @@
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-zoom ()
   (let* ((zoom (/ (- (face-attribute 'default :height)
-                     kwrooijen/default-font-size) kwrooijen/font-step-size))
+                     embellish-font-size) embellish-font-step))
          (affix (if (> zoom 0) "+" "-")))
     (unless (equal zoom 0)
       (kwrooijen/modeline-r (format " %s%s" zoom affix)

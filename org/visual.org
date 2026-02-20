@@ -12,6 +12,7 @@ subwindow mode. The base =embellish-mode= is enabled in =init.el=.
 
 #+BEGIN_SRC emacs-lisp
 (load-theme 'embellish-winter-night t)
+(embellish-font-apply)
 (embellish-mode 1)
 (embellish-subwindow-mode 1)
 #+END_SRC
