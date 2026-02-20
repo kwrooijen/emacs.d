@@ -116,6 +116,9 @@ modes. These keys are configurable through the variables
   "h" '(:ignore t :which-key "Help")
   "t" '(:ignore t :which-key "Toggle"))
 
+(kwrooijen/leader
+  "c m" '(kwrooijen/make :which-key "Make"))
+
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
   :states '(normal visual)

@@ -120,6 +120,27 @@
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/make--targets (makefile)
+  "Parse MAKEFILE and return a list of target names."
+  (when (file-exists-p makefile)
+    (with-temp-buffer
+      (insert-file-contents makefile)
+      (let (targets)
+        (goto-char (point-min))
+        (while (re-search-forward "^\\([a-zA-Z0-9_-][a-zA-Z0-9._-]*\\):" nil t)
+          (push (match-string 1) targets))
+        (nreverse targets)))))
+
+(defun kwrooijen/make ()
+  "Select a Makefile target via completing-read and run it in a unique buffer."
+  (interactive)
+  (let* ((default-directory (or (kwrooijen/project-root) default-directory))
+         (makefile (expand-file-name "Makefile" default-directory))
+         (targets (kwrooijen/make--targets makefile))
+         (target (completing-read "Make: " targets nil t))
+         (buf-name (format "make:%s:%s" (kwrooijen/project-name) target)))
+    (pop-to-buffer (make-comint-in-buffer buf-name nil "make" nil target))))
+
 (defmacro comment (&rest _))
 #+END_SRC
 
