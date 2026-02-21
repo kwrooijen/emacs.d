@@ -221,10 +221,10 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
       (show-paren-match-expression      ((t (:foreground ,popout))))
 
       ;; Org
-      (org-block                        ((t (:background ,darken))))
-      (org-quote                        ((t (:background ,darken))))
-      (org-block-begin-line             ((t (:foreground ,faded :background ,darken))))
-      (org-block-end-line               ((t (:foreground ,faded :background ,darken))))
+      (org-block                        ((t (:background ,darken :extend t))))
+      (org-quote                        ((t (:background ,darken :extend t))))
+      (org-block-begin-line             ((t (:foreground ,faded :background ,darken :extend t))))
+      (org-block-end-line               ((t (:foreground ,faded :background ,darken :extend t))))
       (org-code                         ((t (:foreground ,salient))))
       (org-link                         ((t (:foreground ,salient))))
       (org-table                        ((t (:foreground ,salient))))

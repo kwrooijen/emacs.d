@@ -86,6 +86,13 @@ Calls `embellish-font-apply' from `embellish-font'."
   :type 'boolean
   :group 'embellish)
 
+(defcustom embellish-org t
+  "When non-nil, enable Org visual enhancements.
+Automatically loads `embellish-org' and enables
+`embellish-org-mode' when Org is available."
+  :type 'boolean
+  :group 'embellish)
+
 (defcustom embellish-vertico t
   "When non-nil, enable Vertico padding integration.
 Automatically loads `embellish-vertico' and enables
@@ -353,6 +360,27 @@ Uses a space/unicode toggle trick to prevent window size display."
   "No-op; font settings persist until changed."
   nil)
 
+;;;; Org integration
+
+(defun embellish--enable-org ()
+  "Enable `embellish-org-mode'."
+  (require 'embellish-org)
+  (embellish-org-mode 1))
+
+(defun embellish--setup-org ()
+  "Set up Org integration, now or when Org loads."
+  (when embellish-org
+    (if (featurep 'org)
+        (embellish--enable-org)
+      (with-eval-after-load 'org
+        (when embellish-mode
+          (embellish--enable-org))))))
+
+(defun embellish--teardown-org ()
+  "Tear down Org integration."
+  (when (fboundp 'embellish-org-mode)
+    (embellish-org-mode -1)))
+
 ;;;; Vertico integration
 
 (defun embellish--enable-vertico ()
@@ -392,6 +420,7 @@ Each group can be disabled via `embellish-chrome', `embellish-spacing',
         (embellish--apply-visual-line)
         (embellish--setup-subwindow)
         (embellish--setup-font)
+        (embellish--setup-org)
         (embellish--setup-vertico))
     (embellish--revert-chrome)
     (embellish--revert-spacing)
@@ -399,6 +428,7 @@ Each group can be disabled via `embellish-chrome', `embellish-spacing',
     (embellish--revert-visual-line)
     (embellish--teardown-subwindow)
     (embellish--teardown-font)
+    (embellish--teardown-org)
     (embellish--teardown-vertico)))
 
 

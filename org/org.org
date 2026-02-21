@@ -322,7 +322,6 @@ holding export options."
 
   ;; Fold (hide) blocks on startup
 (org-startup-folded t)
-(org-hide-emphasis-markers t)
 (org-image-actual-width nil)
 (org-src-fontify-natively t)
 (org-edit-src-persistent-message nil)
@@ -386,34 +385,10 @@ Org agenda files. All TODOs go in here.
 
 
 #+BEGIN_SRC emacs-lisp
-(font-lock-add-keywords
- 'org-mode
- '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
- 'append)
-
-(add-to-list 'org-emphasis-alist '("`" (:inherit font-lock-keyword-face )))
-
-  ;; Add backticks to font-lock-keyword-face
-(font-lock-add-keywords
- 'org-mode
- '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
- 'append)
-
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(set-face-attribute 'org-meta-line nil :italic t :inherit 'fixed-pitch)
-;; Get rid of the background on column views
-(set-face-attribute 'org-column nil :background 'unspecified)
-(set-face-attribute 'org-column-title nil :background 'unspecified)
-;; Org-level bold styling
-(set-face-attribute 'org-level-1 nil :bold t)
-(set-face-attribute 'org-level-2 nil :bold t)
-(set-face-attribute 'org-level-3 nil :bold t)
-(set-face-attribute 'org-level-4 nil :bold t)
-(set-face-attribute 'org-level-5 nil :bold t)
-#+END_SRC
+
 
 #+BEGIN_SRC emacs-lisp
 (define-key org-mode-map (kbd "M-p") 'org-previous-block)
@@ -426,7 +401,6 @@ Org agenda files. All TODOs go in here.
 #+BEGIN_SRC emacs-lisp
 ((org-mode . kwrooijen/org-mode-setup)
  (org-mode . org-margin-mode)
- (org-mode . prettify-symbols-mode)
  (org-babel-after-execute . org-redisplay-inline-images)
  (org-babel-after-execute . kwrooijen/jupyter-color-fix)
  (org-src-mode . evil-normal-state))
