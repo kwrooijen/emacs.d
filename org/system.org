@@ -21,6 +21,12 @@
   :group 'kwrooijen)
 #+END_SRC
 
+** Disable F-keys
+#+BEGIN_SRC emacs-lisp
+(dotimes (i 12)
+  (global-unset-key (kbd (format "<f%d>" (1+ i)))))
+#+END_SRC
+
 * Exec Path from Shell
 :PROPERTIES:
 :PACKAGE: exec-path-from-shell
