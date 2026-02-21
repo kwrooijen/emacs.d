@@ -74,6 +74,7 @@ Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
 :END:
 
 #+BEGIN_SRC emacs-lisp
+(require 'embellish-font)
 (set-face-attribute 'shr-text nil
                     :family embellish-font-family
                     :weight 'light)
