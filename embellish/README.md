@@ -1,16 +1,8 @@
 # Embellish
 
-A clean, minimal appearance package for Emacs. Consolidates frame chrome, spacing, scrolling, and subwindow styling into a single configurable package.
+A clean, minimal appearance package for Emacs. One mode to rule them all -- `embellish-mode` consolidates frame chrome, spacing, scrolling, font, subwindow styling, and Vertico integration into a single toggle.
 
-## Features
-
-- **Frame chrome** -- Hide toolbar, menubar, scrollbar, fringes, titlebar text, and proxy icon
-- **Spacing** -- Internal frame borders and window dividers with configurable width
-- **Scrolling** -- Smooth, conservative scrolling defaults
-- **Visual line mode** -- Global word wrapping
-- **Subwindow styling** -- Give special buffers (REPLs, Magit, Dired, shells) a distinct background and padding
-
-Every setting is individually configurable, and feature groups can be disabled entirely.
+Each feature is a separate file that `embellish-mode` loads automatically. Disable any group with a defcustom toggle.
 
 ## Installation
 
@@ -20,55 +12,55 @@ Every setting is individually configurable, and feature groups can be disabled e
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
   :config
-  (set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
-  (embellish-mode 1)
-  (embellish-subwindow-mode 1))
+  (require 'embellish-theme)
+  (add-to-list 'custom-theme-load-path "/path/to/embellish")
+  (load-theme 'embellish-winter-night t)
+  (embellish-mode 1))
 ```
 
 ### Manual
 
-Clone the repository and add it to your load path:
-
 ```elisp
 (add-to-list 'load-path "/path/to/embellish")
+(add-to-list 'custom-theme-load-path "/path/to/embellish")
 (require 'embellish)
+(require 'embellish-theme)
 
-(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
+(load-theme 'embellish-winter-night t)
 (embellish-mode 1)
-(embellish-subwindow-mode 1)
 ```
 
-## Modes
+## Package overview
 
-### `embellish-mode`
+| File | Purpose | Auto-loaded by |
+|------|---------|----------------|
+| `embellish.el` | Frame chrome, spacing, scrolling, visual line mode | -- |
+| `embellish-theme.el` | Theme engine (13 semantic colors, 150+ faces) | -- |
+| `embellish-font.el` | Font family, weight, size, zoom keybindings | `embellish-mode` |
+| `embellish-subwindow.el` | Distinct background for special buffers | `embellish-mode` |
+| `embellish-vertico.el` | Vertico padding and truncation hiding | `embellish-mode` |
+| `embellish-winter-night-theme.el` | Dark theme | `load-theme` |
+| `embellish-winter-morning-theme.el` | Light theme | `load-theme` |
 
-Global minor mode that applies frame chrome, spacing, scrolling, and visual line settings. Toggle with `M-x embellish-mode`.
+---
 
-### `embellish-subwindow-mode`
+## embellish.el
 
-Global minor mode that styles special buffers with a distinct background and padding. Reads the background color from the `embellish-subwindow-face` face. Toggle with `M-x embellish-subwindow-mode`.
-
-## Configuration
-
-### Subwindow face
-
-The `embellish-subwindow-face` face controls the background color used for subwindow buffers (fringes, header lines, default background, minibuffer). Set its `:background` attribute:
-
-```elisp
-(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
-```
-
-When using `embellish-theme`, this face is set automatically by the theme (to the `:darken` palette color).
+`embellish-mode` is the single entry point. It applies frame chrome, spacing, scrolling, and visual line settings directly, and auto-loads the font, subwindow, and vertico modules.
 
 ### Group toggles
 
-Disable entire feature groups without touching individual settings:
+Set any of these to `nil` before enabling `embellish-mode` to skip that group:
 
-```elisp
-(setq embellish-chrome nil)     ;; Skip all chrome (toolbar, menubar, etc.)
-(setq embellish-spacing nil)    ;; Skip all spacing (borders, dividers)
-(setq embellish-scrolling nil)  ;; Skip all scrolling settings
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `embellish-chrome` | `t` | Frame chrome (toolbar, menubar, scrollbar, etc.) |
+| `embellish-spacing` | `t` | Internal borders and window dividers |
+| `embellish-scrolling` | `t` | Conservative scrolling defaults |
+| `embellish-visual-line-mode` | `t` | Global visual line mode |
+| `embellish-subwindow` | `t` | Subwindow styling (auto-loads `embellish-subwindow`) |
+| `embellish-font` | `t` | Font settings (auto-loads `embellish-font`) |
+| `embellish-vertico` | `t` | Vertico padding (auto-loads `embellish-vertico` when Vertico is available) |
 
 ### Frame chrome
 
@@ -92,9 +84,9 @@ All default to `t`:
 |----------|---------|-------------|
 | `embellish-internal-border-width` | `24` | Frame internal border in pixels |
 | `embellish-window-divider-width` | `24` | Window divider width in pixels |
-| `embellish-window-divider-places` | `'right-only` | Where to show dividers (`right-only`, `bottom-only`, or `t`) |
+| `embellish-window-divider-places` | `'right-only` | Where to show dividers |
 
-The window divider color automatically inherits from the `default` face background.
+The window divider color automatically matches the `default` face background and updates on theme change.
 
 ### Scrolling
 
@@ -104,46 +96,26 @@ The window divider color automatically inherits from the `default` face backgrou
 | `embellish-scroll-conservatively` | `10000` | Scroll conservatively |
 | `embellish-scroll-step` | `1` | Lines per scroll step |
 
-### Visual line mode
+### Subwindow face
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `embellish-visual-line-mode` | `t` | Enable global visual line mode |
-
-### Subwindow styling
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `embellish-subwindow-fringe-width` | `24` | Fringe width for subwindow buffers |
-| `embellish-subwindow-header-height` | `190` | Header line height for top padding |
-| `embellish-subwindow-hooks` | See below | Mode hooks that trigger styling |
-| `embellish-subwindow-style-transient` | `t` | Style transient popups |
-| `embellish-subwindow-style-minibuffer` | `t` | Style the minibuffer |
-| `embellish-subwindow-minibuffer-margins` | `2` | Minibuffer left/right margin |
-
-Default hooks:
+`embellish-subwindow-face` is defined in `embellish.el` (shared by subwindow and vertico modules). Its `:background` attribute controls the subwindow background color. When using `embellish-theme`, this face is set automatically by the theme. Without a theme, set it manually:
 
 ```elisp
-(setq embellish-subwindow-hooks
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook
-    messages-buffer-mode-hook))
+(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
 ```
 
-## Embellish Theme
+---
 
-`embellish-theme` is a theme engine that generates complete Emacs themes from 13 semantic colors. It ships with two built-in themes.
+## embellish-theme.el
+
+A theme engine that generates complete Emacs themes from 13 semantic colors. Ships with two built-in themes.
 
 ### How it works
 
-A theme file calls `embellish-theme-generate` with a name and a color palette. This generates:
+Call `embellish-theme-generate` with a name and a color palette. This generates:
 
 1. A standard Emacs theme (works with `load-theme`, `disable-theme`, etc.)
-2. Face triplets for each semantic color (`-fg-face`, `-bg-face`, `-fb-face`) as side effects
+2. Face triplets for each semantic color (`-fg-face`, `-bg-face`, `-fb-face`)
 3. 150+ face assignments covering core Emacs, Org, Magit, Diredfl, Corfu, Consult, Orderless, Elfeed, and more
 4. The `embellish-subwindow-face` background (set to the `:darken` color)
 
@@ -172,28 +144,11 @@ A theme file calls `embellish-theme-generate` with a name and a color palette. T
 
 ### Usage
 
-Load a theme with the standard Emacs mechanism:
-
 ```elisp
 (load-theme 'embellish-winter-night t)
 ```
 
 Switch themes at any time with `M-x load-theme`.
-
-### With use-package
-
-```elisp
-(use-package embellish
-  :straight (embellish :type git :host github :repo "kwrooijen/embellish")
-  :config
-  (require 'embellish-theme)
-  (add-to-list 'custom-theme-load-path "/path/to/embellish")
-  (load-theme 'embellish-winter-night t)
-  (embellish-mode 1)
-  (embellish-subwindow-mode 1))
-```
-
-The theme automatically sets `embellish-subwindow-face`, so no manual color configuration is needed.
 
 ### Creating a custom theme
 
@@ -244,24 +199,17 @@ For each of the 13 semantic colors, three faces are generated:
 
 Plus a composite: `embellish-theme-faded-darken-fb-face`.
 
-These can be used in your own config, e.g. to style a custom modeline:
+These can be used in your own config:
 
 ```elisp
 (set-face-attribute 'my-face nil :inherit 'embellish-theme-salient-fg-face)
 ```
 
-## Embellish Font
+---
 
-`embellish-font` manages font family, weight, size, and zoom keybindings.
+## embellish-font.el
 
-### Usage
-
-```elisp
-(require 'embellish-font)
-(embellish-font-apply)
-```
-
-Call `embellish-font-apply` after loading to set the default face. It does not auto-apply on require.
+Font family, weight, size, and zoom keybindings. Auto-loaded by `embellish-mode` when `embellish-font` is non-nil.
 
 ### Configuration
 
@@ -280,21 +228,90 @@ Call `embellish-font-apply` after loading to set the default face. It does not a
 | `C-x C--` | `embellish-font-size-decrease` | Decrease font size by step |
 | `C-x C-0` | `embellish-font-size-reset` | Reset to default size |
 
-### With use-package
+### Standalone usage
+
+```elisp
+(require 'embellish-font)
+(embellish-font-apply)
+```
+
+---
+
+## embellish-subwindow.el
+
+Gives special buffers (REPLs, Magit, Dired, shells) a distinct background and padding. Auto-loaded by `embellish-mode` when `embellish-subwindow` is non-nil.
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `embellish-subwindow-fringe-width` | `24` | Fringe width for subwindow buffers |
+| `embellish-subwindow-header-height` | `190` | Header line height for top padding |
+| `embellish-subwindow-hooks` | See below | Mode hooks that trigger styling |
+| `embellish-subwindow-style-transient` | `t` | Style transient popups |
+| `embellish-subwindow-style-minibuffer` | `t` | Style the minibuffer |
+| `embellish-subwindow-minibuffer-margins` | `2` | Minibuffer left/right margin |
+
+Default hooks:
+
+```elisp
+'(cider-repl-mode-hook
+  magit-mode-hook
+  dired-mode-hook
+  sql-interactive-mode-hook
+  eshell-mode-hook
+  inf-ruby-mode-hook
+  messages-buffer-mode-hook
+  special-mode-hook)
+```
+
+Pre-existing `*Messages*` and `*Warnings*` buffers are automatically marked for styling on enable.
+
+### Standalone usage
+
+```elisp
+(require 'embellish-subwindow)
+(set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
+(embellish-subwindow-mode 1)
+```
+
+---
+
+## embellish-vertico.el
+
+Adds top/bottom padding to the Vertico completion list, enforces minimum minibuffer height, and hides the truncation indicator. Auto-loaded by `embellish-mode` when Vertico is available and `embellish-vertico` is non-nil. If Vertico loads after embellish, the integration activates automatically via `eval-after-load`.
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `embellish-vertico-top-padding` | `t` | Add blank line above candidates |
+| `embellish-vertico-bottom-padding` | `t` | Add extra height below candidates |
+| `embellish-vertico-min-height` | `t` | Enforce minimum height from `vertico-count` |
+| `embellish-vertico-hide-truncation` | `t` | Hide `$` truncation indicator |
+
+### Standalone usage
+
+```elisp
+(require 'embellish-vertico)
+(embellish-vertico-mode 1)
+```
+
+---
+
+## Examples
+
+### Full setup (recommended)
 
 ```elisp
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
-  :custom
-  (embellish-font-family "Iosevka")
-  (embellish-font-weight 'light)
-  (embellish-font-size 160)
   :config
-  (require 'embellish-font)
-  (embellish-font-apply))
+  (require 'embellish-theme)
+  (add-to-list 'custom-theme-load-path "/path/to/embellish")
+  (load-theme 'embellish-winter-night t)
+  (embellish-mode 1))
 ```
-
-## Examples
 
 ### Minimal (appearance only, no theme)
 
@@ -305,37 +322,38 @@ Call `embellish-font-apply` after loading to set the default face. It does not a
   (embellish-mode 1))
 ```
 
-### Full (appearance + theme + subwindows)
-
-```elisp
-(use-package embellish
-  :straight (embellish :type git :host github :repo "kwrooijen/embellish")
-  :config
-  (require 'embellish-theme)
-  (add-to-list 'custom-theme-load-path "/path/to/embellish")
-  (load-theme 'embellish-winter-night t)
-  (embellish-mode 1)
-  (embellish-subwindow-mode 1))
-```
-
-### Disable a group
+### Disable specific groups
 
 ```elisp
 (use-package embellish
   :straight (embellish :type git :host github :repo "kwrooijen/embellish")
   :custom
-  (embellish-chrome nil)  ;; Keep toolbar, menubar, etc.
+  (embellish-chrome nil)      ;; Keep toolbar, menubar, etc.
+  (embellish-subwindow nil)   ;; No subwindow styling
+  (embellish-font nil)        ;; Manage fonts yourself
   :config
   (require 'embellish-theme)
   (add-to-list 'custom-theme-load-path "/path/to/embellish")
   (load-theme 'embellish-winter-night t)
-  (embellish-mode 1)
-  (embellish-subwindow-mode 1))
+  (embellish-mode 1))
+```
+
+### Custom font
+
+```elisp
+(use-package embellish
+  :straight (embellish :type git :host github :repo "kwrooijen/embellish")
+  :custom
+  (embellish-font-family "Iosevka")
+  (embellish-font-weight 'light)
+  (embellish-font-size 160)
+  :config
+  (embellish-mode 1))
 ```
 
 ### Manual subwindow color (no theme)
 
 ```elisp
 (set-face-attribute 'embellish-subwindow-face nil :background "#1e2030")
-(embellish-subwindow-mode 1)
+(embellish-mode 1)
 ```
