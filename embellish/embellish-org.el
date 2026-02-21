@@ -110,6 +110,14 @@ curly quotes."
   (when embellish-org-prettify-symbols
     (embellish-org--apply-prettify-symbols)))
 
+(defun embellish-org--refresh-existing-buffers ()
+  "Apply prettify-symbols and refontify all existing Org buffers."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (derived-mode-p 'org-mode)
+        (embellish-org--setup-hook)
+        (font-lock-flush)))))
+
 ;;;###autoload
 (define-minor-mode embellish-org-mode
   "Global minor mode for Org visual enhancements."
@@ -121,7 +129,8 @@ curly quotes."
           (setq org-hide-emphasis-markers t))
         (embellish-org--apply-faces)
         (embellish-org--apply-font-lock)
-        (add-hook 'org-mode-hook #'embellish-org--setup-hook))
+        (add-hook 'org-mode-hook #'embellish-org--setup-hook)
+        (embellish-org--refresh-existing-buffers))
     (remove-hook 'org-mode-hook #'embellish-org--setup-hook)))
 
 (provide 'embellish-org)
