@@ -17,6 +17,7 @@
 (straight-use-package 'org)
 
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/embellish"))
+(add-to-list 'custom-theme-load-path (expand-file-name "~/.wisdom.d/embellish"))
 (require 'embellish)
 
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
@@ -42,3 +43,5 @@
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-agent-shell"))
 (require 'org-agent-shell)
 
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-asana"))
+(require 'org-asana)

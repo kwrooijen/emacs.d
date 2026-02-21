@@ -74,6 +74,25 @@ all scrolling modifications."
   :type 'boolean
   :group 'embellish)
 
+(defcustom embellish-subwindow t
+  "When non-nil, enable subwindow styling.
+Loads `embellish-subwindow' and enables `embellish-subwindow-mode'."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-font t
+  "When non-nil, apply font settings on enable.
+Calls `embellish-font-apply' from `embellish-font'."
+  :type 'boolean
+  :group 'embellish)
+
+(defcustom embellish-vertico t
+  "When non-nil, enable Vertico padding integration.
+Automatically loads `embellish-vertico' and enables
+`embellish-vertico-mode' when Vertico is available."
+  :type 'boolean
+  :group 'embellish)
+
 ;;;; Frame chrome
 
 (defcustom embellish-hide-toolbar t
@@ -163,45 +182,6 @@ Uses a space/unicode toggle trick to prevent window size display."
 (defcustom embellish-visual-line-mode t
   "When non-nil, enable `global-visual-line-mode'."
   :type 'boolean
-  :group 'embellish)
-
-;;;; Subwindow styling
-
-(defcustom embellish-subwindow-fringe-width 24
-  "Fringe width (pixels) for subwindow buffers."
-  :type 'integer
-  :group 'embellish)
-
-(defcustom embellish-subwindow-header-height 190
-  "Header line height for subwindow padding."
-  :type 'integer
-  :group 'embellish)
-
-(defcustom embellish-subwindow-hooks
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook
-    messages-buffer-mode-hook)
-  "List of mode hooks that trigger subwindow styling."
-  :type '(repeat symbol)
-  :group 'embellish)
-
-(defcustom embellish-subwindow-style-transient t
-  "When non-nil, also style transient popup buffers."
-  :type 'boolean
-  :group 'embellish)
-
-(defcustom embellish-subwindow-style-minibuffer t
-  "When non-nil, style the minibuffer with the subwindow background."
-  :type 'boolean
-  :group 'embellish)
-
-(defcustom embellish-subwindow-minibuffer-margins 2
-  "Left and right margin width for the minibuffer."
-  :type 'integer
   :group 'embellish)
 
 ;;;; Internal state
@@ -348,6 +328,52 @@ Uses a space/unicode toggle trick to prevent window size display."
   "Revert visual line mode."
   (global-visual-line-mode -1))
 
+;;;; Subwindow integration
+
+(defun embellish--setup-subwindow ()
+  "Enable subwindow styling."
+  (when embellish-subwindow
+    (require 'embellish-subwindow)
+    (embellish-subwindow-mode 1)))
+
+(defun embellish--teardown-subwindow ()
+  "Disable subwindow styling."
+  (when (fboundp 'embellish-subwindow-mode)
+    (embellish-subwindow-mode -1)))
+
+;;;; Font integration
+
+(defun embellish--setup-font ()
+  "Apply font settings."
+  (when embellish-font
+    (require 'embellish-font)
+    (embellish-font-apply)))
+
+(defun embellish--teardown-font ()
+  "No-op; font settings persist until changed."
+  nil)
+
+;;;; Vertico integration
+
+(defun embellish--enable-vertico ()
+  "Enable `embellish-vertico-mode'."
+  (require 'embellish-vertico)
+  (embellish-vertico-mode 1))
+
+(defun embellish--setup-vertico ()
+  "Set up Vertico integration, now or when Vertico loads."
+  (when embellish-vertico
+    (if (featurep 'vertico)
+        (embellish--enable-vertico)
+      (with-eval-after-load 'vertico
+        (when embellish-mode
+          (embellish--enable-vertico))))))
+
+(defun embellish--teardown-vertico ()
+  "Tear down Vertico integration."
+  (when (fboundp 'embellish-vertico-mode)
+    (embellish-vertico-mode -1)))
+
 ;;;; embellish-mode
 
 ;;;###autoload
@@ -363,99 +389,19 @@ Each group can be disabled via `embellish-chrome', `embellish-spacing',
         (embellish--apply-chrome)
         (embellish--apply-spacing)
         (embellish--apply-scrolling)
-        (embellish--apply-visual-line))
+        (embellish--apply-visual-line)
+        (embellish--setup-subwindow)
+        (embellish--setup-font)
+        (embellish--setup-vertico))
     (embellish--revert-chrome)
     (embellish--revert-spacing)
     (embellish--revert-scrolling)
-    (embellish--revert-visual-line)))
+    (embellish--revert-visual-line)
+    (embellish--teardown-subwindow)
+    (embellish--teardown-font)
+    (embellish--teardown-vertico)))
 
-;;;; Subwindow implementation
 
-(defvar-local embellish--subwindow-needs-style nil
-  "Buffer-local flag indicating this buffer needs subwindow styling.")
-
-(defun embellish--subwindow-bg ()
-  "Return the background color for subwindow styling, or nil.
-Reads from the `:background' attribute of `embellish-subwindow-face'."
-  (let ((bg (face-attribute 'embellish-subwindow-face :background nil t)))
-    (unless (or (null bg) (eq bg 'unspecified))
-      bg)))
-
-(defun embellish--subwindow-style (win)
-  "Apply subwindow styling to window WIN."
-  (when-let* ((bg (and embellish--subwindow-needs-style
-                      (embellish--subwindow-bg))))
-    (set-window-fringes win
-                        embellish-subwindow-fringe-width
-                        embellish-subwindow-fringe-width)
-    (setq header-line-format " ")
-    (face-remap-add-relative 'fringe
-                              :foreground bg
-                              :background bg)
-    (face-remap-add-relative 'header-line
-                              :background bg
-                              :height embellish-subwindow-header-height)
-    (face-remap-add-relative 'default
-                              :background bg)))
-
-(defun embellish--subwindow-setup ()
-  "Mark the current buffer as needing subwindow styling."
-  (setq embellish--subwindow-needs-style t))
-
-(defun embellish--subwindow-setup-transient ()
-  "Mark a transient buffer as needing subwindow styling."
-  (when (and (boundp 'transient--buffer-name)
-             (get-buffer (or transient--buffer-name "")))
-    (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq embellish--subwindow-needs-style t))))
-
-(defun embellish--subwindow-restyle ()
-  "Restyle all visible windows that need subwindow styling."
-  (dolist (win (window-list))
-    (with-current-buffer (window-buffer win)
-      (embellish--subwindow-style win))))
-
-(defun embellish--minibuffer-subwindow-hook ()
-  "Apply subwindow styling to the minibuffer."
-  (when-let* ((bg (embellish--subwindow-bg)))
-    (face-remap-add-relative 'default :background bg)
-    (face-remap-add-relative 'minibuffer-prompt :background bg))
-  (set-window-margins (minibuffer-window)
-                      embellish-subwindow-minibuffer-margins
-                      embellish-subwindow-minibuffer-margins))
-
-(defun embellish--subwindow-add-hooks ()
-  "Register all subwindow hooks."
-  (add-hook 'window-configuration-change-hook #'embellish--subwindow-restyle)
-  (dolist (hook embellish-subwindow-hooks)
-    (add-hook hook #'embellish--subwindow-setup))
-  (when embellish-subwindow-style-transient
-    (add-hook 'transient-setup-buffer-hook #'embellish--subwindow-setup-transient))
-  (when embellish-subwindow-style-minibuffer
-    (add-hook 'minibuffer-setup-hook #'embellish--minibuffer-subwindow-hook))
-  (when (buffer-live-p (get-buffer "*Messages*"))
-    (with-current-buffer "*Messages*"
-      (setq embellish--subwindow-needs-style t))))
-
-(defun embellish--subwindow-remove-hooks ()
-  "Remove all subwindow hooks."
-  (remove-hook 'window-configuration-change-hook #'embellish--subwindow-restyle)
-  (dolist (hook embellish-subwindow-hooks)
-    (remove-hook hook #'embellish--subwindow-setup))
-  (remove-hook 'transient-setup-buffer-hook #'embellish--subwindow-setup-transient)
-  (remove-hook 'minibuffer-setup-hook #'embellish--minibuffer-subwindow-hook))
-
-;;;###autoload
-(define-minor-mode embellish-subwindow-mode
-  "Global minor mode for styling subwindow buffers.
-Gives special buffers (REPLs, Magit, Dired, etc.) a distinct
-background and padding.  Set `embellish-background-color' to a
-hex color string to control the styling color."
-  :global t
-  :group 'embellish
-  (if embellish-subwindow-mode
-      (embellish--subwindow-add-hooks)
-    (embellish--subwindow-remove-hooks)))
 
 (provide 'embellish)
 

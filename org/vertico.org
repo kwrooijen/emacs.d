@@ -67,47 +67,6 @@
 (recentf-mode)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/minibuffer-set-minimum-height ()
-  (let ((win (active-minibuffer-window)))
-    (when (window-live-p win)
-      (with-selected-window win
-        (let* ((target 17)
-               (delta (- target (window-height))))
-          (when (/= delta 0)
-            (enlarge-window delta)))))))
-
-(defun kwrooijen/vertico-add-bottom-padding (orig-func height)
-  "Add extra padding to Vertico completion window height."
-  (funcall orig-func (1+ height)))
-
-(defun kwrooijen/vertico-add-top-padding (orig-fun lines)
-  "Add an empty visual line above the Vertico candidate list."
-  (funcall
-   orig-fun
-   (if (or (null lines)
-           ;; Don’t mess with alternative UIs; just in case you use them.
-           (bound-and-true-p vertico-flat-mode)
-           (bound-and-true-p vertico-buffer-mode)
-           (bound-and-true-p vertico-grid-mode))
-       lines
-     ;; Prepend a blank line as an extra ‘candidate line’.
-     (cons "\n" lines))))
-
-(defun kwrooijen/hide-minibuffer-truncation-indicator ()
-  (let ((table (or buffer-display-table (make-display-table))))
-    (set-display-table-slot
-     table 'truncation
-     (make-glyph-code ?\  'embellish-theme-darken-fb-face))
-    (setq-local buffer-display-table table)))
-
-(advice-add #'vertico--display-candidates :around #'kwrooijen/vertico-add-top-padding)
-
-(advice-add #'vertico--resize-window :around #'kwrooijen/vertico-add-bottom-padding)
-
-(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
-#+END_SRC
-
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
@@ -127,7 +86,6 @@ Don't resize minibuffer
 
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
-('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
 ('minibuffer-setup #'vertico-repeat-save)
 #+END_SRC
 
