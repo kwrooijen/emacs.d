@@ -206,8 +206,6 @@ strings?). Making it safe to enable in programming modes.
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-;; Corfu face overrides handled by embellish-theme
-
 (add-hook 'corfu-mode-hook
           (lambda ()
             (add-hook 'corfu-popup-open-hook  #'kwrooijen/copilot-disable nil t)

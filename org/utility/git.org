@@ -43,10 +43,6 @@ winum. For some reason I can't override the keybindings using General.
 (define-key magit-status-mode-map (kbd "M-RET") 'magit-diff-visit-file-other-window)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-;; Diff face overrides handled by embellish-theme
-#+END_SRC
-
 ** Hook :hook:
 
 Enter Evil Insert Mode automatically when starting a Git commit.

@@ -2136,8 +2136,6 @@ strings?). Making it safe to enable in programming modes.
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-;; Corfu face overrides handled by embellish-theme
-
 (add-hook 'corfu-mode-hook
           (lambda ()
             (add-hook 'corfu-popup-open-hook  #'kwrooijen/copilot-disable nil t)
@@ -3449,8 +3447,6 @@ Highlight the tags of the current element.
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-;; Mode line face overrides handled by embellish-theme
-
 (set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
 (set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'embellish-theme-darken-fg-face)
 #+END_SRC
@@ -3944,10 +3940,6 @@ Max body width (using shr renderer)
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-;; Elfeed face overrides handled by embellish-theme
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
 (kwrooijen/find-and-load-file "~/.dotfiles/elfeed-feeds.el")
 #+END_SRC
 
@@ -3971,7 +3963,6 @@ Max body width (using shr renderer)
   (when-let ((entry (elfeed-search-selected :single)))
     (mapcar #'symbol-name (elfeed-entry-tags entry))))
 
-
 (defun kwrooijen/elfeed-search-untag-all (tag)
   "Remove TAG from all selected Elfeed entries."
   (interactive
@@ -3985,15 +3976,9 @@ Max body width (using shr renderer)
         tags
         nil
         t)))))
-(elfeed-search-untag-all tag)
-  )
-
+  (elfeed-search-untag-all tag))
 #+END_SRC
 
-
-#+BEGIN_SRC emacs-lisp
-
-#+END_SRC
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
@@ -4021,10 +4006,6 @@ Max body width (using shr renderer)
 :PROPERTIES:
 :PACKAGE:  message
 :END:
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-;; Message face overrides handled by embellish-theme
-#+END_SRC
 
 
 
@@ -4286,10 +4267,6 @@ winum. For some reason I can't override the keybindings using General.
 (define-key magit-status-mode-map (kbd "M-RET") 'magit-diff-visit-file-other-window)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-;; Diff face overrides handled by embellish-theme
-#+END_SRC
-
 ** Hook :hook:
 
 Enter Evil Insert Mode automatically when starting a Git commit.
@@ -4430,7 +4407,6 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (require 'em-ls)
 (require 'em-prompt)
-;; Eshell face overrides handled by embellish-theme
 #+END_SRC
 
 *** Functions
@@ -5048,12 +5024,18 @@ Press C-t to change the TODO state of the selected entry."
             (message "No %s tasks found" (string-join states "/"))
           (setq entries (sort entries (lambda (a b)
                                         (let ((ca (nth 5 a)) (cb (nth 5 b))
-                                              (pa (nth 6 a)) (pb (nth 6 b)))
+                                              (pa (nth 6 a)) (pb (nth 6 b))
+                                              (sa (nth 1 a)) (sb (nth 1 b))
+                                              (state-order '("IN PROGRESS" "TODO" "WAITING")))
                                           (cond
                                            ((and ca (not cb)) t)
                                            ((and (not ca) cb) nil)
                                            ((and pa (not pb)) t)
                                            ((and (not pa) pb) nil)
+                                           ((/= (cl-position sa state-order :test #'equal)
+                                                (cl-position sb state-order :test #'equal))
+                                            (< (cl-position sa state-order :test #'equal)
+                                               (cl-position sb state-order :test #'equal)))
                                            (t (string> (nth 2 a) (nth 2 b))))))))
           (setq max-tag-width (apply #'max (mapcar (lambda (e) (length (nth 0 e))) entries)))
           (let ((max-state-width (apply #'max (mapcar (lambda (e) (length (nth 1 e))) entries)))
@@ -6399,8 +6381,6 @@ No delays
  kwrooijen/consult-ripgrep-symbol-at-point
  consult-notes-search-in-all-notes
  :preview-key "TAB")
-
-;; Consult face overrides handled by embellish-theme
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -6510,12 +6490,6 @@ Project find files
 (orderless-matching-styles '(orderless-literal orderless-prefixes))
 #+END_SRC
 
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-;; Orderless face overrides handled by embellish-theme
-#+END_SRC
-
-
 * Marginalia
 :PROPERTIES:
 :PACKAGE:  marginalia
@@ -6579,11 +6553,6 @@ Project find files
 
 (:keymaps 'wgrep-mode-map
           "C-c C-c" #'wgrep-finish-edit)
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-;; Wgrep face overrides handled by embellish-theme
 #+END_SRC
 
 

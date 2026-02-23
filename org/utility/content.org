@@ -12,10 +12,6 @@ Max body width (using shr renderer)
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-;; Elfeed face overrides handled by embellish-theme
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
 (kwrooijen/find-and-load-file "~/.dotfiles/elfeed-feeds.el")
 #+END_SRC
 
@@ -39,7 +35,6 @@ Max body width (using shr renderer)
   (when-let ((entry (elfeed-search-selected :single)))
     (mapcar #'symbol-name (elfeed-entry-tags entry))))
 
-
 (defun kwrooijen/elfeed-search-untag-all (tag)
   "Remove TAG from all selected Elfeed entries."
   (interactive
@@ -53,15 +48,9 @@ Max body width (using shr renderer)
         tags
         nil
         t)))))
-(elfeed-search-untag-all tag)
-  )
-
+  (elfeed-search-untag-all tag))
 #+END_SRC
 
-
-#+BEGIN_SRC emacs-lisp
-
-#+END_SRC
 
 ** General :general:
 #+BEGIN_SRC emacs-lisp
@@ -89,10 +78,6 @@ Max body width (using shr renderer)
 :PROPERTIES:
 :PACKAGE:  message
 :END:
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-;; Message face overrides handled by embellish-theme
-#+END_SRC
 
 
 

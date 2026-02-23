@@ -46,8 +46,6 @@
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-;; Mode line face overrides handled by embellish-theme
-
 (set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
 (set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'embellish-theme-darken-fg-face)
 #+END_SRC

@@ -10,7 +10,6 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (require 'em-ls)
 (require 'em-prompt)
-;; Eshell face overrides handled by embellish-theme
 #+END_SRC
 
 *** Functions
