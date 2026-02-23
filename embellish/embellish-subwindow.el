@@ -60,6 +60,9 @@ enabled, and continuously as new buffers become visible."
 (defvar-local embellish-subwindow--needs-style nil
   "Buffer-local flag indicating this buffer needs subwindow styling.")
 
+(defvar-local embellish-subwindow--styled nil
+  "Buffer-local flag indicating subwindow styling has been applied.")
+
 (defun embellish-subwindow--bg ()
   "Return the background color for subwindow styling, or nil.
 Reads from the `:background' attribute of `embellish-subwindow-face'."
@@ -70,6 +73,7 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
 (defun embellish-subwindow--style (win)
   "Apply subwindow styling to window WIN."
   (when-let* ((bg (and embellish-subwindow--needs-style
+                       (not embellish-subwindow--styled)
                        (embellish-subwindow--bg))))
     (set-window-fringes win
                         embellish-subwindow-fringe-width
@@ -82,7 +86,8 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
                               :background bg
                               :height embellish-subwindow-header-height)
     (face-remap-add-relative 'default
-                              :background bg)))
+                              :background bg)
+    (setq embellish-subwindow--styled t)))
 
 (defun embellish-subwindow--setup ()
   "Mark the current buffer as needing subwindow styling."
