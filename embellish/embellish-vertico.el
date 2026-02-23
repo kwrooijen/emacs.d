@@ -53,8 +53,12 @@
      (cons "\n" lines))))
 
 (defun embellish-vertico--add-bottom-padding (orig-func height)
-  "Add extra padding to Vertico completion window height."
-  (funcall orig-func (1+ height)))
+  "Add extra padding to Vertico completion window height.
+Ensures the minimum height accounts for all padding lines, since
+vertico clamps small heights to `vertico-count' internally which
+would otherwise swallow the padding."
+  (let ((top (if embellish-vertico-top-padding 1 0)))
+    (funcall orig-func (max (+ height 1) (+ vertico-count top 1)))))
 
 (defun embellish-vertico--hide-truncation ()
   "Hide the truncation indicator in the minibuffer.
