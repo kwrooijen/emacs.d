@@ -79,11 +79,6 @@ Allow nested minibuffers
 (enable-recursive-minibuffers t)
 #+END_SRC
 
-Don't resize minibuffer
-#+BEGIN_SRC emacs-lisp
-(resize-mini-windows nil)
-#+END_SRC
-
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 ('minibuffer-setup #'vertico-repeat-save)

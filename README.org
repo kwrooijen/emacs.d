@@ -478,88 +478,6 @@ Help
   "h v" '(describe-variable :which-key "Describe variable"))
 #+END_SRC
 
-#+LEXICAL_BINDING: nil
-#+PRIORITY: 2
-
-* Theme
-:PROPERTIES:
-:PACKAGE: embellish-theme
-:END:
-
-Font and color utilities. Theme faces are handled by the embellish-theme
-package (loaded in =init.el=, applied in =visual.org=).
-
-** Color Reference
-
-Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
-
-| Semantic    | Hex     | Description                          |
-|-------------+---------+--------------------------------------|
-| strong      | #FFFFFF | Primary emphasis, bold text          |
-| foreground  | #ECEFF4 | Default text                         |
-| subtle      | #434C5E | Secondary, muted elements            |
-| faded       | #616E88 | De-emphasized, comments              |
-| salient     | #81A1C1 | Accent, links, keywords              |
-| popout      | #D08770 | Strings, special callouts            |
-| error       | #BF616A | Error states                         |
-| warning     | #FFC16D | Warning states                       |
-| success     | #A3BE8C | Success states                       |
-| info        | #88C0D0 | Informational highlights             |
-| background  | #222436 | Main background                      |
-| darken      | #1e2030 | Darker background (sidebars, blocks) |
-| highlight   | #2f334d | Selection, cursor line               |
-
-* Utilities
-
-** Hex Color Preview
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/hex-colors-enable ()
-  "Enable hex color preview in current buffer."
-  (interactive)
-  (font-lock-add-keywords
-   nil
-   '(("#[[:xdigit:]]\\{6\\}"
-      (0 (put-text-property (match-beginning 0) (match-end 0)
-                            'face (list :foreground (match-string-no-properties 0)))))))
-  (font-lock-flush))
-
-(defun kwrooijen/hex-colors-disable ()
-  "Disable hex color preview in current buffer."
-  (interactive)
-  (font-lock-remove-keywords
-   nil
-   '(("#[[:xdigit:]]\\{6\\}"
-      (0 (put-text-property (match-beginning 0) (match-end 0)
-                            'face (list :foreground (match-string-no-properties 0)))))))
-  (font-lock-flush))
-#+END_SRC
-
-* Package: Web Mode
-:PROPERTIES:
-:PACKAGE: web-mode
-:DEFER: t
-:END:
-
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
-#+END_SRC
-
-* Package: Shr :config:
-:PROPERTIES:
-:PACKAGE: shr
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(require 'embellish-font)
-(set-face-attribute 'shr-text nil
-                    :family embellish-font-family
-                    :weight 'light)
-#+END_SRC
-
 #+STARTUP: showeverything
 #+PRIORITY: 3
 
@@ -811,6 +729,21 @@ subwindow mode. The base =embellish-mode= is enabled in =init.el=.
 #+END_SRC
 
 
+
+* Shr
+:PROPERTIES:
+:PACKAGE: shr
+:DEFER: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(require 'embellish-font)
+(set-face-attribute 'shr-text nil
+                    :family embellish-font-family
+                    :weight 'light)
+#+END_SRC
 
 * Highlight TODO
 :PROPERTIES:
@@ -3349,6 +3282,7 @@ chaotic.
 ** Init :init:
 
 #+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.css\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . web-mode))
@@ -6418,11 +6352,6 @@ Allow nested minibuffers
 #+BEGIN_SRC emacs-lisp
 (enable-recursive-minibuffers t)
 #+END_SRC
-
-# Don't resize minibuffer
-# #+BEGIN_SRC emacs-lisp
-# (resize-mini-windows nil)
-# #+END_SRC
 
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp

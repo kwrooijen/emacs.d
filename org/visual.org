@@ -17,6 +17,21 @@ subwindow mode. The base =embellish-mode= is enabled in =init.el=.
 
 
 
+* Shr
+:PROPERTIES:
+:PACKAGE: shr
+:DEFER: t
+:END:
+
+** Config :config:
+
+#+BEGIN_SRC emacs-lisp
+(require 'embellish-font)
+(set-face-attribute 'shr-text nil
+                    :family embellish-font-family
+                    :weight 'light)
+#+END_SRC
+
 * Highlight TODO
 :PROPERTIES:
 :PACKAGE: hl-todo
