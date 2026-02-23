@@ -34,6 +34,14 @@
   :type '(repeat symbol)
   :group 'embellish)
 
+(defcustom embellish-subwindow-buffers
+  '("\\*Messages\\*" "\\*Warnings\\*" "Claude Code Agent.*" "\\*Org Agenda\\*")
+  "List of regexps matched against buffer names for subwindow styling.
+Matched buffers are styled eagerly when `embellish-subwindow-mode' is
+enabled, and continuously as new buffers become visible."
+  :type '(repeat regexp)
+  :group 'embellish)
+
 (defcustom embellish-subwindow-style-transient t
   "When non-nil, also style transient popup buffers."
   :type 'boolean
@@ -87,10 +95,18 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
     (with-current-buffer (get-buffer (or transient--buffer-name ""))
       (setq embellish-subwindow--needs-style t))))
 
+(defun embellish-subwindow--buffer-match-p (name)
+  "Return non-nil if buffer NAME matches any `embellish-subwindow-buffers' regexp."
+  (cl-some (lambda (re) (string-match-p re name))
+           embellish-subwindow-buffers))
+
 (defun embellish-subwindow--restyle ()
   "Restyle all visible windows that need subwindow styling."
   (dolist (win (window-list))
     (with-current-buffer (window-buffer win)
+      (when (and (not embellish-subwindow--needs-style)
+                 (embellish-subwindow--buffer-match-p (buffer-name)))
+        (setq embellish-subwindow--needs-style t))
       (embellish-subwindow--style win))))
 
 (defun embellish-subwindow--minibuffer-hook ()
@@ -111,9 +127,9 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
     (add-hook 'transient-setup-buffer-hook #'embellish-subwindow--setup-transient))
   (when embellish-subwindow-style-minibuffer
     (add-hook 'minibuffer-setup-hook #'embellish-subwindow--minibuffer-hook))
-  (dolist (name '("*Messages*" "*Warnings*"))
-    (when (buffer-live-p (get-buffer name))
-      (with-current-buffer name
+  (dolist (buf (buffer-list))
+    (when (embellish-subwindow--buffer-match-p (buffer-name buf))
+      (with-current-buffer buf
         (setq embellish-subwindow--needs-style t)))))
 
 (defun embellish-subwindow--remove-hooks ()

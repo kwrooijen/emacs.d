@@ -286,6 +286,7 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
       (org-property-value               ((t (:foreground ,faded))))
       (org-scheduled                    ((t (:foreground ,faded))))
       (org-scheduled-previously         ((t (:foreground ,faded))))
+      (org-scheduled-today              ((t (:foreground ,faded))))
       (org-sexp-date                    ((t (:foreground ,faded))))
       (org-special-keyword              ((t (:foreground ,faded))))
       (org-tag-group                    ((t (:foreground ,faded))))
@@ -410,8 +411,7 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
       (diff-refine-removed              ((t (:background "#612828"))))
 
       ;; Embellish subwindow
-      (embellish-subwindow-face         ((t (:background ,darken))))
-      )))
+      (embellish-subwindow-face         ((t (:background ,darken)))))))
 
 ;;;; Theme generator
 
