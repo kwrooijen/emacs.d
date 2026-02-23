@@ -19,6 +19,7 @@
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/embellish"))
 (add-to-list 'custom-theme-load-path (expand-file-name "~/.wisdom.d/embellish"))
 (require 'embellish)
+(require 'embellish-theme)
 
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-clock-multi"))
 (require 'org-clock-multi)
