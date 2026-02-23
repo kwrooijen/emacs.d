@@ -88,75 +88,10 @@ Disable the default mode-line on startup
 
 ** User interface
 
-*** Simplify
-#+BEGIN_SRC emacs-lisp
-(tool-bar-mode 0)
-(menu-bar-mode 0)
-(scroll-bar-mode 0)
-(blink-cursor-mode 0)
-(setq-default cursor-in-non-selected-windows nil)
-#+END_SRC
-
-Completely disable fringes
-
-#+BEGIN_SRC emacs-lisp
-(set-fringe-mode 0)
-(setq left-fringe-width 0)
-(setq right-fringe-width 0)
-#+END_SRC
-
-Make Emacs title bar the same color as the background (macOS)
-#+BEGIN_SRC emacs-lisp
-(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
-#+END_SRC
-
-Remove buffer name from title bar. Weird trick to get the frame title
-to not display most of the time. We keep switching the title from
-regular space to unicode U+3164. This will prevent the window size
-from being displayed in the title bar.
-
-#+BEGIN_SRC emacs-lisp
-(setq-default frame-title-format " ")
-(add-hook 'window-size-change-functions
-          (lambda (_frame)
-            (if (equal frame-title-format " ")
-                (setq frame-title-format "ㅤ")
-              (setq frame-title-format " "))))
-#+END_SRC
-
-Remove proxy icon from title bar
-#+BEGIN_SRC emacs-lisp
-(setq-default ns-use-proxy-icon nil)
-#+END_SRC
-
-*** Enhance
-
 Show the current column in the mode-line
 
 #+BEGIN_SRC emacs-lisp
 (column-number-mode 1)
-#+END_SRC
-
-Add margins around the frame
-
-#+BEGIN_SRC emacs-lisp
-(push '(internal-border-width . 24) default-frame-alist)
-#+END_SRC
-
-** Scrolling
-*** Smooth scrolling
-#+BEGIN_SRC emacs-lisp
-(setq redisplay-dont-pause t
-      scroll-margin 1
-      scroll-conservatively 10000
-      scroll-step 1
-      auto-window-vscroll nil)
-#+END_SRC
-
-*** Scroll
-#+BEGIN_SRC emacs-lisp
-(setq scroll-error-top-bottom t
-      scroll-preserve-screen-position t)
 #+END_SRC
 
 ** Programming preferences
@@ -302,6 +237,12 @@ suppress their messages. Restart is required for this to take effect.
   :group 'kwrooijen)
 #+END_SRC
 
+** Disable F-keys
+#+BEGIN_SRC emacs-lisp
+(dotimes (i 12)
+  (global-unset-key (kbd (format "<f%d>" (1+ i)))))
+#+END_SRC
+
 * Exec Path from Shell
 :PROPERTIES:
 :PACKAGE: exec-path-from-shell
@@ -396,6 +337,9 @@ modes. These keys are configurable through the variables
   "r" '(:ignore t :which-key "Resume")
   "h" '(:ignore t :which-key "Help")
   "t" '(:ignore t :which-key "Toggle"))
+
+(kwrooijen/leader
+  "c m" '(kwrooijen/make :which-key "Make"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
@@ -537,13 +481,13 @@ Help
 #+LEXICAL_BINDING: nil
 #+PRIORITY: 2
 
-* Nord Theme
+* Theme
 :PROPERTIES:
-:PACKAGE: nord-theme
-:STRAIGHT: (:host github :repo "nordtheme/emacs")
+:PACKAGE: embellish-theme
 :END:
 
-A modular theming framework built on the Nord color palette.
+Font and color utilities. Theme faces are handled by the embellish-theme
+package (loaded in =init.el=, applied in =visual.org=).
 
 ** Color Reference
 
@@ -564,341 +508,6 @@ Use =M-x kwrooijen/hex-colors-enable= to preview colors in this buffer.
 | background  | #222436 | Main background                      |
 | darken      | #1e2030 | Darker background (sidebars, blocks) |
 | highlight   | #2f334d | Selection, cursor line               |
-
-** Init :init:
-
-*** Palette Definition
-
-#+BEGIN_SRC emacs-lisp
-(require 'color)
-
-(defgroup kwrooijen/theme nil
-  "Kwrooijen theme configuration."
-  :group 'faces)
-
-(defvar kwrooijen/palette-dark
-  '(:strong     "#FFFFFF"
-    :foreground "#ECEFF4"
-    :subtle     "#434C5E"
-    :faded      "#616E88"
-    :salient    "#81A1C1"
-    :popout     "#D08770"
-    :error      "#BF616A"
-    :warning    "#FFC16D"
-    :success    "#A3BE8C"
-    :info       "#88C0D0"
-    :background "#222436"
-    :darken     "#1e2030"
-    :highlight  "#2f334d")
-  "Dark theme palette.")
-
-(defvar kwrooijen/palette-light
-  '(:strong     "#000000"
-    :foreground "#101010"
-    :subtle     "#9099AB"
-    :faded      "#7A8599"
-    :salient    "#3B6EA8"
-    :popout     "#C35D2A"
-    :error      "#C33C54"
-    :warning    "#AC8300"
-    :success    "#6A9A3A"
-    :info       "#2C9A9A"
-    :background "#FAFAFA"
-    :darken     "#F0F0F0"
-    :highlight  "#E5E5E5")
-  "Light theme palette (basic, can be improved).")
-
-(defvar kwrooijen/palette kwrooijen/palette-dark
-  "Active color palette.")
-
-(defvar kwrooijen/theme-variant 'nord
-  "Base theme to load (nord).")
-
-(defvar kwrooijen/font "Roboto Mono"
-  "Default font family.")
-#+END_SRC
-
-*** Color Access API
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen-color (name)
-  "Get color NAME from the active palette.
-NAME should be a keyword like :salient, :error, etc."
-  (plist-get kwrooijen/palette name))
-
-(defun kwrooijen-colors ()
-  "Return list of all color names in the palette."
-  (cl-loop for (key _val) on kwrooijen/palette by #'cddr
-           collect key))
-#+END_SRC
-
-*** Color Transformation Functions
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/color-increase-brightness (hex &optional percent)
-  "Adjust brightness of HEX by PERCENT (default 10).
-Positive values brighten, negative values darken.
-Returns a #RRGGBB string."
-  (let* ((p (/ (or percent 10) 100.0))
-         (rgb (color-name-to-rgb hex))
-         (adjusted
-          (mapcar
-           (lambda (c)
-             (cond
-              ((> p 0) (min 1.0 (+ c (* (- 1.0 c) p))))
-              ((< p 0) (max 0.0 (* c (+ 1.0 p))))
-              (t c)))
-           rgb)))
-    (apply #'color-rgb-to-hex (append adjusted (list 2)))))
-
-(defun kwrooijen/color-increase-saturation (hex &optional percent)
-  "Adjust saturation of HEX by PERCENT (default 10).
-Returns a #RRGGBB string."
-  (let* ((p (/ (or percent 10) 100.0))
-         (rgb (color-name-to-rgb hex))
-         (hsl (apply #'color-rgb-to-hsl rgb))
-         (h (nth 0 hsl))
-         (s (nth 1 hsl))
-         (l (nth 2 hsl))
-         (new-s (min 1.0 (+ s (* (- 1.0 s) p))))
-         (new-rgb (color-hsl-to-rgb h new-s l)))
-    (apply #'color-rgb-to-hex (append new-rgb (list 2)))))
-#+END_SRC
-
-*** Face Generation System
-
-#+BEGIN_SRC emacs-lisp
-(defvar kwrooijen/face-registry '()
-  "Registry of all generated theme faces.")
-
-(defun kwrooijen/define-face (name color &optional bg-color)
-  "Define faces for semantic NAME with COLOR.
-Creates three faces:
-  - kwrooijen/NAME-fg-face (foreground only)
-  - kwrooijen/NAME-bg-face (background only)
-  - kwrooijen/NAME-fb-face (foreground + background)
-Optional BG-COLOR sets a different background for fb-face."
-  (let ((fg-face (intern (format "kwrooijen/%s-fg-face" name)))
-        (bg-face (intern (format "kwrooijen/%s-bg-face" name)))
-        (fb-face (intern (format "kwrooijen/%s-fb-face" name))))
-    ;; Define faces if they don't exist
-    (unless (facep fg-face)
-      (eval `(defface ,fg-face '((t (:foreground ,color))) "")))
-    (unless (facep bg-face)
-      (eval `(defface ,bg-face '((t (:background ,color))) "")))
-    (unless (facep fb-face)
-      (eval `(defface ,fb-face '((t (:foreground ,color :background ,(or bg-color color)))) "")))
-    ;; Update face attributes
-    (set-face-attribute fg-face nil :foreground color)
-    (set-face-attribute bg-face nil :background color)
-    (set-face-attribute fb-face nil
-                        :foreground color
-                        :background (or bg-color color))
-    ;; Register faces
-    (cl-pushnew fg-face kwrooijen/face-registry)
-    (cl-pushnew bg-face kwrooijen/face-registry)
-    (cl-pushnew fb-face kwrooijen/face-registry)))
-
-(defun kwrooijen/reset-face-attributes (&rest faces)
-  "Reset all attributes of FACES to unspecified."
-  (dolist (face faces)
-    (set-face-attribute
-     face nil
-     :foreground 'unspecified
-     :background 'unspecified
-     :inherit 'unspecified
-     :stipple 'unspecified
-     :inverse-video 'unspecified
-     :box 'unspecified
-     :strike-through 'unspecified
-     :overline 'unspecified
-     :underline 'unspecified
-     :slant 'unspecified
-     :weight 'unspecified
-     :height 'unspecified
-     :width 'unspecified
-     :foundry 'unspecified
-     :family 'unspecified)))
-
-(defun kwrooijen/reset-inherit-face! (&rest face-pairs)
-  "Reset FACE-PAIRS and set inheritance.
-FACE-PAIRS is a list of (face inherit-face) pairs."
-  (dolist (face-pair (-partition 2 face-pairs))
-    (let ((face (car face-pair))
-          (inherit-face (cadr face-pair)))
-      (kwrooijen/reset-face-attributes face)
-      (set-face-attribute face nil :inherit inherit-face))))
-#+END_SRC
-
-*** Theme Application
-
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/apply-palette (palette)
-  "Apply PALETTE to generate all base faces."
-  (setq kwrooijen/palette palette)
-  ;; Generate base semantic faces
-  (kwrooijen/define-face 'background  (plist-get palette :background))
-  (kwrooijen/define-face 'foreground  (plist-get palette :foreground))
-  (kwrooijen/define-face 'strong      (plist-get palette :strong))
-  (kwrooijen/define-face 'faded       (plist-get palette :faded))
-  (kwrooijen/define-face 'subtle      (plist-get palette :subtle))
-  (kwrooijen/define-face 'salient     (plist-get palette :salient))
-  (kwrooijen/define-face 'popout      (plist-get palette :popout))
-  (kwrooijen/define-face 'error       (plist-get palette :error))
-  (kwrooijen/define-face 'warning     (plist-get palette :warning))
-  (kwrooijen/define-face 'success     (plist-get palette :success))
-  (kwrooijen/define-face 'info        (plist-get palette :info))
-  (kwrooijen/define-face 'darken      (plist-get palette :darken))
-  (kwrooijen/define-face 'highlight   (plist-get palette :highlight))
-  ;; Composite faces (foreground + different background)
-  (kwrooijen/define-face 'faded-darken
-                         (plist-get palette :faded)
-                         (plist-get palette :darken))
-  ;; Update theme default face
-  (custom-theme-set-faces
-   kwrooijen/theme-variant
-   `(default ((t (:foreground ,(plist-get palette :foreground)
-                  :background ,(plist-get palette :background)))))))
-
-(defun kwrooijen/apply-core-faces ()
-  "Apply theme faces to core Emacs faces."
-  ;; Bold
-  (kwrooijen/reset-inherit-face! 'bold 'kwrooijen/strong-fg-face)
-  (set-face-attribute 'bold nil :weight 'bold)
-  ;; Basic UI faces
-  (kwrooijen/reset-inherit-face!
-   'secondary-selection 'kwrooijen/darken-bg-face
-   'region              'kwrooijen/highlight-bg-face
-   'highlight           'kwrooijen/highlight-bg-face
-   'success             'kwrooijen/success-fg-face
-   'error               'kwrooijen/error-fg-face
-   'warning             'kwrooijen/warning-fg-face
-   'button              'kwrooijen/popout-fg-face
-   'fringe              'kwrooijen/background-bg-face
-   'minibuffer-prompt   'kwrooijen/salient-fg-face
-   'header-line         'kwrooijen/foreground-fg-face)
-  ;; Search faces
-  (kwrooijen/reset-inherit-face!
-   'isearch        'kwrooijen/faded-bg-face
-   'lazy-highlight 'kwrooijen/subtle-bg-face
-   'match          'bold)
-  ;; Font-lock faces
-  (kwrooijen/reset-inherit-face!
-   'font-lock-comment-face       'kwrooijen/faded-fg-face
-   'font-lock-doc-face           'kwrooijen/faded-fg-face
-   'font-lock-string-face        'kwrooijen/popout-fg-face
-   'font-lock-constant-face      'kwrooijen/salient-fg-face
-   'font-lock-warning-face       'kwrooijen/popout-fg-face
-   'font-lock-function-name-face 'kwrooijen/strong-fg-face
-   'font-lock-variable-name-face 'kwrooijen/strong-fg-face
-   'font-lock-builtin-face       'kwrooijen/salient-fg-face
-   'font-lock-type-face          'kwrooijen/salient-fg-face
-   'font-lock-keyword-face       'kwrooijen/salient-fg-face)
-  ;; Dired
-  (kwrooijen/reset-inherit-face! 'dired-directory 'kwrooijen/salient-fg-face))
-
-(defun kwrooijen/set-dark-theme ()
-  "Activate dark theme."
-  (interactive)
-  (kwrooijen/apply-palette kwrooijen/palette-dark)
-  (kwrooijen/apply-core-faces)
-  (set-frame-parameter nil 'background-color (kwrooijen-color :background)))
-
-(defun kwrooijen/set-light-theme ()
-  "Activate light theme."
-  (interactive)
-  (kwrooijen/apply-palette kwrooijen/palette-light)
-  (kwrooijen/apply-core-faces)
-  (set-frame-parameter nil 'background-color (kwrooijen-color :background)))
-
-(defun kwrooijen/toggle-theme ()
-  "Toggle between dark and light themes."
-  (interactive)
-  (if (equal kwrooijen/palette kwrooijen/palette-dark)
-      (kwrooijen/set-light-theme)
-    (kwrooijen/set-dark-theme)))
-#+END_SRC
-
-*** Initialize Theme
-
-#+BEGIN_SRC emacs-lisp
-;; Load base nord theme
-(let ((inhibit-message t)
-      (message-log-max nil))
-  (load-theme kwrooijen/theme-variant t))
-
-;; Set font
-(set-face-attribute 'default nil
-                    :family kwrooijen/font
-                    :weight 'thin)
-
-;; Apply dark theme
-(kwrooijen/set-dark-theme)
-#+END_SRC
-
-* Font Size
-:PROPERTIES:
-:PACKAGE: frame
-:END:
-
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/default-font-size 200
-  "Default font size (in 1/10 pt)."
-  :type 'integer
-  :group 'kwrooijen/theme)
-
-(defcustom kwrooijen/font-step-size 20
-  "Font size adjustment step."
-  :type 'integer
-  :group 'kwrooijen/theme)
-
-(defun kwrooijen/font-size-set (size)
-  "Set global font SIZE."
-  (set-face-attribute 'default nil :height size))
-
-(defun kwrooijen/font-size-increase ()
-  "Increase global font size."
-  (interactive)
-  (kwrooijen/font-size-set (+ (face-attribute 'default :height) kwrooijen/font-step-size)))
-
-(defun kwrooijen/font-size-decrease ()
-  "Decrease global font size."
-  (interactive)
-  (kwrooijen/font-size-set (- (face-attribute 'default :height) kwrooijen/font-step-size)))
-
-(defun kwrooijen/font-size-reset ()
-  "Reset global font size to default."
-  (interactive)
-  (kwrooijen/font-size-set kwrooijen/default-font-size))
-
-(kwrooijen/font-size-set kwrooijen/default-font-size)
-
-(general-define-key
- "C-x C-=" 'kwrooijen/font-size-increase
- "C-x C--" 'kwrooijen/font-size-decrease
- "C-x C-0" 'kwrooijen/font-size-reset)
-#+END_SRC
-
-* Window Divider
-:PROPERTIES:
-:PACKAGE: frame
-:END:
-
-** Init :init:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'window-divider             'kwrooijen/background-fb-face
- 'window-divider-first-pixel 'kwrooijen/background-fb-face
- 'window-divider-last-pixel  'kwrooijen/background-fb-face
- 'vertical-border            'kwrooijen/background-fb-face)
-
-(setq window-divider-default-right-width 24)
-(setq window-divider-default-places 'right-only)
-(window-divider-mode 1)
-#+END_SRC
 
 * Utilities
 
@@ -926,276 +535,16 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
   (font-lock-flush))
 #+END_SRC
 
-* Package: Iedit :config:
-:PROPERTIES:
-:PACKAGE: iedit
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'iedit-occurrence 'kwrooijen/salient-bg-face)
-(set-face-attribute 'iedit-occurrence nil :foreground (kwrooijen-color :strong))
-
-(advice-add 'iedit-next-occurrence :after #'kwrooijen/recenter)
-(advice-add 'iedit-prev-occurrence :after #'kwrooijen/recenter)
-#+END_SRC
-
-* Package: Magit :config:
-:PROPERTIES:
-:PACKAGE: magit
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'magit-diff-context-highlight    'kwrooijen/darken-bg-face
- 'magit-section-highlight         'kwrooijen/highlight-bg-face
- 'magit-diff-hunk-heading-highlight 'kwrooijen/background-bg-face
- 'magit-diff-hunk-heading         'kwrooijen/background-bg-face)
-#+END_SRC
-
-* Package: Org :config:
-:PROPERTIES:
-:PACKAGE: org
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-;; Block styling
-(kwrooijen/reset-inherit-face!
- 'org-block            'kwrooijen/darken-bg-face
- 'org-quote            'kwrooijen/darken-bg-face
- 'org-block-begin-line 'kwrooijen/faded-darken-fb-face
- 'org-block-end-line   'kwrooijen/faded-darken-fb-face)
-
-;; Faded faces (de-emphasized)
-(kwrooijen/reset-inherit-face!
- 'org-agenda-clocking          'kwrooijen/faded-fg-face
- 'org-agenda-column-dateline   'kwrooijen/faded-fg-face
- 'org-agenda-date-weekend      'kwrooijen/faded-fg-face
- 'org-agenda-diary             'kwrooijen/faded-fg-face
- 'org-agenda-dimmed-todo-face  'kwrooijen/faded-fg-face
- 'org-agenda-done              'kwrooijen/faded-fg-face
- 'org-agenda-filter-category   'kwrooijen/faded-fg-face
- 'org-agenda-filter-effort     'kwrooijen/faded-fg-face
- 'org-agenda-filter-regexp     'kwrooijen/faded-fg-face
- 'org-agenda-filter-tags       'kwrooijen/faded-fg-face
- 'org-agenda-restriction-lock  'kwrooijen/faded-fg-face
- 'org-archived                 'kwrooijen/faded-fg-face
- 'org-checkbox                 'kwrooijen/faded-fg-face
- 'org-checkbox-statistics-done 'kwrooijen/faded-fg-face
- 'org-checkbox-statistics-todo 'kwrooijen/faded-fg-face
- 'org-clock-overlay            'kwrooijen/faded-fg-face
- 'org-column                   'kwrooijen/faded-fg-face
- 'org-column-title             'kwrooijen/faded-fg-face
- 'org-date                     'kwrooijen/faded-fg-face
- 'org-date-selected            'kwrooijen/faded-fg-face
- 'org-default                  'kwrooijen/faded-fg-face
- 'org-document-info            'kwrooijen/faded-fg-face
- 'org-document-info-keyword    'kwrooijen/faded-fg-face
- 'org-document-title           'kwrooijen/faded-fg-face
- 'org-drawer                   'kwrooijen/faded-fg-face
- 'org-ellipsis                 'kwrooijen/faded-fg-face
- 'org-footnote                 'kwrooijen/faded-fg-face
- 'org-formula                  'kwrooijen/faded-fg-face
- 'org-headline-done            'kwrooijen/faded-fg-face
- 'org-latex-and-related        'kwrooijen/faded-fg-face
- 'org-list-dt                  'kwrooijen/faded-fg-face
- 'org-macro                    'kwrooijen/faded-fg-face
- 'org-meta-line                'kwrooijen/faded-fg-face
- 'org-mode-line-clock          'kwrooijen/faded-fg-face
- 'org-mode-line-clock-overrun  'kwrooijen/faded-fg-face
- 'org-property-value           'kwrooijen/faded-fg-face
- 'org-scheduled                'kwrooijen/faded-fg-face
- 'org-scheduled-previously     'kwrooijen/faded-fg-face
- 'org-sexp-date                'kwrooijen/faded-fg-face
- 'org-special-keyword          'kwrooijen/faded-fg-face
- 'org-tag-group                'kwrooijen/faded-fg-face
- 'org-target                   'kwrooijen/faded-fg-face
- 'org-time-grid                'kwrooijen/faded-fg-face
- 'org-verse                    'kwrooijen/faded-fg-face)
-
-;; Foreground faces (normal text)
-(kwrooijen/reset-inherit-face!
- 'org-agenda-calendar-event 'kwrooijen/foreground-fg-face
- 'org-done                  'kwrooijen/foreground-fg-face
- 'org-level-1               'kwrooijen/foreground-fg-face
- 'org-level-2               'kwrooijen/foreground-fg-face
- 'org-level-3               'kwrooijen/foreground-fg-face
- 'org-level-4               'kwrooijen/foreground-fg-face
- 'org-level-5               'kwrooijen/foreground-fg-face
- 'org-level-6               'kwrooijen/foreground-fg-face
- 'org-level-7               'kwrooijen/foreground-fg-face
- 'org-level-8               'kwrooijen/foreground-fg-face
- 'org-upcoming-deadline     'kwrooijen/foreground-fg-face)
-
-;; Popout faces (attention-grabbing)
-(kwrooijen/reset-inherit-face!
- 'org-tag      'kwrooijen/popout-fg-face
- 'org-verbatim 'kwrooijen/popout-fg-face
- 'org-warning  'kwrooijen/popout-fg-face)
-
-;; Strong faces (emphasis)
-(kwrooijen/reset-inherit-face!
- 'org-agenda-current-time 'kwrooijen/strong-fg-face
- 'org-agenda-structure    'kwrooijen/strong-fg-face)
-
-;; Salient faces (accent)
-(kwrooijen/reset-inherit-face!
- 'org-code     'kwrooijen/salient-fg-face
- 'org-link     'kwrooijen/salient-fg-face
- 'org-table    'kwrooijen/salient-fg-face
- 'org-todo     'kwrooijen/salient-fg-face)
-
-;; Error faces
-(kwrooijen/reset-inherit-face!
- 'org-priority 'kwrooijen/error-fg-face)
-#+END_SRC
-
-* Package: Org Agenda :config:
-:PROPERTIES:
-:PACKAGE: org-agenda
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'org-agenda-calendar-sexp 'kwrooijen/salient-fg-face
- 'org-agenda-date          'kwrooijen/salient-fg-face
- 'org-agenda-clocking      'kwrooijen/warning-fg-face)
-#+END_SRC
-
-* Package: Org Habit :config:
-:PROPERTIES:
-:PACKAGE: org-habit
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'org-habit-clear-future-face    'kwrooijen/salient-fb-face
- 'org-habit-alert-face           'kwrooijen/warning-fb-face
- 'org-habit-overdue-future-face  'kwrooijen/error-fb-face)
-#+END_SRC
-
-* Package: Paren :config:
-:PROPERTIES:
-:PACKAGE: paren
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'show-paren-match            'kwrooijen/salient-fg-face
- 'show-paren-mismatch         'kwrooijen/error-fg-face
- 'show-paren-match-expression 'kwrooijen/popout-fg-face)
-#+END_SRC
-
-* Package: Web Mode :config:
+* Package: Web Mode
 :PROPERTIES:
 :PACKAGE: web-mode
 :DEFER: t
 :END:
 
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'web-mode-string-face                    'font-lock-string-face
- 'web-mode-html-attr-value-face           'font-lock-string-face
- 'web-mode-symbol-face                    'font-lock-keyword-face
- 'web-mode-builtin-face                   'kwrooijen/strong-fg-face
- 'web-mode-variable-name-face             'font-lock-variable-name-face
- 'web-mode-current-element-highlight-face 'underline)
-#+END_SRC
-
 ** Init :init:
 
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode))
-#+END_SRC
-
-* Package: Evil Highlight Persist :config:
-:PROPERTIES:
-:PACKAGE: evil-search-highlight-persist
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'evil-search-highlight-persist-highlight-face 'highlight)
-#+END_SRC
-
-* Package: HL Line :config:
-:PROPERTIES:
-:PACKAGE: hl-line
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'hl-line 'kwrooijen/highlight-bg-face)
-#+END_SRC
-
-* Package: Anzu :config:
-:PROPERTIES:
-:PACKAGE: anzu
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(set-face-attribute 'anzu-mode-line nil
-                    :foreground (kwrooijen-color :salient))
-#+END_SRC
-
-* Package: Diredfl :config:
-:PROPERTIES:
-:PACKAGE: diredfl
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'diredfl-file-name              'kwrooijen/foreground-fg-face
- 'diredfl-file-suffix            'kwrooijen/foreground-fg-face
- 'diredfl-dir-name               'kwrooijen/salient-fg-face
- 'diredfl-dir-heading            'kwrooijen/salient-fg-face
- 'diredfl-dir-priv               'kwrooijen/subtle-fg-face
- 'diredfl-date-time              'kwrooijen/faded-fg-face
- 'diredfl-read-priv              'kwrooijen/subtle-fg-face
- 'diredfl-write-priv             'kwrooijen/subtle-fg-face
- 'diredfl-exec-priv              'kwrooijen/subtle-fg-face
- 'diredfl-number                 'kwrooijen/subtle-fg-face
- 'diredfl-no-priv                'kwrooijen/subtle-fg-face
- 'diredfl-other-priv             'kwrooijen/subtle-fg-face
- 'diredfl-link-priv              'kwrooijen/subtle-fg-face
- 'diredfl-symlink                'kwrooijen/faded-fg-face
- 'diredfl-compressed-file-name   'kwrooijen/faded-fg-face
- 'diredfl-compressed-file-suffix 'kwrooijen/faded-fg-face)
-
-(kwrooijen/reset-face-attributes 'diredfl-ignored-file-name)
-#+END_SRC
-
-* Package: Ediff :config:
-:PROPERTIES:
-:PACKAGE: ediff
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'ediff-even-diff-A 'default
- 'ediff-even-diff-B 'default
- 'ediff-odd-diff-A  'org-warning
- 'ediff-odd-diff-B  'org-warning)
-#+END_SRC
-
-* Package: Pulse :config:
-:PROPERTIES:
-:PACKAGE: pulse
-:DEFER: t
-:END:
-
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face!
- 'pulse-highlight-face       'kwrooijen/salient-bg-face
- 'pulse-highlight-start-face 'kwrooijen/salient-bg-face)
 #+END_SRC
 
 * Package: Shr :config:
@@ -1205,8 +554,9 @@ FACE-PAIRS is a list of (face inherit-face) pairs."
 :END:
 
 #+BEGIN_SRC emacs-lisp
+(require 'embellish-font)
 (set-face-attribute 'shr-text nil
-                    :family kwrooijen/font
+                    :family embellish-font-family
                     :weight 'light)
 #+END_SRC
 
@@ -1400,6 +750,27 @@ type (by default) `xs`. Configurable through
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/make--targets (makefile)
+  "Parse MAKEFILE and return a list of target names."
+  (when (file-exists-p makefile)
+    (with-temp-buffer
+      (insert-file-contents makefile)
+      (let (targets)
+        (goto-char (point-min))
+        (while (re-search-forward "^\\([a-zA-Z0-9_-][a-zA-Z0-9._-]*\\):" nil t)
+          (push (match-string 1) targets))
+        (nreverse targets)))))
+
+(defun kwrooijen/make ()
+  "Select a Makefile target via completing-read and run it in a unique buffer."
+  (interactive)
+  (let* ((default-directory (or (kwrooijen/project-root) default-directory))
+         (makefile (expand-file-name "Makefile" default-directory))
+         (targets (kwrooijen/make--targets makefile))
+         (target (completing-read "Make: " targets nil t))
+         (buf-name (format "make:%s:%s" (kwrooijen/project-name) target)))
+    (pop-to-buffer (make-comint-in-buffer buf-name nil "make" nil target))))
+
 (defmacro comment (&rest _))
 #+END_SRC
 
@@ -1420,6 +791,146 @@ type (by default) `xs`. Configurable through
       (goto-char start)
       (while (re-search-forward "^[[:space:]]*\n" end t)
         (replace-match "")))))
+#+END_SRC
+
+#+PRIORITY: 3
+
+* Embellish
+:PROPERTIES:
+:PACKAGE: embellish
+:END:
+
+Configure theme-dependent settings for embellish and enable
+subwindow mode. The base =embellish-mode= is enabled in =init.el=.
+
+** Init :init:
+
+#+BEGIN_SRC emacs-lisp
+(load-theme 'embellish-winter-night t)
+(embellish-mode 1)
+#+END_SRC
+
+
+
+* Highlight TODO
+:PROPERTIES:
+:PACKAGE: hl-todo
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(hl-todo-keyword-faces
+ '(("TODO"   . "#FF0000")
+   ("FIXME"  . "#FF0000")
+   ("DEBUG"  . "#A020F0")
+   ("GOTCHA" . "#FF4500")
+   ("STUB"   . "#1E90FF")))
+#+END_SRC
+
+** hook :hook:
+#+BEGIN_SRC emacs-lisp
+(prog-mode . hl-todo-mode)
+#+END_SRC
+
+* Highlight numbers
+:PROPERTIES:
+:PACKAGE: highlight-numbers
+:STRAIGHT: t
+:END:
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . highlight-numbers-mode)
+ (org-mode . highlight-numbers-mode))
+#+END_SRC
+
+* Dimmer
+:PROPERTIES:
+:PACKAGE: dimmer
+:STRAIGHT: t
+:END:
+
+** Init :init:
+#+BEGIN_SRC emacs-lisp
+(require 'dimmer)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(dimmer-fraction 0.8)
+(dimmer-watch-frame-focus-events nil)
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(defgroup kwrooijen/minibuffer-dim nil
+  "Customization for minibuffer-aware dimming rules."
+  :group 'convenience)
+
+(setq kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    magit-discard
+    anzu-query-replace
+    org-schedule
+    kwrooijen/consult-ripgrep-symbol-at-point)
+)
+
+(defcustom kwrooijen/minibuffer-dim-excluded-commands
+  '(consult-line
+    consult-yank-from-kill-ring
+    consult-ripgrep
+    magit-discard
+    anzu-query-replace
+    org-schedule
+    kwrooijen/consult-ripgrep-symbol-at-point)
+
+  "Commands for which the original window should not be dimmed.
+When the minibuffer is activated by one of these commands,
+the selected window will be restored (not dimmed)."
+  :type '(repeat symbol))
+
+(defun kwrooijen/dimmer-dim-all ()
+  "Dim all buffers."
+  (mapc (lambda (buf)
+          (with-current-buffer buf
+            (unless (minibufferp)
+              (dimmer-dim-buffer buf dimmer-fraction))))
+        (dimmer-visible-buffer-list)))
+
+(defun kwrooijen/minibuffer-dim-all-initialize ()
+  "Dim all buffers except for commands listed in `kwrooijen/minibuffer-dim-excluded-commands'."
+  (kwrooijen/dimmer-dim-all)
+  (when (memq this-command kwrooijen/minibuffer-dim-excluded-commands)
+    (dimmer-restore-buffer (window-buffer (minibuffer-selected-window)))))
+
+;;;###autoload
+(define-minor-mode kwrooijen/minibuffer-dim-mode
+  "Toggle dimming adjustments for Minibuffer."
+  :global t
+  (if kwrooijen/minibuffer-dim-mode
+      (progn
+        (add-to-list 'dimmer-exclusion-regexp-list ".*Minibuf.*")
+
+        (add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (add-hook 'minibuffer-exit-hook #'dimmer-restore-all))
+
+        (remove-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
+        (remove-hook 'minibuffer-exit-hook #'dimmer-restore-all)))
+
+(kwrooijen/minibuffer-dim-mode)
+#+END_SRC
+* Hl line mode
+:PROPERTIES:
+:PACKAGE: hl-line
+:END:
+
+** Hook :hook:
+#+BEGIN_SRC emacs-lisp
+((prog-mode . hl-line-mode)
+ (text-mode . hl-line-mode)
+ (messages-buffer-mode . hl-line-mode))
 #+END_SRC
 
 #+PRIORITY: 4
@@ -1567,7 +1078,7 @@ type (by default) `xs`. Configurable through
 
 
 (defface ignore-paren-face
-  `((t (:inherit kwrooijen/subtle-fg-face))) "")
+  `((t (:inherit embellish-theme-subtle-fg-face))) "")
 
 (add-hook 'lispy-mode-hook
           (lambda ()
@@ -2692,8 +2203,7 @@ strings?). Making it safe to enable in programming modes.
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'corfu-default 'kwrooijen/darken-bg-face)
-(kwrooijen/reset-inherit-face! 'corfu-current 'hl-line)
+;; Corfu face overrides handled by embellish-theme
 
 (add-hook 'corfu-mode-hook
           (lambda ()
@@ -3961,15 +3471,15 @@ Highlight the tags of the current element.
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/modeline-border
-  `((t (:foreground ,(face-attribute 'kwrooijen/foreground-fg-face :foreground)))
-    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+  `((t (:foreground ,(face-attribute 'embellish-theme-foreground-fg-face :foreground)))
+    (t (:background ,(face-attribute 'embellish-theme-darken-fg-face :background)))
     (t (:height 1.5)))
   "Face for the active window border."
   :group 'kwrooijen/modeline)
 
 (defface kwrooijen/modeline-border-inactive
-  `((t (:foreground ,(face-attribute 'kwrooijen/darken-fg-face :foreground)))
-    (t (:background ,(face-attribute 'kwrooijen/darken-fg-face :background)))
+  `((t (:foreground ,(face-attribute 'embellish-theme-darken-fg-face :foreground)))
+    (t (:background ,(face-attribute 'embellish-theme-darken-fg-face :background)))
     (t (:height 1.5)))
   "Face for the inactive window border."
   :group 'kwrooijen/modeline)
@@ -4005,14 +3515,10 @@ Highlight the tags of the current element.
   "Face for major mode text."
   :group 'kwrooijen/modeline)
 
-(kwrooijen/reset-inherit-face!
- 'mode-line           'kwrooijen/darken-bg-face
- 'mode-line-active    'kwrooijen/darken-bg-face
- 'mode-line-inactive  'kwrooijen/darken-bg-face
- 'mode-line-highlight 'unspecified)
+;; Mode line face overrides handled by embellish-theme
 
 (set-face-attribute 'kwrooijen/modeline-border nil :height 'unspecified :inherit 'default)
-(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'kwrooijen/darken-fg-face)
+(set-face-attribute 'kwrooijen/modeline-border-inactive nil :height 1.5 :inherit 'embellish-theme-darken-fg-face)
 #+END_SRC
 
 ** Active bar
@@ -4031,12 +3537,12 @@ Highlight the tags of the current element.
 (defun kwrooijen/modeline-win-focus-border (&optional force)
   "Show a border only when the window is active."
 (set-face-attribute  'kwrooijen/modeline-border nil
-        :foreground (face-attribute 'kwrooijen/foreground-fg-face :foreground)
-        :background (face-attribute 'kwrooijen/darken-bg-face :background)
+        :foreground (face-attribute 'embellish-theme-foreground-fg-face :foreground)
+        :background (face-attribute 'embellish-theme-darken-bg-face :background)
         :height 1.5)
 (set-face-attribute  'kwrooijen/modeline-border-inactive nil
-        :foreground (face-attribute 'kwrooijen/darken-fg-face :foreground)
-        :background (face-attribute 'kwrooijen/darken-fg-face :background)
+        :foreground (face-attribute 'embellish-theme-darken-fg-face :foreground)
+        :background (face-attribute 'embellish-theme-darken-fg-face :background)
         :height 1.5)
   (if (or force (eq (selected-window) kwrooijen/modeline-selected-window))
       (propertize kwrooijen/modeline-active-border 'face 'kwrooijen/modeline-border)
@@ -4047,6 +3553,14 @@ Highlight the tags of the current element.
     (setq kwrooijen/modeline-selected-window (selected-window))))
 
 (add-hook 'post-command-hook #'kwrooijen/modeline--set-selected-window)
+
+(defun kwrooijen/modeline--force-update-visual (&rest _)
+  "Force modeline update during evil visual state."
+  (when (and (bound-and-true-p evil-local-mode)
+             (eq evil-state 'visual))
+    (force-mode-line-update)))
+
+(add-hook 'post-command-hook #'kwrooijen/modeline--force-update-visual)
 #+END_SRC
 
 ** Segments
@@ -4100,14 +3614,22 @@ Highlight the tags of the current element.
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-line-col ()
-  (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll))
+  (if (and (bound-and-true-p evil-local-mode)
+           (eq evil-state 'visual)
+           (use-region-p))
+      (let* ((beg (region-beginning))
+             (end (region-end))
+             (lines (count-lines beg end))
+             (chars (abs (- end beg))))
+        (kwrooijen/modeline-r (format " %d:%d" lines chars) 'kwrooijen/modeline-scroll))
+    (kwrooijen/modeline-r " %l:%c" 'kwrooijen/modeline-scroll)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-buffer-name ()
   (let* ((dirty? (buffer-modified-p))
          (face   (if dirty?
-                     `(:foreground ,(face-attribute 'kwrooijen/error-fg-face :foreground))
+                     `(:foreground ,(face-attribute 'embellish-theme-error-fg-face :foreground))
                    'kwrooijen/modeline-buffer)))
     (kwrooijen/modeline-r " %b" face)))
 #+END_SRC
@@ -4141,7 +3663,7 @@ Highlight the tags of the current element.
   (when (kwrooijen/weekday-p)
     (let* ((clock-count (length org-clock-multi-clocks))
            (clocked-in-p (> clock-count 0))
-           (face (if clocked-in-p 'kwrooijen/warning-fg-face 'kwrooijen/faded-fg-face)))
+           (face (if clocked-in-p 'embellish-theme-warning-fg-face 'embellish-theme-faded-fg-face)))
       (kwrooijen/modeline-r (format " [%d | %s | %s]" clock-count (kwrooijen/clocked-today) (kwrooijen/clocked-today-percentage)) face))))
 #+END_SRC
 
@@ -4157,11 +3679,11 @@ Highlight the tags of the current element.
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-zoom ()
   (let* ((zoom (/ (- (face-attribute 'default :height)
-                     kwrooijen/default-font-size) kwrooijen/font-step-size))
+                     embellish-font-size) embellish-font-step))
          (affix (if (> zoom 0) "+" "-")))
     (unless (equal zoom 0)
       (kwrooijen/modeline-r (format " %s%s" zoom affix)
-                            'kwrooijen/popout-fg-face))))
+                            'embellish-theme-popout-fg-face))))
 #+END_SRC
 
 
@@ -4353,33 +3875,39 @@ Uses Claude Code as the default agent."
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agent-shell--count-by-status ()
-  "Return (WORKING . TOTAL) count of agent-shell buffers.
-WORKING counts agents that are actively working (not waiting for input).
-TOTAL counts all live agent-shell buffers."
+  "Return (:working N :total N :waiting N) plist of agent-shell buffers."
   (let ((working 0)
-        (total 0))
+        (total 0)
+        (waiting 0))
     (dolist (buf (agent-shell-buffers))
       (when (buffer-live-p buf)
         (let ((status (agent-shell-manager--get-status buf)))
           (unless (string= status "killed")
             (setq total (1+ total))
             (when (string= status "working")
-              (setq working (1+ working)))))))
-    (cons working total)))
+              (setq working (1+ working)))
+            (when (string= status "waiting")
+              (setq waiting (1+ waiting)))))))
+    (list :working working :total total :waiting waiting)))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-agent-shell ()
-  "Return modeline segment showing agent-shell status as [WORKING/TOTAL]."
+  "Return modeline segment showing agent-shell status as [WORKING/TOTAL].
+Prepends ! when any agent is waiting for permission."
   (when (fboundp 'agent-shell-buffers)
     (let* ((counts (kwrooijen/agent-shell--count-by-status))
-           (working (car counts))
-           (total (cdr counts)))
+           (working (plist-get counts :working))
+           (total (plist-get counts :total))
+           (waiting (plist-get counts :waiting)))
       (when (> total 0)
-        (let ((face (if (< working total)
-                        'kwrooijen/popout-fg-face
-                      'kwrooijen/faded-fg-face)))
-          (kwrooijen/modeline-r (format " [%d/%d]" working total) face))))))
+        (let* ((has-waiting (> waiting 0))
+               (face (cond
+                      (has-waiting 'embellish-theme-error-fg-face)
+                      ((> working 0) 'embellish-theme-popout-fg-face)
+                      (t 'embellish-theme-faded-fg-face)))
+               (prefix (if has-waiting "!" "")))
+          (kwrooijen/modeline-r (format " %s[%d/%d]" prefix working total) face))))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -4411,7 +3939,7 @@ TOTAL counts all live agent-shell buffers."
                                               "  "
                                               padded-name
                                               "  "
-                                              (propertize dir 'face 'kwrooijen/faded-fg-face))))
+                                              (propertize dir 'face 'embellish-theme-faded-fg-face))))
                           (cons label buf)))
                       entries))
              (collection (lambda (str pred action)
@@ -4449,6 +3977,25 @@ TOTAL counts all live agent-shell buffers."
   (evil-define-key 'normal agent-shell-manager-mode-map (kbd "<tab>") #'agent-shell-manager-goto))
 #+END_SRC
 
+* Request
+:PROPERTIES:
+:PACKAGE:  request
+:STRAIGHT: t
+:END:
+
+* Org Asana
+:PROPERTIES:
+:PACKAGE:  org-asana
+:END:
+
+** General :general:
+
+#+BEGIN_SRC emacs-lisp
+(kwrooijen/leader
+ "as" '(org-asana-pull :which-key "Asana Pull")
+ "aS" '(org-asana-redownload :which-key "Asana Redownload"))
+#+END_SRC
+
 * Elfeed
 :PROPERTIES:
 :PACKAGE:  elfeed
@@ -4463,9 +4010,7 @@ Max body width (using shr renderer)
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'elfeed-search-feed-face 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'elfeed-search-tag-face 'kwrooijen/popout-fg-face)
-(kwrooijen/reset-inherit-face! 'elfeed-search-date-face 'kwrooijen/faded-fg-face)
+;; Elfeed face overrides handled by embellish-theme
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -4544,11 +4089,7 @@ Max body width (using shr renderer)
 :END:
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(kwrooijen/reset-inherit-face! 'message-header-to 'kwrooijen/salient-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-subject 'kwrooijen/strong-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-other 'kwrooijen/faded-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
-(kwrooijen/reset-inherit-face! 'message-header-name 'kwrooijen/popout-fg-face)
+;; Message face overrides handled by embellish-theme
 #+END_SRC
 
 
@@ -4661,8 +4202,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-owner
-  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
-    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-subtle-fg-face))
+    (t                   (:inherit embellish-theme-subtle-fg-face)))
   "Face for the file owner field in Dired."
   :group 'diredfl)
 
@@ -4672,8 +4213,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-size
-  '((((background dark)) (:inherit kwrooijen/popout-fg-face))
-    (t                   (:inherit kwrooijen/popout-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-popout-fg-face))
+    (t                   (:inherit embellish-theme-popout-fg-face)))
   "Face for the file group field in Dired."
   :group 'diredfl)
 
@@ -4682,8 +4223,8 @@ Enable diredfl mode globally
 
 #+BEGIN_SRC emacs-lisp
 (defface kwrooijen/diredfl-acl-flag
-  '((((background dark)) (:inherit kwrooijen/subtle-fg-face))
-    (t                   (:inherit kwrooijen/subtle-fg-face)))
+  '((((background dark)) (:inherit embellish-theme-subtle-fg-face))
+    (t                   (:inherit embellish-theme-subtle-fg-face)))
   "Face for the ACL '+' flag in Dired permission strings."
   :group 'diredfl)
 
@@ -4812,11 +4353,7 @@ winum. For some reason I can't override the keybindings using General.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-;; (set-face-background 'diff-refine-added "#000000")
-;; (set-face-background 'diff-refine-removed "#000000")
-
-(set-face-background 'diff-refine-added "#276128")
-(set-face-background 'diff-refine-removed "#612828")
+;; Diff face overrides handled by embellish-theme
 #+END_SRC
 
 ** Hook :hook:
@@ -4959,8 +4496,7 @@ Use dired colors
 #+BEGIN_SRC emacs-lisp
 (require 'em-ls)
 (require 'em-prompt)
-(set-face-attribute 'eshell-ls-directory nil :inherit 'dired-directory)
-(set-face-attribute 'eshell-prompt nil :foreground 'unspecified :inherit 'minibuffer-prompt)
+;; Eshell face overrides handled by embellish-theme
 #+END_SRC
 
 *** Functions
@@ -5436,9 +4972,9 @@ When TAG is non-nil, only show tasks that have that tag."
                         (marker (nth 3 entry))
                         (padded-tag (string-pad tag-str max-tag-width))
                         (padded-closed (string-pad closed max-closed-width))
-                        (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                        (label (concat (propertize padded-tag 'face 'embellish-theme-faded-fg-face)
                                        "  "
-                                       (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                       (propertize padded-closed 'face 'embellish-theme-faded-fg-face)
                                        "  " heading)))
                    (cons label marker)))
                entries))
@@ -5605,13 +5141,13 @@ Press C-t to change the TODO state of the selected entry."
                               (padded-state (propertize (string-pad state max-state-width)
                                                         'face (org-get-todo-face state)))
                               (padded-closed (string-pad closed max-closed-width))
-                              (label (concat (propertize padded-tag 'face 'kwrooijen/faded-fg-face)
+                              (label (concat (propertize padded-tag 'face 'embellish-theme-faded-fg-face)
                                              "  "
                                              padded-agent
                                              "  "
                                              padded-state
                                              "  "
-                                             (propertize padded-closed 'face 'kwrooijen/faded-fg-face)
+                                             (propertize padded-closed 'face 'embellish-theme-faded-fg-face)
                                              "  " heading)))
                          (when clocked
                            (put-text-property 0 1 'kwrooijen/clocked t label))
@@ -5702,6 +5238,11 @@ Press C-t to change the TODO state of the selected entry."
   "Select a TODO or IN PROGRESS :work: task and edit it."
   (interactive)
   (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING") :tag "work"))
+
+(defun kwrooijen/org-todo-find-all ()
+  "Select a TODO or IN PROGRESS :work: task and edit it."
+  (interactive)
+  (kwrooijen/org-todo-find-and-edit :states '("TODO" "IN PROGRESS" "WAITING")))
 
 (defun kwrooijen/org-todo-unarchive ()
   "Select a DONE task and change it back to TODO."
@@ -5860,9 +5401,9 @@ Set the faces for specific org keywords
 
 #+BEGIN_SRC emacs-lisp
 (org-todo-keyword-faces
-      '(("TODO"        . (:inherit kwrooijen/salient-fg-face))
-        ("IN PROGRESS" . (:inherit kwrooijen/popout-fg-face))
-        ("WAITING"     . (:inherit kwrooijen/faded-fg-face))
+      '(("TODO"        . (:inherit embellish-theme-salient-fg-face))
+        ("IN PROGRESS" . (:inherit embellish-theme-popout-fg-face))
+        ("WAITING"     . (:inherit embellish-theme-faded-fg-face))
         ("DONE"        . (:inherit org-done))
         ("CANCELLED"   . (:inherit org-done))))
 #+END_SRC
@@ -5889,6 +5430,7 @@ Customize agenda renderer to optionally filter out habits.
   "ac" '(org-capture :which-key "Org Capture")
   "aD" '(org-todo-dashboard-open :which-key "Dashboard")
   "af" '(kwrooijen/org-todo-find-active-work :which-key "Find Active")
+  "aF" '(kwrooijen/org-todo-find-all :which-key "Find all")
   "au" '(kwrooijen/org-todo-find-done-work :which-key "Find Done")
   "aw" '(kwrooijen/org-todo-find-waiting-work :which-key "Find Waiting"))
 #+END_SRC
@@ -6527,7 +6069,6 @@ holding export options."
 
   ;; Fold (hide) blocks on startup
 (org-startup-folded t)
-(org-hide-emphasis-markers t)
 (org-image-actual-width nil)
 (org-src-fontify-natively t)
 (org-edit-src-persistent-message nil)
@@ -6591,33 +6132,10 @@ Org agenda files. All TODOs go in here.
 
 
 #+BEGIN_SRC emacs-lisp
-(font-lock-add-keywords
- 'org-mode
- '(("^\\([0-9]+[.)]\\|\\+\\|\\-\\) " 1 'org-bullet))
- 'append)
-
-(add-to-list 'org-emphasis-alist '("`" (:inherit font-lock-keyword-face )))
-
-  ;; Add backticks to font-lock-keyword-face
-(font-lock-add-keywords
- 'org-mode
- '(("\\(`\\([^`]+\\)`\\)" 1 'font-lock-keyword-face))
- 'append)
-
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(set-face-attribute 'org-meta-line nil :italic t :inherit 'fixed-pitch)
-;; Get rid of the background on column views
-(set-face-attribute 'org-column nil :background 'unspecified)
-(set-face-attribute 'org-column-title nil :background 'unspecified)
-(set-face-attribute 'org-level-1 nil :bold t)
-(set-face-attribute 'org-level-2 nil :bold t)
-(set-face-attribute 'org-level-3 nil :bold t)
-(set-face-attribute 'org-level-4 nil :bold t)
-(set-face-attribute 'org-level-5 nil :bold t)
-#+END_SRC
+
 
 #+BEGIN_SRC emacs-lisp
 (define-key org-mode-map (kbd "M-p") 'org-previous-block)
@@ -6630,7 +6148,6 @@ Org agenda files. All TODOs go in here.
 #+BEGIN_SRC emacs-lisp
 ((org-mode . kwrooijen/org-mode-setup)
  (org-mode . org-margin-mode)
- (org-mode . prettify-symbols-mode)
  (org-babel-after-execute . org-redisplay-inline-images)
  (org-babel-after-execute . kwrooijen/jupyter-color-fix)
  (org-src-mode . evil-normal-state))
@@ -6890,47 +6407,6 @@ Org agenda files. All TODOs go in here.
 (recentf-mode)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(defun kwrooijen/minibuffer-set-minimum-height ()
-  (let ((win (active-minibuffer-window)))
-    (when (window-live-p win)
-      (with-selected-window win
-        (let* ((target 17)
-               (delta (- target (window-height))))
-          (when (/= delta 0)
-            (enlarge-window delta)))))))
-
-(defun kwrooijen/vertico-add-bottom-padding (orig-func height)
-  "Add extra padding to Vertico completion window height."
-  (funcall orig-func (1+ height)))
-
-(defun kwrooijen/vertico-add-top-padding (orig-fun lines)
-  "Add an empty visual line above the Vertico candidate list."
-  (funcall
-   orig-fun
-   (if (or (null lines)
-           ;; Don’t mess with alternative UIs; just in case you use them.
-           (bound-and-true-p vertico-flat-mode)
-           (bound-and-true-p vertico-buffer-mode)
-           (bound-and-true-p vertico-grid-mode))
-       lines
-     ;; Prepend a blank line as an extra ‘candidate line’.
-     (cons "\n" lines))))
-
-(defun kwrooijen/hide-minibuffer-truncation-indicator ()
-  (let ((table (or buffer-display-table (make-display-table))))
-    (set-display-table-slot
-     table 'truncation
-     (make-glyph-code ?\  'kwrooijen/darken-fb-face))
-    (setq-local buffer-display-table table)))
-
-(advice-add #'vertico--display-candidates :around #'kwrooijen/vertico-add-top-padding)
-
-(advice-add #'vertico--resize-window :around #'kwrooijen/vertico-add-bottom-padding)
-
-(add-hook 'minibuffer-setup-hook #'kwrooijen/hide-minibuffer-truncation-indicator)
-#+END_SRC
-
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
@@ -6943,14 +6419,13 @@ Allow nested minibuffers
 (enable-recursive-minibuffers t)
 #+END_SRC
 
-Don't resize minibuffer
-#+BEGIN_SRC emacs-lisp
-(resize-mini-windows nil)
-#+END_SRC
+# Don't resize minibuffer
+# #+BEGIN_SRC emacs-lisp
+# (resize-mini-windows nil)
+# #+END_SRC
 
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
-('minibuffer-setup #'kwrooijen/minibuffer-set-minimum-height)
 ('minibuffer-setup #'vertico-repeat-save)
 #+END_SRC
 
@@ -6996,13 +6471,7 @@ No delays
  consult-notes-search-in-all-notes
  :preview-key "TAB")
 
-(kwrooijen/reset-inherit-face! 'consult-file 'kwrooijen/faded-fg-face)
-(set-face-attribute 'consult-preview-line nil :inherit 'hl-line)
-(set-face-attribute 'consult-highlight-match nil :inherit 'bold)
-(set-face-attribute 'consult-preview-match nil :inherit 'bold)
-
-(set-face-attribute 'consult-line-number nil :inherit 'font-lock-warning-face)
-(set-face-attribute 'consult-line-number-prefix nil :inherit 'font-lock-warning-face)
+;; Consult face overrides handled by embellish-theme
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -7114,10 +6583,7 @@ Project find files
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'orderless-match-face-0 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-1 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-2 nil :inherit 'bold :foreground 'unspecified)
-(set-face-attribute 'orderless-match-face-3 nil :inherit 'bold :foreground 'unspecified)
+;; Orderless face overrides handled by embellish-theme
 #+END_SRC
 
 
@@ -7188,7 +6654,7 @@ Project find files
 
 ** Config :config:
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'wgrep-face nil :background 'unspecified :foreground 'unspecified :inherit 'warning)
+;; Wgrep face overrides handled by embellish-theme
 #+END_SRC
 
 
@@ -7201,210 +6667,5 @@ Project find files
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp
 (project-switch-commands 'project-find-file)
-#+END_SRC
-
-* Highlight TODO
-:PROPERTIES:
-:PACKAGE: hl-todo
-:STRAIGHT: t
-:END:
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(hl-todo-keyword-faces
- '(("TODO"   . "#FF0000")
-   ("FIXME"  . "#FF0000")
-   ("DEBUG"  . "#A020F0")
-   ("GOTCHA" . "#FF4500")
-   ("STUB"   . "#1E90FF")))
-#+END_SRC
-
-** hook :hook:
-#+BEGIN_SRC emacs-lisp
-(prog-mode . hl-todo-mode)
-#+END_SRC
-
-* Visual line mode
-:PROPERTIES:
-:PACKAGE: simple
-:END:
-
-When Visual Line mode is enabled, `word-wrap` is turned on, and simple
-editing commands are redefined to act on visual lines, not logical
-lines.  See Info node `Visual Line Mode` for details.  Turning on this
-mode disables line truncation set up by variables `truncate-lines` and
-`truncate-partial-width-windows'.
-
-** Init
-
-#+BEGIN_SRC emacs-lisp
-(global-visual-line-mode 1)
-#+END_SRC
-
-* Highlight numbers
-:PROPERTIES:
-:PACKAGE: highlight-numbers
-:STRAIGHT: t
-:END:
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-((prog-mode . highlight-numbers-mode)
- (org-mode . highlight-numbers-mode))
-#+END_SRC
-
-* Dimmer
-:PROPERTIES:
-:PACKAGE: dimmer
-:STRAIGHT: t
-:END:
-
-** Init :init:
-#+BEGIN_SRC emacs-lisp
-(require 'dimmer)
-#+END_SRC
-
-** Custom :custom:
-#+BEGIN_SRC emacs-lisp
-(dimmer-fraction 0.8)
-(dimmer-watch-frame-focus-events nil)
-#+END_SRC
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(defgroup kwrooijen/minibuffer-dim nil
-  "Customization for minibuffer-aware dimming rules."
-  :group 'convenience)
-
-(setq kwrooijen/minibuffer-dim-excluded-commands
-  '(consult-line
-    consult-yank-from-kill-ring
-    consult-ripgrep
-    magit-discard
-    anzu-query-replace
-    org-schedule
-    kwrooijen/consult-ripgrep-symbol-at-point)
-)
-
-(defcustom kwrooijen/minibuffer-dim-excluded-commands
-  '(consult-line
-    consult-yank-from-kill-ring
-    consult-ripgrep
-    magit-discard
-    anzu-query-replace
-    org-schedule
-    kwrooijen/consult-ripgrep-symbol-at-point)
-
-  "Commands for which the original window should not be dimmed.
-When the minibuffer is activated by one of these commands,
-the selected window will be restored (not dimmed)."
-  :type '(repeat symbol))
-
-(defun kwrooijen/dimmer-dim-all ()
-  "Dim all buffers."
-  (mapc (lambda (buf)
-          (with-current-buffer buf
-            (unless (minibufferp)
-              (dimmer-dim-buffer buf dimmer-fraction))))
-        (dimmer-visible-buffer-list)))
-
-(defun kwrooijen/minibuffer-dim-all-initialize ()
-  "Dim all buffers except for commands listed in `kwrooijen/minibuffer-dim-excluded-commands'."
-  (kwrooijen/dimmer-dim-all)
-  (when (memq this-command kwrooijen/minibuffer-dim-excluded-commands)
-    (dimmer-restore-buffer (window-buffer (minibuffer-selected-window)))))
-
-;;;###autoload
-(define-minor-mode kwrooijen/minibuffer-dim-mode
-  "Toggle dimming adjustments for Minibuffer."
-  :global t
-  (if kwrooijen/minibuffer-dim-mode
-      (progn
-        (add-to-list 'dimmer-exclusion-regexp-list ".*Minibuf.*")
-
-        (add-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
-        (add-hook 'minibuffer-exit-hook #'dimmer-restore-all))
-
-        (remove-hook 'minibuffer-setup-hook #'kwrooijen/minibuffer-dim-all-initialize)
-        (remove-hook 'minibuffer-exit-hook #'dimmer-restore-all)))
-
-(kwrooijen/minibuffer-dim-mode)
-#+END_SRC
-* Hl line mode
-:PROPERTIES:
-:PACKAGE: hl-line
-:END:
-
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-((prog-mode . hl-line-mode)
- (text-mode . hl-line-mode)
- (messages-buffer-mode . hl-line-mode))
-#+END_SRC
-
-
-* Subwindow
-
-Give subwindows (magit, repl, shell, minibuffer, etc) a different
-style. Similar to Solaire mode, but more flexible.
-
-#+BEGIN_SRC emacs-lisp
-(defvar-local kwrooijen/subwindow-needs-style nil)
-
-(defun kwrooijen/subwindow-styling (win)
-  (when kwrooijen/subwindow-needs-style
-    (set-window-fringes win 24 24)
-    (setq header-line-format " ")
-    (face-remap-add-relative 'fringe :inherit 'kwrooijen/darken-fb-face)
-    (face-remap-add-relative 'header-line :inherit 'kwrooijen/darken-bg-face :height 190)
-    (face-remap-add-relative 'default :inherit 'kwrooijen/darken-bg-face)))
-
-(defun kwrooijen/subwindow-setup-hook ()
-  (setq kwrooijen/subwindow-needs-style t))
-
-(defun kwrooijen/subwindow-setup-hook-transient ()
-  ;; Transient has special needs when it comes to getting the proper
-  ;; buffer.
-  (when (get-buffer (or transient--buffer-name ""))
-    (with-current-buffer (get-buffer (or transient--buffer-name ""))
-      (setq kwrooijen/subwindow-needs-style t))))
-
-(defun kwrooijen/subwindow-restyle ()
-  (dolist (win (window-list))
-    (with-current-buffer (window-buffer win)
-      (kwrooijen/subwindow-styling win))))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'window-configuration-change-hook #'kwrooijen/subwindow-restyle)
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-(defcustom kwrooijen/subwindow-hook-list
-  '(cider-repl-mode-hook
-    magit-mode-hook
-    dired-mode-hook
-    sql-interactive-mode-hook
-    eshell-mode-hook
-    inf-ruby-mode-hook
-    messages-buffer-mode-hook)
-  "List of hooks on which to run `kwrooijen/subwindow-setup-hook`."
-  :type '(repeat symbol)
-  :group 'kwrooijen)
-
-(add-hook 'transient-setup-buffer-hook #'kwrooijen/subwindow-setup-hook-transient)
-
-(dolist (hook kwrooijen/subwindow-hook-list)
-  (add-hook hook #'kwrooijen/subwindow-setup-hook))
-
-(defun minibuffer-subwindow-hook ()
- (face-remap-add-relative 'default '(:inherit kwrooijen/darken-bg-face))
- (face-remap-add-relative 'minibuffer-prompt '(:inherit kwrooijen/darken-bg-face))
- (set-window-margins (minibuffer-window) 2 2))
-
-(add-hook 'minibuffer-setup-hook 'minibuffer-subwindow-hook)
-
-(when (buffer-live-p (get-buffer "*Messages*"))
-  (with-current-buffer "*Messages*"
-    (setq kwrooijen/subwindow-needs-style t)))
 #+END_SRC
 
