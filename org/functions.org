@@ -145,6 +145,16 @@
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/find-file-at-point ()
+  "Open the file path at point if it exists."
+  (interactive)
+  (let ((path (thing-at-point 'filename t)))
+    (if (and path (file-exists-p (expand-file-name path)))
+        (find-file (expand-file-name path))
+      (message "File does not exist"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/dired-project-root ()
   (interactive)
   (let ((project-root (project-root (project-current t))))

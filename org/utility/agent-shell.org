@@ -197,7 +197,8 @@ Prepends ! when any agent is waiting for permission."
  "l s" 'agent-shell-manager-toggle
  "l p" 'kwrooijen/agent-shell-start-in-project
  "l b" 'kwrooijen/agent-shell-switch-agent
- "f l" 'kwrooijen/agent-shell-switch-agent)
+ "f l" 'kwrooijen/agent-shell-switch-agent
+ "a l" 'kwrooijen/agent-shell-switch-agent)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp

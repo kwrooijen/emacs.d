@@ -223,6 +223,7 @@ Navigation
 (kwrooijen/leader
   "f r" '(kwrooijen/dired-project-root :which-key "Open project root in Dired")
   "f f" '(find-file :which-key "Find File")
+  "f F" '(kwrooijen/find-file-at-point :which-key "Find File at Point")
   "f d" '(dired-jump :which-key "Open current directory")
   "f c" '(org-clock-multi-clock-goto :which-key "Go to active clock"))
 #+END_SRC
