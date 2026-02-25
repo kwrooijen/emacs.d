@@ -439,6 +439,7 @@ Navigation
 (kwrooijen/leader
   "f r" '(kwrooijen/dired-project-root :which-key "Open project root in Dired")
   "f f" '(find-file :which-key "Find File")
+  "f F" '(kwrooijen/find-file-at-point :which-key "Find File at Point")
   "f d" '(dired-jump :which-key "Open current directory")
   "f c" '(org-clock-multi-clock-goto :which-key "Go to active clock"))
 #+END_SRC
@@ -693,6 +694,16 @@ type (by default) `xs`. Configurable through
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/find-file-at-point ()
+  "Open the file path at point if it exists."
+  (interactive)
+  (let ((path (thing-at-point 'filename t)))
+    (if (and path (file-exists-p (expand-file-name path)))
+        (find-file (expand-file-name path))
+      (message "File does not exist"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/dired-project-root ()
   (interactive)
   (let ((project-root (project-root (project-current t))))
@@ -799,16 +810,6 @@ subwindow mode. The base =embellish-mode= is enabled in =init.el=.
 (defgroup kwrooijen/minibuffer-dim nil
   "Customization for minibuffer-aware dimming rules."
   :group 'convenience)
-
-(setq kwrooijen/minibuffer-dim-excluded-commands
-  '(consult-line
-    consult-yank-from-kill-ring
-    consult-ripgrep
-    magit-discard
-    anzu-query-replace
-    org-schedule
-    kwrooijen/consult-ripgrep-symbol-at-point)
-)
 
 (defcustom kwrooijen/minibuffer-dim-excluded-commands
   '(consult-line
@@ -2378,7 +2379,6 @@ When non-nil a bit of help text will be displayed on REPL start.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-(cider-repl-display-help-banner nil)
 (cider-figwheel-main-default-options "dev")
 (cider-default-cljs-repl 'figwheel-main)
 (cider-preferred-build-tool 'clojure-cli)
@@ -3236,19 +3236,6 @@ chaotic.
 (inf-ruby-mode . eglot-ensure)
 #+END_SRC
 
-
-# * Chruby
-# :PROPERTIES:
-# :PACKAGE: chruby
-# :STRAIGHT: t
-# :END:
-
-# ** Hook :hook:
-
-# #+BEGIN_SRC emacs-lisp
-# (ruby-mode-hook . 'chruby-use-corresponding)
-# #+END_SRC
-
 * Rust
 :PROPERTIES:
 :PACKAGE: rust-mode
@@ -3323,18 +3310,6 @@ chaotic.
       (call-interactively 'evil-insert))))
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-
-(defun kwrooijen/web-mode-before-save-hook ()
-  (interactive)
-  (when (eq major-mode 'web-mode)
-    ;(web-mode-buffer-indent)
-))
-
-#+END_SRC
-
-
-
 ** Custom :custom:
 
 Basic indentation rules
@@ -3360,8 +3335,7 @@ Highlight the tags of the current element.
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 ((web-mode . electric-indent-mode)
- (web-mode . paredit-mode)
- (before-save . kwrooijen/web-mode-before-save-hook))
+ (web-mode . paredit-mode))
 #+END_SRC
 
 ** Bindings :general:
@@ -3889,7 +3863,9 @@ Prepends ! when any agent is waiting for permission."
 (kwrooijen/leader
  "l s" 'agent-shell-manager-toggle
  "l p" 'kwrooijen/agent-shell-start-in-project
- "l b" 'kwrooijen/agent-shell-switch-agent)
+ "l b" 'kwrooijen/agent-shell-switch-agent
+ "f l" 'kwrooijen/agent-shell-switch-agent
+ "a l" 'kwrooijen/agent-shell-switch-agent)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -4000,12 +3976,6 @@ Max body width (using shr renderer)
 #+END_SRC
 
 
-
-
-* Message
-:PROPERTIES:
-:PACKAGE:  message
-:END:
 
 
 
@@ -4298,35 +4268,6 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 "gl" '(smerge-keep-lower :which-key "Merge keep lower")
 "ga" '(smerge-keep-all :which-key "Merge keep all"))
 #+END_SRC
-
-* Magit Todos
-:PROPERTIES:
-:PACKAGE:  magit-todos
-:STRAIGHT: t
-:AFTER: magit
-:END:
-
-** Config :config:
-#+BEGIN_SRC emacs-lisp
-(magit-todos-mode 1)
-#+END_SRC
-
-# TODO Magit delta sometimes breaks, so we should have an easy way to toggle it.
-# * Magit Delta
-# :PROPERTIES:
-# :PACKAGE:  magit-delta
-# :STRAIGHT: t
-# :END:
-
-# ** Hook :hook:
-# #+BEGIN_SRC emacs-lisp
-# (magit-mode . magit-delta-mode)
-# #+END_SRC
-
-# ** Custom :custom:
-# #+BEGIN_SRC emacs-lisp
-# (magit-delta-delta-args '("--max-line-distance" "0.6" "--true-color" "always" "--color-only" "--syntax-theme" "Nord" ))
-# #+END_SRC
 
 * Anzu
 :PROPERTIES:
@@ -4788,11 +4729,11 @@ Automatically save any org buffers when making changes in org agenda.
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agenda-org-save-all-org-buffers ()
   (when (equal major-mode 'org-agenda-mode)
-    ;; TODO Inhibit messages
-    (org-save-all-org-buffers))
+    (let ((inhibit-message t))
+      (org-save-all-org-buffers)))
   (when (equal major-mode 'org-mode)
-    ;; TODO Inhibit messages
-    (save-buffer)))
+    (let ((inhibit-message t))
+      (save-buffer))))
 
 (add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
@@ -5205,17 +5146,6 @@ Custom loading bar for work.
      (round current)
      (make-string (- (window-width) 1) ?─))))
 
-(defun kwrooijen/org-agenda-insert-loading-bar ()
-  "Insert loading bar at the top of the agenda buffer."
-  ;; TODO only when current day is mon - fri
-  ;; (when (derived-mode-p 'org-agenda-mode)
-  ;;   (let ((inhibit-read-only t))
-  ;;     (goto-char (point-min))
-  ;;     (insert (kwrooijen/org-agenda-loading-bar))))
-)
-
-(add-hook 'org-agenda-finalize-hook
-          #'kwrooijen/org-agenda-insert-loading-bar)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -6032,26 +5962,8 @@ Org agenda files. All TODOs go in here.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/org-heading-1-next ()
-  (interactive)
-    (org-next-visible-heading 1)
-    (recenter-top-bottom 2))
-
-(defun kwrooijen/org-heading-1-prev ()
-  (interactive)
-    (org-next-visible-heading -1)
-    (recenter-top-bottom 2))
-
-(define-key org-mode-map (kbd "M-n") #'kwrooijen/org-heading-1-next)
-(define-key org-mode-map (kbd "M-p") #'kwrooijen/org-heading-1-prev)
-#+END_SRC
-
-
-#+BEGIN_SRC emacs-lisp
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
-
-
 
 #+BEGIN_SRC emacs-lisp
 (define-key org-mode-map (kbd "M-p") 'org-previous-block)
@@ -6264,24 +6176,7 @@ Org agenda files. All TODOs go in here.
 
 
 #+BEGIN_SRC emacs-lisp
-;; (defun kwrooijen/consult-grep-fix-tab ()
-;;   (when (eq (completion-metadata-get
-;;              (completion-metadata (minibuffer-contents)
-;;                                   minibuffer-completion-table
-;;                                   minibuffer-completion-predicate)
-;;              'category)
-;;             'consult-grep)
-;;     (let ((map (make-sparse-keymap)))
-;;       (define-key map (kbd "TAB")   #'ignore)
-;;       (define-key map (kbd "<tab>") #'ignore)
-;;       (setq-local minor-mode-overriding-map-alist
-;;                   (cons `(vertico-mode . ,map)
-;;                         minor-mode-overriding-map-alist)))
-;;     ))
-
-;; (add-hook 'minibuffer-setup-hook #'kwrooijen/consult-grep-fix-tab)
-;; vertico-next-group is causing consult-rip-grep to break. Disabling it for now.
-;; Attempted to override the keybinding with a hook, but that doesn't seem to work.
+;; Disabled: vertico-next-group breaks consult-ripgrep
 (defun vertico-next-group (&optional n) (interactive))
 #+END_SRC
 
@@ -6482,9 +6377,7 @@ Project find files
 #+BEGIN_SRC emacs-lisp
 (completion-styles '(orderless basic))
 (completion-category-defaults nil)
-;; (completion-category-overrides '((file (styles . (orderless)))))
 (completion-category-overrides '((file (styles partial-completion))))
-(completion-category-defaults nil)
 (completion-pcm-leading-wildcard t)
 
 (orderless-matching-styles '(orderless-literal orderless-prefixes))
