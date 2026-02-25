@@ -73,7 +73,6 @@ When non-nil a bit of help text will be displayed on REPL start.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-(cider-repl-display-help-banner nil)
 (cider-figwheel-main-default-options "dev")
 (cider-default-cljs-repl 'figwheel-main)
 (cider-preferred-build-tool 'clojure-cli)

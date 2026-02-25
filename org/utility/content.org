@@ -74,12 +74,6 @@ Max body width (using shr renderer)
 
 
 
-* Message
-:PROPERTIES:
-:PACKAGE:  message
-:END:
-
-
 
 * Olivetti
 :PROPERTIES:

@@ -50,18 +50,6 @@
       (call-interactively 'evil-insert))))
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-
-(defun kwrooijen/web-mode-before-save-hook ()
-  (interactive)
-  (when (eq major-mode 'web-mode)
-    ;(web-mode-buffer-indent)
-))
-
-#+END_SRC
-
-
-
 ** Custom :custom:
 
 Basic indentation rules
@@ -87,8 +75,7 @@ Highlight the tags of the current element.
 ** Hook :hook:
 #+BEGIN_SRC emacs-lisp
 ((web-mode . electric-indent-mode)
- (web-mode . paredit-mode)
- (before-save . kwrooijen/web-mode-before-save-hook))
+ (web-mode . paredit-mode))
 #+END_SRC
 
 ** Bindings :general:

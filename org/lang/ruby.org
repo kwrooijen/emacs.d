@@ -144,16 +144,3 @@ chaotic.
 (inf-ruby-mode . kwrooijen/inf-ruby-remove-underline)
 (inf-ruby-mode . eglot-ensure)
 #+END_SRC
-
-
-# * Chruby
-# :PROPERTIES:
-# :PACKAGE: chruby
-# :STRAIGHT: t
-# :END:
-
-# ** Hook :hook:
-
-# #+BEGIN_SRC emacs-lisp
-# (ruby-mode-hook . 'chruby-use-corresponding)
-# #+END_SRC

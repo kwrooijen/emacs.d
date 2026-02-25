@@ -87,16 +87,6 @@ subwindow mode. The base =embellish-mode= is enabled in =init.el=.
   "Customization for minibuffer-aware dimming rules."
   :group 'convenience)
 
-(setq kwrooijen/minibuffer-dim-excluded-commands
-  '(consult-line
-    consult-yank-from-kill-ring
-    consult-ripgrep
-    magit-discard
-    anzu-query-replace
-    org-schedule
-    kwrooijen/consult-ripgrep-symbol-at-point)
-)
-
 (defcustom kwrooijen/minibuffer-dim-excluded-commands
   '(consult-line
     consult-yank-from-kill-ring

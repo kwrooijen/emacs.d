@@ -369,26 +369,8 @@ Org agenda files. All TODOs go in here.
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
-(defun kwrooijen/org-heading-1-next ()
-  (interactive)
-    (org-next-visible-heading 1)
-    (recenter-top-bottom 2))
-
-(defun kwrooijen/org-heading-1-prev ()
-  (interactive)
-    (org-next-visible-heading -1)
-    (recenter-top-bottom 2))
-
-(define-key org-mode-map (kbd "M-n") #'kwrooijen/org-heading-1-next)
-(define-key org-mode-map (kbd "M-p") #'kwrooijen/org-heading-1-prev)
-#+END_SRC
-
-
-#+BEGIN_SRC emacs-lisp
 (plist-put org-format-latex-options :scale 2.5)
 #+END_SRC
-
-
 
 #+BEGIN_SRC emacs-lisp
 (define-key org-mode-map (kbd "M-p") 'org-previous-block)

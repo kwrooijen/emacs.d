@@ -8,24 +8,7 @@
 
 
 #+BEGIN_SRC emacs-lisp
-;; (defun kwrooijen/consult-grep-fix-tab ()
-;;   (when (eq (completion-metadata-get
-;;              (completion-metadata (minibuffer-contents)
-;;                                   minibuffer-completion-table
-;;                                   minibuffer-completion-predicate)
-;;              'category)
-;;             'consult-grep)
-;;     (let ((map (make-sparse-keymap)))
-;;       (define-key map (kbd "TAB")   #'ignore)
-;;       (define-key map (kbd "<tab>") #'ignore)
-;;       (setq-local minor-mode-overriding-map-alist
-;;                   (cons `(vertico-mode . ,map)
-;;                         minor-mode-overriding-map-alist)))
-;;     ))
-
-;; (add-hook 'minibuffer-setup-hook #'kwrooijen/consult-grep-fix-tab)
-;; vertico-next-group is causing consult-rip-grep to break. Disabling it for now.
-;; Attempted to override the keybinding with a hook, but that doesn't seem to work.
+;; Disabled: vertico-next-group breaks consult-ripgrep
 (defun vertico-next-group (&optional n) (interactive))
 #+END_SRC
 
@@ -226,9 +209,7 @@ Project find files
 #+BEGIN_SRC emacs-lisp
 (completion-styles '(orderless basic))
 (completion-category-defaults nil)
-;; (completion-category-overrides '((file (styles . (orderless)))))
 (completion-category-overrides '((file (styles partial-completion))))
-(completion-category-defaults nil)
 (completion-pcm-leading-wildcard t)
 
 (orderless-matching-styles '(orderless-literal orderless-prefixes))

@@ -10,11 +10,11 @@ Automatically save any org buffers when making changes in org agenda.
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/agenda-org-save-all-org-buffers ()
   (when (equal major-mode 'org-agenda-mode)
-    ;; TODO Inhibit messages
-    (org-save-all-org-buffers))
+    (let ((inhibit-message t))
+      (org-save-all-org-buffers)))
   (when (equal major-mode 'org-mode)
-    ;; TODO Inhibit messages
-    (save-buffer)))
+    (let ((inhibit-message t))
+      (save-buffer))))
 
 (add-hook 'org-after-todo-state-change-hook #'kwrooijen/agenda-org-save-all-org-buffers)
 (add-hook 'org-clock-in-hook                #'kwrooijen/agenda-org-save-all-org-buffers)
@@ -427,17 +427,6 @@ Custom loading bar for work.
      (round current)
      (make-string (- (window-width) 1) ?─))))
 
-(defun kwrooijen/org-agenda-insert-loading-bar ()
-  "Insert loading bar at the top of the agenda buffer."
-  ;; TODO only when current day is mon - fri
-  ;; (when (derived-mode-p 'org-agenda-mode)
-  ;;   (let ((inhibit-read-only t))
-  ;;     (goto-char (point-min))
-  ;;     (insert (kwrooijen/org-agenda-loading-bar))))
-)
-
-(add-hook 'org-agenda-finalize-hook
-          #'kwrooijen/org-agenda-insert-loading-bar)
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
