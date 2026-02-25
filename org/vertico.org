@@ -111,6 +111,23 @@ No delays
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-buffer-pair-modified (buffer)
+  "Like `consult--buffer-pair' but propertize modified file buffers with the error face."
+  (let ((name (buffer-name buffer)))
+    (cons (if (and (buffer-modified-p buffer)
+                   (buffer-file-name buffer))
+              (propertize name 'face 'embellish-theme-error-fg-face)
+            name)
+          buffer)))
+
+(setq consult-source-buffer
+      (plist-put consult-source-buffer :items
+                 (lambda ()
+                   (consult--buffer-query :sort 'visibility
+                                          :as #'kwrooijen/consult-buffer-pair-modified))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
 (defun kwrooijen/consult-ripgrep-symbol-at-point ()
   (interactive)
   (consult-ripgrep nil (thing-at-point 'symbol t)))
