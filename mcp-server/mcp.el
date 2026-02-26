@@ -689,6 +689,42 @@ For the TODO identified by FILE and HEADING."
             `((success . t)
               (heading . ,heading)))))))))
 
+(cl-defun kwrooijen/mcp-agent-get-tail (file heading &optional n)
+  "Return the last N lines from the agent-shell buffer for the TODO at FILE/HEADING.
+N defaults to 80.  Returns the buffer tail and current status."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE")))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (let* ((lines (or n 80))
+                (worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+           (unless shell-buf
+             (error "No running agent-shell found for %s" heading))
+           (let* ((status (substring-no-properties
+                           (agent-shell-manager--get-combined-status shell-buf)))
+                  (content (with-current-buffer shell-buf
+                             (let* ((text (buffer-substring-no-properties
+                                           (point-min) (point-max)))
+                                    (all-lines (split-string text "\n"))
+                                    (tail (last all-lines lines)))
+                               (string-join tail "\n")))))
+             (json-encode
+              `((heading . ,heading)
+                (status . ,status)
+                (lines . ,lines)
+                (content . ,content))))))))))
+
 ;;; Notification Queue
 
 (cl-defun kwrooijen/mcp-agent-notifications-list ()

@@ -185,6 +185,22 @@ def handle_tool_call(name, arguments)
       "(kwrooijen/mcp-agent-get-transcript #{elisp_string(file)} #{elisp_string(heading)})"
     )
 
+  when "agent_get_tail"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+
+    if arguments["n"]
+      emacsclient_eval(
+        "(kwrooijen/mcp-agent-get-tail #{elisp_string(file)} #{elisp_string(heading)} #{arguments["n"].to_i})"
+      )
+    else
+      emacsclient_eval(
+        "(kwrooijen/mcp-agent-get-tail #{elisp_string(file)} #{elisp_string(heading)})"
+      )
+    end
+
   when "agent_get_diff"
     file = arguments["file"]
     heading = arguments["heading"]
