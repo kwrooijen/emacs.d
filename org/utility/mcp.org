@@ -1,0 +1,37 @@
+* Agent Shell
+:PROPERTIES:
+:PACKAGE:  agent-shell
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-mcp-servers
+ '(((name . "emacs")
+    (command . "ruby")
+    (args . ("/Users/kwrooijen/.wisdom.d/mcp-server/emacs-mcp-server.rb"))
+    (env . ()))))
+#+END_SRC
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(cl-defun kwrooijen/mcp-get-work-todos ()
+  "Return a JSON string of org TODO items tagged :work:.
+Queries agenda files for entries in TODO, IN PROGRESS, or WAITING state."
+  (let ((states '("TODO" "IN PROGRESS" "WAITING"))
+        (tag "work")
+        entries)
+    (dolist (file (org-agenda-files))
+      (with-current-buffer (find-file-noselect file)
+        (org-with-wide-buffer
+         (goto-char (point-min))
+         (while (re-search-forward org-heading-regexp nil t)
+           (when (and (member (org-get-todo-state) states)
+                      (member tag (org-get-tags)))
+             (push `((heading . ,(org-get-heading t t t t))
+                     (state . ,(org-get-todo-state))
+                     (tags . ,(org-get-tags))
+                     (file . ,(buffer-file-name)))
+                   entries))))))
+    (json-encode (nreverse entries))))
+#+END_SRC
