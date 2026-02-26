@@ -181,6 +181,47 @@ Returns a string like \"feature/1234-short-slug\"."
              (org-clock-multi-clock-out)))))
     (error nil)))
 
+(cl-defun kwrooijen/mcp-get-active-clocks ()
+  "Return a JSON array of all active org-clock-multi clocks.
+Each entry includes the clock ID, heading, file, elapsed minutes,
+and parent heading properties (CLIENT, ASANA_PROJECT, etc.)."
+  (let (entries)
+    (dolist (clock org-clock-multi-clocks)
+      (let* ((key (car clock))
+             (start-minutes (cdr clock))
+             (elapsed (- (org-clock-multi--current-minutes) start-minutes)))
+        (org-clock-multi--with-heading-at-key key
+          (let ((heading (org-get-heading t t t t))
+                (file (buffer-file-name))
+                (props (kwrooijen/mcp--get-own-properties))
+                (parent-props (kwrooijen/mcp--get-parent-properties)))
+            (push `((clock_id . ,key)
+                    (heading . ,heading)
+                    (file . ,file)
+                    (elapsed_minutes . ,elapsed)
+                    (properties . ,props)
+                    (parent_properties . ,parent-props))
+                  entries)))))
+    (json-encode (nreverse entries))))
+
+(cl-defun kwrooijen/mcp-clock-in (file heading)
+  "Clock in the heading identified by FILE and HEADING using org-clock-multi.
+Returns JSON with success status."
+  (kwrooijen/mcp--clock-in-heading file heading)
+  (json-encode
+   `((success . t)
+     (heading . ,heading)
+     (file . ,file))))
+
+(cl-defun kwrooijen/mcp-clock-out (file heading)
+  "Clock out the heading identified by FILE and HEADING using org-clock-multi.
+Returns JSON with success status."
+  (kwrooijen/mcp--clock-out-heading file heading)
+  (json-encode
+   `((success . t)
+     (heading . ,heading)
+     (file . ,file))))
+
 ;;; Todo Management
 
 (cl-defun kwrooijen/mcp-get-work-todo-files ()

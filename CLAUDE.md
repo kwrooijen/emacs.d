@@ -66,6 +66,24 @@ Functions prefixed with `kwrooijen/`:
 - `kwrooijen/tab` - Tab with Copilot fallback
 - `kwrooijen/indent-buffer` - Format entire buffer
 
+## MCP Tools
+
+This project provides MCP tools via `mcp-server/emacs-mcp-server.rb`. Always use these tools when relevant:
+
+### Todo Management
+- `get_work_todo_files` - List org files in `~/Documents/org/todos/client/` (returns JSON array of paths)
+- `get_work_todos` - Get all TODO items tagged :work: (states: TODO, IN PROGRESS, WAITING) with properties and parent_properties
+- `get_work_todo(file, heading)` - Get full details of a single todo: properties, parent_properties, logbook (clock entries), body, subtasks
+- `edit_work_todo(file, heading, state?, set_properties?, delete_properties?, body?)` - Edit a todo's state, properties, or body content
+
+### Agent Management
+- `agent_set_branch(file, heading, branch?)` - Set :BRANCH: property on a ticket. Auto-generates a concise branch name with Asana ID prefix if omitted (e.g. `feature/1213416506379504-sentry-errors`)
+- `agent_launch(file, heading)` - Create git worktree, write ticket.org, and start an agent-shell for a ticket. Requires :PROJECT: and :BRANCH: properties
+- `agent_list` - List all ticket-managed agent-shell workspaces with status (Ready/Working/Waiting/Killed), transcript path, and ticket metadata
+- `agent_get_prompt(file, heading)` - Read the ticket.org prompt that was sent to the agent
+- `agent_get_transcript(file, heading)` - Read the agent's session transcript (markdown). Falls back to most recent transcript file if shell is no longer running
+- `agent_get_diff(file, heading)` - Get git diff (stat + full diff) for the agent's worktree branch vs base branch
+
 ## Development Notes
 
 - Wisdom framework is loaded from `~/Programming/Emacs/wisdom/wisdom.el` for local development

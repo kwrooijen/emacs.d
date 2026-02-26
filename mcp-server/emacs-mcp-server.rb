@@ -28,6 +28,56 @@ TOOLS = [
     }
   },
   {
+    name: "get_active_clocks",
+    description: "Get all currently running org-clock-multi clocks. " \
+                 "Returns a JSON array of objects with clock_id, heading, file, elapsed_minutes, " \
+                 "properties, and parent_properties (including CLIENT). " \
+                 "Use this to check what is currently being tracked and detect conflicts " \
+                 "(e.g. OVERIGE and a task for the same client should not run simultaneously).",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "clock_in",
+    description: "Clock in a heading using org-clock-multi. " \
+                 "Adds to the list of active clocks without affecting other running clocks.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the heading"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "clock_out",
+    description: "Clock out a heading using org-clock-multi. " \
+                 "Writes a LOGBOOK entry and removes from active clocks.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the heading"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
     name: "get_work_todo",
     description: "Get full details of a single work TODO item including properties, " \
                  "parent properties, body content, subtasks, and logbook (clock entries with start, end, duration). " \
@@ -299,6 +349,24 @@ def handle_tool_call(name, arguments)
     emacsclient_eval("(kwrooijen/mcp-get-work-todos)")
   when "get_work_todo_files"
     emacsclient_eval("(kwrooijen/mcp-get-work-todo-files)")
+  when "get_active_clocks"
+    emacsclient_eval("(kwrooijen/mcp-get-active-clocks)")
+  when "clock_in"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-clock-in #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+  when "clock_out"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-clock-out #{elisp_string(file)} #{elisp_string(heading)})"
+    )
   when "get_work_todo"
     file = arguments["file"]
     heading = arguments["heading"]

@@ -13,15 +13,15 @@
 (require 'json)
 
 ;; Provide stubs for packages unavailable in batch mode
+;; (agent-shell has heavy deps: comint, magit, acp, display-buffer, etc.)
 (unless (featurep 'request)
   (provide 'request))
 (unless (featurep 'org-agent-shell)
   (provide 'org-agent-shell))
-(unless (featurep 'org-clock-multi)
-  (provide 'org-clock-multi))
 
 ;; Load modules under test relative to this file
 (let ((dir (file-name-directory (or load-file-name buffer-file-name))))
+  (require 'org-clock-multi (expand-file-name "../../org-clock-multi/org-clock-multi.el" dir))
   (require 'org-asana (expand-file-name "../../org-asana/org-asana.el" dir))
   (require 'mcp (expand-file-name "../mcp.el" dir)))
 
@@ -198,6 +198,65 @@ MCP functions return elisp-printed JSON strings, so we unwrap the outer quotes."
     (goto-char (point-min))
     (re-search-forward "Change me")
     (should (equal (org-get-todo-state) "DONE"))))
+
+;;; clock_in / clock_out tests
+
+(defmacro mcp-test-with-clock-env (&rest body)
+  "Execute BODY with a clean org-clock-multi state and no disk writes."
+  (declare (indent 0) (debug t))
+  `(let ((org-clock-multi-clocks nil)
+         (org-clock-multi-paused nil))
+     (cl-letf (((symbol-function 'org-clock-multi-save-state) #'ignore))
+       ,@body)))
+
+(ert-deftest mcp-test-clock-in-returns-json ()
+  "clock_in returns JSON with success, heading, and file."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO My task\n:PROPERTIES:\n:END:\n"
+    (mcp-test-with-clock-env
+      (let* ((result (kwrooijen/mcp-clock-in --org-file-- "My task"))
+             (parsed (mcp-test--parse-json result)))
+        (should (eq (alist-get 'success parsed) t))
+        (should (equal (alist-get 'heading parsed) "My task"))
+        (should (equal (alist-get 'file parsed) --org-file--))))))
+
+(ert-deftest mcp-test-clock-in-adds-to-active-clocks ()
+  "clock_in adds the heading to org-clock-multi-clocks."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO My task\n:PROPERTIES:\n:END:\n"
+    (mcp-test-with-clock-env
+      (should (null org-clock-multi-clocks))
+      (kwrooijen/mcp-clock-in --org-file-- "My task")
+      (should (= 1 (length org-clock-multi-clocks))))))
+
+(ert-deftest mcp-test-clock-out-returns-json ()
+  "clock_out returns JSON with success, heading, and file."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO My task\n:PROPERTIES:\n:END:\n"
+    (mcp-test-with-clock-env
+      (kwrooijen/mcp-clock-in --org-file-- "My task")
+      (let* ((result (kwrooijen/mcp-clock-out --org-file-- "My task"))
+             (parsed (mcp-test--parse-json result)))
+        (should (eq (alist-get 'success parsed) t))
+        (should (equal (alist-get 'heading parsed) "My task"))))))
+
+(ert-deftest mcp-test-clock-out-removes-from-active-clocks ()
+  "clock_out removes the heading from org-clock-multi-clocks."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO My task\n:PROPERTIES:\n:END:\n"
+    (mcp-test-with-clock-env
+      (kwrooijen/mcp-clock-in --org-file-- "My task")
+      (should (= 1 (length org-clock-multi-clocks)))
+      (kwrooijen/mcp-clock-out --org-file-- "My task")
+      (should (null org-clock-multi-clocks)))))
+
+(ert-deftest mcp-test-clock-in-errors-on-missing-heading ()
+  "clock_in errors when the heading does not exist."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO Real task\n:PROPERTIES:\n:END:\n"
+    (mcp-test-with-clock-env
+      (should-error
+       (kwrooijen/mcp-clock-in --org-file-- "Nonexistent task")))))
 
 (provide 'mcp-test)
 ;;; mcp-test.el ends here
