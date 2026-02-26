@@ -17,6 +17,7 @@
 (require 'cl-lib)
 (require 'json)
 (require 'org-agent-shell)
+(require 'org-clock-multi)
 
 ;;; Helpers
 
@@ -150,6 +151,35 @@ Returns a string like \"feature/1234-short-slug\"."
                    (concat asana-id "-" short)
                  short)))
     (concat "feature/" slug)))
+
+;;; Clock Management
+
+(defun kwrooijen/mcp--clock-in-heading (file heading)
+  "Clock in the heading identified by FILE and HEADING using org-clock-multi."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-clock-multi-clock-in)))))
+
+(defun kwrooijen/mcp--clock-out-heading (file heading)
+  "Clock out the heading identified by FILE and HEADING using org-clock-multi."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-clock-multi-clock-out)))))
+
+(defun kwrooijen/mcp--clock-out-overige (file)
+  "Clock out the OVERIGE heading in FILE if it is clocked in."
+  (condition-case nil
+      (let ((marker (kwrooijen/mcp--find-heading-marker file "OVERIGE")))
+        (with-current-buffer (marker-buffer marker)
+          (org-with-wide-buffer
+           (goto-char marker)
+           (when (org-clock-multi-clocking-p)
+             (org-clock-multi-clock-out)))))
+    (error nil)))
 
 ;;; Todo Management
 
@@ -339,6 +369,9 @@ Requires :PROJECT: (inherited) and :BRANCH: properties."
                                (branch . ,branch)
                                (worktree . ,worktree-name)
                                (worktree_path . ,worktree-path))))))
+           ;; Clock out OVERIGE for this client, clock in this ticket
+           (kwrooijen/mcp--clock-out-overige org-file)
+           (kwrooijen/mcp--clock-in-heading org-file heading)
            ;; Return result
            (json-encode
             `((success . t)
