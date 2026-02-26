@@ -99,6 +99,25 @@ Returns accumulated results from all pages."
           (setq has-more nil))))
     all-data))
 
+(defun org-asana--post (endpoint data)
+  "POST DATA to Asana API ENDPOINT.
+DATA is an alist that will be wrapped in a `data' key and JSON-encoded.
+Returns the `data' alist from the response."
+  (let* ((url (concat "https://app.asana.com/api/1.0/" endpoint))
+         (response (request url
+                    :type "POST"
+                    :headers `(("Authorization" . ,(concat "Bearer " (org-asana--token)))
+                               ("Content-Type" . "application/json"))
+                    :data (json-encode `((data . ,data)))
+                    :parser 'json-read
+                    :sync t
+                    :silent t))
+         (status (request-response-status-code response))
+         (body (request-response-data response)))
+    (unless (memq status '(200 201))
+      (user-error "Asana API error %d: %s" status body))
+    (alist-get 'data body)))
+
 ;;; Cache
 
 (defun org-asana--cache-file (project-gid)
@@ -429,6 +448,71 @@ For each Asana-tracked heading, prompts to set the TODO state."
                   (cl-incf count))))))
          existing)))
     (message "org-asana: Updated %d states" count)))
+
+;;; Push
+
+(defun org-asana--get-first-section (project-gid)
+  "Return (GID . NAME) of the first section in PROJECT-GID."
+  (let* ((sections (org-asana--request-all-pages
+                    (format "projects/%s/sections" project-gid)
+                    '(("opt_fields" . "gid,name"))))
+         (first (when (> (length sections) 0)
+                  (aref sections 0))))
+    (when first
+      (cons (alist-get 'gid first)
+            (alist-get 'name first)))))
+
+(defun org-asana--extract-ticket-quote ()
+  "Extract text from the #+BEGIN_QUOTE ticket block under current heading.
+Returns the content string or nil if no quote block exists."
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((end (save-excursion (org-end-of-subtree t t) (point))))
+      (when (re-search-forward "^#\\+BEGIN_QUOTE ticket$" end t)
+        (let ((start (progn (forward-line 1) (point))))
+          (when (re-search-forward "^#\\+END_QUOTE$" end t)
+            (let ((text (buffer-substring-no-properties
+                         start (line-beginning-position))))
+              (string-trim text))))))))
+
+(defun org-asana--push-heading ()
+  "Push the org heading at point to Asana as a new task.
+Requires an inherited :ASANA_PROJECT: property and no existing :ASANA: GID.
+Sets :ASANA: and :ASANA_SECTION: on the heading after creation."
+  (org-back-to-heading t)
+  (let ((project-gid (org-entry-get nil "ASANA_PROJECT" t))
+        (asana-gid (org-entry-get nil "ASANA")))
+    (unless project-gid
+      (user-error "No :ASANA_PROJECT: property found (own or inherited)"))
+    (when asana-gid
+      (user-error "Heading already has :ASANA: %s — already synced" asana-gid))
+    (let* ((name (org-get-heading t t t t))
+           (notes (org-asana--extract-ticket-quote))
+           (task-data `((name . ,name)
+                        (projects . [,project-gid])
+                        ,@(when notes `((notes . ,notes)))))
+           (result (org-asana--post "tasks" task-data))
+           (new-gid (alist-get 'gid result)))
+      (unless new-gid
+        (user-error "Asana API did not return a task GID"))
+      ;; Set :ASANA: property
+      (org-entry-put nil "ASANA" new-gid)
+      ;; Add to first section of the board
+      (let ((section (org-asana--get-first-section project-gid)))
+        (when section
+          (org-asana--post (format "sections/%s/addTask" (car section))
+                           `((task . ,new-gid)))
+          (org-entry-put nil "ASANA_SECTION" (cdr section))))
+      (save-buffer)
+      (message "org-asana: Created task \"%s\" (GID: %s)" name new-gid))))
+
+(defun org-asana-push ()
+  "Push the heading at point to Asana as a new task.
+The heading must be under a parent with :ASANA_PROJECT: and must not
+already have an :ASANA: property."
+  (interactive)
+  (org-asana--token)
+  (org-asana--push-heading))
 
 (provide 'org-asana)
 ;;; org-asana.el ends here
