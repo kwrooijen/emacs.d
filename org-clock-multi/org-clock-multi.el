@@ -174,25 +174,67 @@ Returns nil if the heading cannot be located."
                     (cl-return ,found-sym)))))))
          ,found-sym))))
 
+(defun org-clock-multi--find-edit-indirect-buffer-for-key (key)
+  "Find an edit-indirect buffer containing a heading with CLOCK_MULTI_ID KEY.
+Searches all buffers whose name starts with *edit-indirect.
+Returns the buffer or nil."
+  (cl-loop for buf in (buffer-list)
+           when (and (string-prefix-p "*edit-indirect" (buffer-name buf))
+                     (buffer-live-p buf)
+                     (with-current-buffer buf
+                       (save-excursion
+                         (goto-char (point-min))
+                         (re-search-forward
+                          (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$"
+                                  (regexp-quote key))
+                          nil t))))
+           return buf))
+
+(defun org-clock-multi--insert-clock-line-in-buffer (buf key clock-line)
+  "Insert CLOCK-LINE at the heading with CLOCK_MULTI_ID KEY in BUF."
+  (with-current-buffer buf
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (re-search-forward
+      (format "^[ \t]*:CLOCK_MULTI_ID:[ \t]+%s[ \t]*$"
+              (regexp-quote key))
+      nil t)
+     (org-back-to-heading t)
+     (let ((org-clock-out-when-done nil))
+       (org-clock-find-position nil)
+       (insert-before-markers clock-line)))))
+
+(defun org-clock-multi--insert-clock-line (key clock-line)
+  "Insert CLOCK-LINE into the LOGBOOK for heading with CLOCK_MULTI_ID KEY.
+First checks for an edit-indirect buffer containing the heading.
+If found, writes there directly (the source buffer is read-only).
+Otherwise writes to the source buffer via `org-agenda-files'."
+  (let ((ei-buf (org-clock-multi--find-edit-indirect-buffer-for-key key)))
+    (if ei-buf
+        (org-clock-multi--insert-clock-line-in-buffer ei-buf key clock-line)
+      (org-clock-multi--with-heading-at-key key
+        (let ((org-clock-out-when-done nil))
+          (org-clock-find-position nil)
+          (insert-before-markers clock-line))))))
+
 (defun org-clock-multi--write-clock-entry (key start-minutes)
   "Write a LOGBOOK clock entry for heading at KEY with START-MINUTES.
 KEY is a CLOCK_MULTI_ID string. START-MINUTES is minutes since epoch.
-Uses org-clock's format for compatibility."
+Uses org-clock's format for compatibility.
+If the source buffer is read-only (edit-indirect), falls back to
+writing in the corresponding edit-indirect buffer."
   (let* ((end-minutes (org-clock-multi--current-minutes))
          (start-time (org-clock-multi--minutes-to-time start-minutes))
          (end-time (org-clock-multi--minutes-to-time end-minutes))
-         (duration (- end-minutes start-minutes)))
-    (org-clock-multi--with-heading-at-key key
-      (let ((org-clock-out-when-done nil))
-        (org-clock-find-position nil)
-        (insert-before-markers
-         "CLOCK: "
-         (org-clock-multi--format-timestamp start-time)
-         "--"
-         (org-clock-multi--format-timestamp end-time)
-         " =>  "
-         (org-duration-from-minutes duration)
-         "\n")))))
+         (duration (- end-minutes start-minutes))
+         (clock-line (concat "CLOCK: "
+                             (org-clock-multi--format-timestamp start-time)
+                             "--"
+                             (org-clock-multi--format-timestamp end-time)
+                             " =>  "
+                             (org-duration-from-minutes duration)
+                             "\n")))
+    (org-clock-multi--insert-clock-line key clock-line)))
 
 (defun org-clock-multi--get-heading-for-key (key)
   "Get the heading text for KEY."
