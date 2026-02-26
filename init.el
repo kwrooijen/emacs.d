@@ -47,5 +47,8 @@
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-asana"))
 (require 'org-asana)
 
+(add-to-list 'load-path (expand-file-name "~/.wisdom.d/mcp-server"))
+(require 'mcp)
+
 (require 'server)
 (server-start)
