@@ -328,7 +328,7 @@ BODY is optional initial body text."
             (state . ,todo-state)
             (file . ,(buffer-file-name)))))))))
 
-(cl-defun kwrooijen/mcp-edit-work-todo-body (file heading body)
+(cl-defun kwrooijen/mcp-edit-work-todo-ticket-description (file heading body)
   "Set the #+BEGIN_QUOTE ticket block on the heading identified by FILE and HEADING.
 If a ticket quote block exists, replaces its contents.
 If none exists, appends one after the existing body."

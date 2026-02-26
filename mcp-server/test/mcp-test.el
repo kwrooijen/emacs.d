@@ -96,34 +96,34 @@ MCP functions return elisp-printed JSON strings, so we unwrap the outer quotes."
       (should (equal (alist-get 'heading parsed) "JSON test"))
       (should (equal (alist-get 'state parsed) "TODO")))))
 
-;;; edit_work_todo_body tests
+;;; edit_work_todo_ticket_description tests
 
-(ert-deftest mcp-test-edit-work-todo-body-creates-quote ()
+(ert-deftest mcp-test-edit-work-todo-ticket-description-creates-quote ()
   "Adds a #+BEGIN_QUOTE ticket block when none exists."
   (mcp-test-with-temp-org
       "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\n"
-    (kwrooijen/mcp-edit-work-todo-body --org-file-- "My ticket" "The description")
+    (kwrooijen/mcp-edit-work-todo-ticket-description --org-file-- "My ticket" "The description")
     (goto-char (point-min))
     (should (re-search-forward "^#\\+BEGIN_QUOTE ticket$" nil t))
     (should (re-search-forward "The description" nil t))
     (should (re-search-forward "^#\\+END_QUOTE$" nil t))))
 
-(ert-deftest mcp-test-edit-work-todo-body-replaces-quote ()
+(ert-deftest mcp-test-edit-work-todo-ticket-description-replaces-quote ()
   "Replaces an existing #+BEGIN_QUOTE ticket block."
   (mcp-test-with-temp-org
       (concat "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\n\n"
               "#+BEGIN_QUOTE ticket\nOld content\n#+END_QUOTE\n")
-    (kwrooijen/mcp-edit-work-todo-body --org-file-- "My ticket" "New content")
+    (kwrooijen/mcp-edit-work-todo-ticket-description --org-file-- "My ticket" "New content")
     (goto-char (point-min))
     (should (re-search-forward "New content" nil t))
     (goto-char (point-min))
     (should-not (re-search-forward "Old content" nil t))))
 
-(ert-deftest mcp-test-edit-work-todo-body-preserves-other-content ()
+(ert-deftest mcp-test-edit-work-todo-ticket-description-preserves-other-content ()
   "Preserves existing body text when adding a quote block."
   (mcp-test-with-temp-org
       "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\nMy notes here\n"
-    (kwrooijen/mcp-edit-work-todo-body --org-file-- "My ticket" "Ticket desc")
+    (kwrooijen/mcp-edit-work-todo-ticket-description --org-file-- "My ticket" "Ticket desc")
     (goto-char (point-min))
     (should (re-search-forward "My notes here" nil t))
     (goto-char (point-min))

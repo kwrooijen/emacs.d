@@ -108,7 +108,7 @@
         },
         "body": {
           "type": "string",
-          "description": "New body content to replace the entire body (text between properties drawer and sub-headings). Use edit_work_todo_body instead to only update the ticket quote block"
+          "description": "New body content to replace the entire body (text between properties drawer and sub-headings). Use edit_work_todo_ticket_description instead to only update the ticket quote block"
         }
       },
       "required": ["file", "heading"]
@@ -146,8 +146,8 @@
     }
   },
   {
-    "name": "edit_work_todo_body",
-    "description": "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. This is the ticket description that gets pushed to Asana via asana_push. Existing body content outside the quote block is preserved.",
+    "name": "edit_work_todo_ticket_description",
+    "description": "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. The ticket block serves two purposes: it reflects the Asana task description (pushed via asana_push), and it is automatically sent to agent-shell LLMs as the task description when launching agents. Existing body content outside the quote block is preserved.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -169,7 +169,7 @@
   },
   {
     "name": "asana_push",
-    "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_body to set the ticket description before pushing.",
+    "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_ticket_description to set the ticket description before pushing.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -311,7 +311,7 @@
   },
   {
     "name": "agent_resend",
-    "description": "Rewrite ticket.org from the org heading body and tell the agent to re-read it. Use this after updating the ticket description with edit_work_todo_body to sync changes to the running agent. The agent must be in Ready or Waiting state.",
+    "description": "Rewrite ticket.org from the org heading body and tell the agent to re-read it. Use this after updating the ticket description with edit_work_todo_ticket_description to sync changes to the running agent. The agent must be in Ready or Waiting state.",
     "inputSchema": {
       "type": "object",
       "properties": {

@@ -108,7 +108,7 @@ def handle_tool_call(name, arguments)
 
     emacsclient_eval("(kwrooijen/mcp-create-work-todo #{parts.join(' ')})")
 
-  when "edit_work_todo_body"
+  when "edit_work_todo_ticket_description"
     file = arguments["file"]
     heading = arguments["heading"]
     body = arguments["body"]
@@ -116,7 +116,7 @@ def handle_tool_call(name, arguments)
     raise "Missing required parameter: heading" unless heading
     raise "Missing required parameter: body" unless body
     emacsclient_eval(
-      "(kwrooijen/mcp-edit-work-todo-body #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(body)})"
+      "(kwrooijen/mcp-edit-work-todo-ticket-description #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(body)})"
     )
 
   when "asana_push"
