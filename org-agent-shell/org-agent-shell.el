@@ -42,6 +42,11 @@
   :type 'string
   :group 'org-agent-shell)
 
+(defvar-local org-agent-shell--ticket-info nil
+  "Alist of ticket metadata for this agent-shell buffer.
+Set by `org-agent-shell-launch'.  nil for non-ticket agents.
+Keys: file, heading, project, branch, worktree, worktree_path.")
+
 ;;; Helpers
 
 (defun org-agent-shell--get-property (property)
@@ -117,7 +122,9 @@ Creates a git worktree and starts agent-shell with the heading body as input."
   (org-back-to-heading t)
   (let ((project (org-agent-shell--get-property "PROJECT"))
         (branch (org-entry-get nil "BRANCH"))
-        (worktree (org-entry-get nil "WORKTREE")))
+        (worktree (org-entry-get nil "WORKTREE"))
+        (org-file (buffer-file-name))
+        (heading-text (org-get-heading t t t t)))
     (unless project
       (user-error "No :PROJECT: property found"))
     (unless branch
@@ -177,7 +184,18 @@ Creates a git worktree and starts agent-shell with the heading body as input."
                                 (agent-shell-insert :text "Read ticket.org and enter plan mode"
                                                     :submit t
                                                     :shell-buffer buf)))
-                            worktree-path)))))))
+                            worktree-path)))
+        ;; Tag the shell buffer with ticket metadata
+        (when-let* ((buf (or existing
+                              (org-agent-shell--find-shell-buffer worktree-path))))
+          (with-current-buffer buf
+            (setq-local org-agent-shell--ticket-info
+                        `((file . ,org-file)
+                          (heading . ,heading-text)
+                          (project . ,project-path)
+                          (branch . ,branch)
+                          (worktree . ,worktree-name)
+                          (worktree_path . ,worktree-path)))))))))
 
 (defun org-agent-shell-open-shell ()
   "Switch to the agent-shell buffer for the current heading's worktree."

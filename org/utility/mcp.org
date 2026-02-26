@@ -128,6 +128,26 @@ Skips the property drawer, logbook, and planning lines."
       (delete-region content-start child-start)
       (goto-char content-start)
       (insert new-body "\n\n"))))
+
+(defun kwrooijen/mcp--generate-branch-name (heading &optional asana-id)
+  "Generate a concise branch name from HEADING text.
+Strips common prefixes like [Feature], [Bug], etc.  Produces a short
+kebab-case slug (max ~50 chars).  Prepends ASANA-ID when non-nil.
+Returns a string like \"feature/1234-short-slug\"."
+  (let* ((stripped (replace-regexp-in-string
+                    "^\\[\\(?:Feature\\|Bug\\|Uitzoeken\\|Wijziging\\|Marketing\\|Uitbreiding\\)\\]\\s-*"
+                    "" heading))
+         (lower (downcase stripped))
+         (kebab (replace-regexp-in-string "[^a-z0-9]+" "-" lower))
+         (trimmed (replace-regexp-in-string "^-+\\|-+$" "" kebab))
+         (short (if (> (length trimmed) 50)
+                    (let ((cut (substring trimmed 0 50)))
+                      (replace-regexp-in-string "-[^-]*$" "" cut))
+                  trimmed))
+         (slug (if (and asana-id (not (string-empty-p asana-id)))
+                   (concat asana-id "-" short)
+                 short)))
+    (concat "feature/" slug)))
 #+END_SRC
 
 
@@ -210,4 +230,250 @@ Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BO
           (heading . ,(org-get-heading t t t t))
           (state . ,(org-get-todo-state))
           (properties . ,(kwrooijen/mcp--get-own-properties))))))))
+
+(cl-defun kwrooijen/mcp-agent-set-branch (file heading &optional branch)
+  "Set :BRANCH: property on the TODO identified by FILE and HEADING.
+If BRANCH is nil or empty, auto-generate from heading text and ASANA id."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((asana-id (org-entry-get nil "ASANA"))
+              (effective-branch
+               (if (and branch (not (string-empty-p branch)))
+                   branch
+                 (kwrooijen/mcp--generate-branch-name heading asana-id))))
+         (org-entry-put nil "BRANCH" effective-branch)
+         (save-buffer)
+         (json-encode
+          `((success . t)
+            (heading . ,heading)
+            (branch . ,effective-branch))))))))
+
+(cl-defun kwrooijen/mcp-agent-launch (file heading)
+  "Launch an agent-shell workspace for the TODO identified by FILE and HEADING.
+Creates a git worktree, writes ticket.org, and starts agent-shell.
+Requires :PROJECT: (inherited) and :BRANCH: properties."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((project (org-agent-shell--get-property "PROJECT"))
+             (branch (org-entry-get nil "BRANCH"))
+             (worktree (org-entry-get nil "WORKTREE")))
+         (unless project
+           (error "No :PROJECT: property found on heading: %s" heading))
+         (unless branch
+           (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
+         (let* ((project-path (expand-file-name project))
+                (worktree-name
+                 (or worktree
+                     (let ((clean-branch
+                            (replace-regexp-in-string
+                             "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
+                             "" branch)))
+                       (concat (file-name-nondirectory
+                                (directory-file-name project-path))
+                               "_" clean-branch))))
+                (worktree-path
+                 (expand-file-name
+                  worktree-name
+                  (file-name-concat project-path
+                                    agent-shell-worktree--subdirectory)))
+                (body (org-agent-shell--heading-body))
+                (reuse (and worktree (file-directory-p worktree-path)))
+                (org-file (buffer-file-name)))
+           ;; Set WORKTREE property if not already set
+           (unless worktree
+             (org-entry-put nil "WORKTREE" worktree-name)
+             (save-buffer))
+           ;; Create worktree if needed
+           (unless reuse
+             (make-directory (file-name-directory worktree-path) t)
+             (let ((default-directory project-path))
+               (let* ((branch-exists-p
+                       (= 0 (call-process "git" nil nil nil
+                                          "rev-parse" "--verify" branch)))
+                      (base (org-agent-shell--base-branch))
+                      (output (shell-command-to-string
+                               (if branch-exists-p
+                                   (format "git worktree add --force %s %s 2>&1"
+                                           (shell-quote-argument worktree-path)
+                                           (shell-quote-argument branch))
+                                 (format "git worktree add -b %s %s %s 2>&1"
+                                         (shell-quote-argument branch)
+                                         (shell-quote-argument worktree-path)
+                                         (shell-quote-argument base))))))
+                 (unless (file-exists-p worktree-path)
+                   (error "Failed to create worktree: %s" output)))))
+           ;; Write ticket.org in worktree
+           (when (and body (not (string-empty-p body)))
+             (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
+               (with-temp-file ticket-file
+                 (insert body))))
+           ;; Start agent-shell non-interactively
+           (let ((existing (org-agent-shell--find-shell-buffer worktree-path)))
+             (unless existing
+               (let ((default-directory worktree-path)
+                     (display-buffer-overriding-action '((display-buffer-no-window))))
+                 (agent-shell '(4)))
+               ;; Send initial prompt after delay
+               (when (and body (not (string-empty-p body)))
+                 (run-with-timer
+                  1.5 nil
+                  (lambda (wpath)
+                    (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
+                      (agent-shell-insert :text "Read ticket.org and enter plan mode"
+                                          :submit t
+                                          :shell-buffer buf)))
+                  worktree-path)))
+             ;; Tag the shell buffer with ticket metadata
+             (when-let* ((buf (or existing
+                                  (org-agent-shell--find-shell-buffer worktree-path))))
+               (with-current-buffer buf
+                 (setq-local org-agent-shell--ticket-info
+                             `((file . ,org-file)
+                               (heading . ,heading)
+                               (project . ,project-path)
+                               (branch . ,branch)
+                               (worktree . ,worktree-name)
+                               (worktree_path . ,worktree-path))))))
+           ;; Return result
+           (json-encode
+            `((success . t)
+              (heading . ,heading)
+              (project . ,project-path)
+              (branch . ,branch)
+              (worktree . ,worktree-name)
+              (worktree_path . ,worktree-path)
+              (reused . ,(if reuse t :json-false))))))))))
+
+(cl-defun kwrooijen/mcp-agent-list ()
+  "List all ticket-managed agent-shell workspaces.
+Returns a JSON array of agents that were started via org-agent-shell.
+Each entry includes heading, file, project, branch, worktree, status,
+and transcript file path."
+  (let (entries)
+    (dolist (buf (agent-shell-buffers))
+      (when-let* ((info (buffer-local-value 'org-agent-shell--ticket-info buf)))
+        (let* ((status (substring-no-properties
+                        (agent-shell-manager--get-combined-status buf)))
+               (transcript (when (buffer-live-p buf)
+                             (buffer-local-value 'agent-shell--transcript-file buf))))
+          (push `((heading . ,(alist-get 'heading info))
+                  (file . ,(alist-get 'file info))
+                  (project . ,(alist-get 'project info))
+                  (branch . ,(alist-get 'branch info))
+                  (worktree . ,(alist-get 'worktree info))
+                  (worktree_path . ,(alist-get 'worktree_path info))
+                  (status . ,status)
+                  (transcript_file . ,transcript))
+                entries))))
+    (json-encode (nreverse entries))))
+
+(cl-defun kwrooijen/mcp-agent-get-prompt (file heading)
+  "Read the ticket.org prompt for the agent identified by FILE and HEADING."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE")))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (let* ((worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (ticket-file (expand-file-name "ticket.org" worktree-path)))
+           (unless (file-exists-p ticket-file)
+             (error "ticket.org not found at %s" ticket-file))
+           (json-encode
+            `((heading . ,heading)
+              (ticket_file . ,ticket-file)
+              (content . ,(with-temp-buffer
+                            (insert-file-contents ticket-file)
+                            (buffer-string)))))))))))
+
+(cl-defun kwrooijen/mcp-agent-get-transcript (file heading)
+  "Read the transcript for the agent identified by FILE and HEADING.
+Tries the running shell buffer first, falls back to the most recent
+transcript file in the worktree."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE")))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (let* ((worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (shell-buf (org-agent-shell--find-shell-buffer worktree-path))
+                (transcript-file
+                 (or
+                  ;; Try the buffer-local variable first
+                  (when shell-buf
+                    (buffer-local-value 'agent-shell--transcript-file shell-buf))
+                  ;; Fallback: most recent transcript file on disk
+                  (let* ((transcripts-dir
+                          (expand-file-name ".agent-shell/transcripts"
+                                            worktree-path))
+                         (files (and (file-directory-p transcripts-dir)
+                                     (directory-files transcripts-dir t "\\.md$"))))
+                    (when files
+                      (car (sort files #'string>)))))))
+           (unless transcript-file
+             (error "No transcript found for this agent"))
+           (unless (file-exists-p transcript-file)
+             (error "Transcript file does not exist: %s" transcript-file))
+           (json-encode
+            `((heading . ,heading)
+              (transcript_file . ,transcript-file)
+              (content . ,(with-temp-buffer
+                            (insert-file-contents transcript-file)
+                            (buffer-string)))))))))))
+
+(cl-defun kwrooijen/mcp-agent-get-diff (file heading)
+  "Get the git diff for the agent's worktree identified by FILE and HEADING."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE"))
+              (branch (org-entry-get nil "BRANCH"))
+              (base (org-agent-shell--base-branch)))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (unless branch
+           (error "No :BRANCH: property found"))
+         (let* ((worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (default-directory worktree-path)
+                (range (format "%s...%s" base branch))
+                (stat (shell-command-to-string
+                       (format "git diff --stat %s" range)))
+                (diff (shell-command-to-string
+                       (format "git diff %s" range))))
+           (json-encode
+            `((heading . ,heading)
+              (base . ,base)
+              (branch . ,branch)
+              (worktree_path . ,worktree-path)
+              (stat . ,stat)
+              (diff . ,diff)))))))))
 #+END_SRC

@@ -84,6 +84,121 @@ TOOLS = [
       },
       required: ["file", "heading"]
     }
+  },
+  {
+    name: "agent_set_branch",
+    description: "Set the :BRANCH: property on an org TODO heading for agent-shell. " \
+                 "If no branch is provided, auto-generates a concise branch name from the heading text, " \
+                 "prefixed with the Asana ticket ID when available " \
+                 "(e.g. 'feature/1213416506379504-sentry-errors').",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        branch: {
+          type: "string",
+          description: "Branch name to set. If omitted, auto-generated from heading text and Asana ID"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "agent_launch",
+    description: "Launch an agent-shell workspace for a specific org TODO ticket. " \
+                 "Creates a git worktree, writes ticket.org from the heading body, " \
+                 "and starts an agent-shell (Claude Code). Requires :PROJECT: (inherited) and :BRANCH: properties. " \
+                 "Use agent_set_branch first if :BRANCH: is not set.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "agent_list",
+    description: "List all ticket-managed agent-shell workspaces. " \
+                 "Returns only agents started from org TODO tickets (not manually started ones). " \
+                 "Each entry includes heading, file, project, branch, worktree, " \
+                 "status (Ready/Working/Waiting/Killed/Starting.../No Session), and transcript file path.",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "agent_get_prompt",
+    description: "Read the ticket.org prompt file for an agent workspace. " \
+                 "Returns the content that was sent to the agent when it was launched.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "agent_get_transcript",
+    description: "Read the transcript of an agent-shell session. " \
+                 "Returns the markdown transcript including messages and tool calls. " \
+                 "Falls back to most recent transcript file on disk if the shell is no longer running.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "agent_get_diff",
+    description: "Get the git diff for an agent's worktree branch compared to its base branch. " \
+                 "Returns both a stat summary and the full diff output.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
   }
 ].freeze
 
@@ -143,6 +258,62 @@ def handle_tool_call(name, arguments)
     end
 
     emacsclient_eval("(kwrooijen/mcp-edit-work-todo #{parts.join(' ')})")
+
+  when "agent_set_branch"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+
+    if arguments["branch"]
+      emacsclient_eval(
+        "(kwrooijen/mcp-agent-set-branch #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(arguments["branch"])})"
+      )
+    else
+      emacsclient_eval(
+        "(kwrooijen/mcp-agent-set-branch #{elisp_string(file)} #{elisp_string(heading)})"
+      )
+    end
+
+  when "agent_launch"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-launch #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+
+  when "agent_list"
+    emacsclient_eval("(kwrooijen/mcp-agent-list)")
+
+  when "agent_get_prompt"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-get-prompt #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+
+  when "agent_get_transcript"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-get-transcript #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+
+  when "agent_get_diff"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-get-diff #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+
   else
     raise "Unknown tool: #{name}"
   end
