@@ -1,0 +1,290 @@
+[
+  {
+    "name": "get_work_todos",
+    "description": "Get all org-mode TODO items tagged :work: with states TODO, IN PROGRESS, or WAITING. Returns a JSON array of objects with heading, state, tags, file, properties, and parent_properties fields. Use this to get an overview of all active work tickets across all client files. Parent properties include CLIENT and ASANA_PROJECT which identify which client/project a ticket belongs to.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_work_todo_files",
+    "description": "List org files in the ~/Documents/org/todos/client/ directory. Returns a JSON array of absolute file paths. Each file represents a client and contains project headings with TODO tickets underneath.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_active_clocks",
+    "description": "Get all currently running org-clock-multi clocks. Returns a JSON array of objects with clock_id, heading, file, elapsed_minutes, properties, and parent_properties (including CLIENT). Use this to check what is currently being tracked and detect conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "clock_in",
+    "description": "Clock in a heading using org-clock-multi. Adds to the list of active clocks without affecting other running clocks. Multiple clocks can run simultaneously. Use get_active_clocks first to check for conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the heading"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "clock_out",
+    "description": "Clock out a heading using org-clock-multi. Writes a LOGBOOK clock entry (with start time, end time, and duration) and removes from active clocks. The heading must currently be clocked in.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the heading"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "get_work_todo",
+    "description": "Get full details of a single work TODO item. Returns JSON with: heading, state, tags, file, properties (own :PROPERTIES: drawer), parent_properties (from parent heading, includes CLIENT/ASANA_PROJECT/PROJECT), body (text content including #+BEGIN_QUOTE ticket block), subtasks (child headings with state), and logbook (clock entries with start, end, duration). Identify the todo by its file path and heading text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "edit_work_todo",
+    "description": "Edit a work TODO item. Can change state (TODO, IN PROGRESS, WAITING, DONE, CANCELLED), set or delete org properties, or replace the full body content. All optional parameters can be combined in a single call. Identify the todo by its file path and heading text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        "state": {
+          "type": "string",
+          "description": "New TODO state. Changes the org-mode TODO keyword on the heading",
+          "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+        },
+        "set_properties": {
+          "type": "object",
+          "description": "Key-value pairs of org properties to set or update in the :PROPERTIES: drawer (e.g. {\"ASANA_SECTION\": \"In Progress\"})",
+          "additionalProperties": { "type": "string" }
+        },
+        "delete_properties": {
+          "type": "array",
+          "description": "Names of org properties to remove from the :PROPERTIES: drawer",
+          "items": { "type": "string" }
+        },
+        "body": {
+          "type": "string",
+          "description": "New body content to replace the entire body (text between properties drawer and sub-headings). Use edit_work_todo_body instead to only update the ticket quote block"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "create_work_todo",
+    "description": "Create a new TODO heading under a parent heading (e.g. a client project). The new heading is inserted as a child (one level deeper) at the end of the parent's subtree. It inherits :ASANA_PROJECT:, :PROJECT:, and tags from the parent via org inheritance. State defaults to TODO if not specified. Identify the parent by its file path and heading text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the parent heading"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the parent (e.g. the client/project heading)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title for the new TODO heading"
+        },
+        "state": {
+          "type": "string",
+          "description": "TODO state (default: TODO)",
+          "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+        },
+        "body": {
+          "type": "string",
+          "description": "Optional initial body text for the heading"
+        }
+      },
+      "required": ["file", "heading", "title"]
+    }
+  },
+  {
+    "name": "edit_work_todo_body",
+    "description": "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. This is the ticket description that gets pushed to Asana via asana_push. Existing body content outside the quote block is preserved.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        "body": {
+          "type": "string",
+          "description": "Content for the #+BEGIN_QUOTE ticket block"
+        }
+      },
+      "required": ["file", "heading", "body"]
+    }
+  },
+  {
+    "name": "asana_push",
+    "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_body to set the ticket description before pushing.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "agent_set_branch",
+    "description": "Set the :BRANCH: property on an org TODO heading for agent-shell. If no branch is provided, auto-generates a concise branch name from the heading text, prefixed with the Asana ticket ID when available (e.g. 'feature/1213416506379504-sentry-errors').",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch name to set. If omitted, auto-generated from heading text and Asana ID"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "agent_launch",
+    "description": "Launch an agent-shell workspace for a specific org TODO ticket. Creates a git worktree, writes ticket.org from the heading body, and starts an agent-shell (Claude Code). Requires :PROJECT: (inherited) and :BRANCH: properties. Use agent_set_branch first if :BRANCH: is not set.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "agent_list",
+    "description": "List all ticket-managed agent-shell workspaces. Returns only agents started from org TODO tickets (not manually started ones). Each entry includes heading, file, project, branch, worktree, status (Ready/Working/Waiting/Killed/Starting.../No Session), and transcript file path.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "agent_get_prompt",
+    "description": "Read the ticket.org prompt file for an agent workspace. Returns the content that was sent to the agent when it was launched.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "agent_get_transcript",
+    "description": "Read the transcript of an agent-shell session. Returns the markdown transcript including messages and tool calls. Falls back to most recent transcript file on disk if the shell is no longer running.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  },
+  {
+    "name": "agent_get_diff",
+    "description": "Get the git diff for an agent's worktree branch compared to its base branch. Returns both a stat summary and the full diff output.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
+  }
+]
