@@ -113,6 +113,92 @@ Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
                   normalized)))
      (agent-shell-buffers))))
 
+;;; Core Launch
+
+(cl-defun org-agent-shell--launch (&key project branch worktree body heading file headless base)
+  "Create a git worktree and start an agent-shell workspace.
+Returns an alist with worktree_name, worktree_path, and reused keys.
+
+PROJECT is the git repo root path.  BRANCH is the feature branch name.
+WORKTREE is an existing worktree name or nil to auto-generate.
+BODY is the ticket content to write as ticket.org.
+HEADING and FILE are metadata to tag the shell buffer with.
+When HEADLESS is non-nil, the shell buffer is not displayed.
+BASE is the base branch (defaults to `org-agent-shell-base-branch')."
+  (let* ((project-path (expand-file-name project))
+         (base-branch (or base org-agent-shell-base-branch))
+         (worktree-name
+          (or worktree
+              (let ((clean-branch
+                     (replace-regexp-in-string
+                      "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
+                      "" branch)))
+                (concat (file-name-nondirectory
+                         (directory-file-name project-path))
+                        "_" clean-branch))))
+         (worktree-path
+          (expand-file-name
+           worktree-name
+           (file-name-concat project-path
+                             agent-shell-worktree--subdirectory)))
+         (reuse (and worktree (file-directory-p worktree-path))))
+    ;; Create worktree if needed
+    (unless reuse
+      (make-directory (file-name-directory worktree-path) t)
+      (let ((default-directory project-path))
+        (let* ((branch-exists-p
+                (= 0 (call-process "git" nil nil nil "rev-parse" "--verify" branch)))
+               (output (shell-command-to-string
+                        (if branch-exists-p
+                            (format "git worktree add --force %s %s 2>&1"
+                                    (shell-quote-argument worktree-path)
+                                    (shell-quote-argument branch))
+                          (format "git worktree add -b %s %s %s 2>&1"
+                                  (shell-quote-argument branch)
+                                  (shell-quote-argument worktree-path)
+                                  (shell-quote-argument base-branch))))))
+          (unless (file-exists-p worktree-path)
+            (error "Failed to create worktree: %s" output)))))
+    ;; Write ticket.org in worktree
+    (when (and body (not (string-empty-p body)))
+      (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
+        (with-temp-file ticket-file
+          (insert body))))
+    ;; Start agent-shell if not already running
+    (let ((existing (org-agent-shell--find-shell-buffer worktree-path)))
+      (unless existing
+        (let ((default-directory worktree-path)
+              (display-buffer-overriding-action
+               (if headless
+                   '((display-buffer-no-window))
+                 '((display-buffer-use-some-window)))))
+          (agent-shell '(4)))
+        ;; Send initial prompt after delay
+        (when (and body (not (string-empty-p body)))
+          (run-with-timer
+           1.5 nil
+           (lambda (wpath)
+             (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
+               (agent-shell-insert :text "Read ticket.org and enter plan mode"
+                                   :submit t
+                                   :shell-buffer buf)))
+           worktree-path)))
+      ;; Tag the shell buffer with ticket metadata
+      (when-let* ((buf (or existing
+                            (org-agent-shell--find-shell-buffer worktree-path))))
+        (with-current-buffer buf
+          (setq-local org-agent-shell--ticket-info
+                      `((file . ,file)
+                        (heading . ,heading)
+                        (project . ,project-path)
+                        (branch . ,branch)
+                        (worktree . ,worktree-name)
+                        (worktree_path . ,worktree-path))))))
+    ;; Return result
+    `((worktree_name . ,worktree-name)
+      (worktree_path . ,worktree-path)
+      (reused . ,reuse))))
+
 ;;; Commands
 
 (defun org-agent-shell-launch ()
@@ -120,82 +206,29 @@ Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
 Creates a git worktree and starts agent-shell with the heading body as input."
   (interactive)
   (org-back-to-heading t)
-  (let ((project (org-agent-shell--get-property "PROJECT"))
-        (branch (org-entry-get nil "BRANCH"))
-        (worktree (org-entry-get nil "WORKTREE"))
-        (org-file (buffer-file-name))
-        (heading-text (org-get-heading t t t t)))
+  (let* ((project (org-agent-shell--get-property "PROJECT"))
+         (branch (org-entry-get nil "BRANCH"))
+         (worktree (org-entry-get nil "WORKTREE"))
+         (body (org-agent-shell--heading-body))
+         (heading-text (org-get-heading t t t t))
+         (org-file (buffer-file-name))
+         (base (org-agent-shell--base-branch)))
     (unless project
       (user-error "No :PROJECT: property found"))
     (unless branch
       (user-error "No :BRANCH: property found"))
-    (let* ((project-path (expand-file-name project))
-           (worktree-name (or worktree
-                              (let ((clean-branch (replace-regexp-in-string
-                                                   "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
-                                                   "" branch)))
-                                (concat (file-name-nondirectory
-                                         (directory-file-name project-path))
-                                        "_" clean-branch))))
-           (worktree-path (expand-file-name
-                           worktree-name
-                           (file-name-concat project-path
-                                             agent-shell-worktree--subdirectory)))
-           (body (org-agent-shell--heading-body))
-           (reuse (and worktree (file-directory-p worktree-path))))
-      ;; Set WORKTREE property if not already set
+    (let ((result (org-agent-shell--launch
+                   :project project :branch branch :worktree worktree
+                   :body body :heading heading-text :file org-file
+                   :base base)))
+      ;; Set WORKTREE property if newly generated
       (unless worktree
-        (org-entry-put nil "WORKTREE" worktree-name)
+        (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
         (save-buffer))
-      ;; Create worktree if needed
-      (unless reuse
-        (make-directory (file-name-directory worktree-path) t)
-        (let ((default-directory project-path))
-          (let* ((branch-exists-p
-                  (= 0 (call-process "git" nil nil nil "rev-parse" "--verify" branch)))
-                 (output (shell-command-to-string
-                          (if branch-exists-p
-                              (format "git worktree add --force %s %s 2>&1"
-                                      (shell-quote-argument worktree-path)
-                                      (shell-quote-argument branch))
-                            (format "git worktree add -b %s %s %s 2>&1"
-                                    (shell-quote-argument branch)
-                                    (shell-quote-argument worktree-path)
-                                    (shell-quote-argument (org-agent-shell--base-branch)))))))
-            (unless (file-exists-p worktree-path)
-              (user-error "Failed to create worktree: %s" output)))))
-      ;; Write ticket.org in worktree
-      (when (and body (not (string-empty-p body)))
-        (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
-          (with-temp-file ticket-file
-            (insert body))))
-      ;; Start agent-shell in worktree, or switch to existing one
-      (let ((existing (org-agent-shell--find-shell-buffer worktree-path))
-            (display-buffer-overriding-action '((display-buffer-use-some-window))))
-        (if existing
-            (pop-to-buffer existing)
-          (let ((default-directory worktree-path))
-            (agent-shell '(4)))
-          ;; Tell agent to read ticket.org
-          (when (and body (not (string-empty-p body)))
-            (run-with-timer 1.5 nil
-                            (lambda (wpath)
-                              (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
-                                (agent-shell-insert :text "Read ticket.org and enter plan mode"
-                                                    :submit t
-                                                    :shell-buffer buf)))
-                            worktree-path)))
-        ;; Tag the shell buffer with ticket metadata
-        (when-let* ((buf (or existing
-                              (org-agent-shell--find-shell-buffer worktree-path))))
-          (with-current-buffer buf
-            (setq-local org-agent-shell--ticket-info
-                        `((file . ,org-file)
-                          (heading . ,heading-text)
-                          (project . ,project-path)
-                          (branch . ,branch)
-                          (worktree . ,worktree-name)
-                          (worktree_path . ,worktree-path)))))))))
+      ;; Show the shell buffer
+      (when-let* ((buf (org-agent-shell--find-shell-buffer
+                        (alist-get 'worktree_path result))))
+        (pop-to-buffer buf '((display-buffer-use-some-window)))))))
 
 (defun org-agent-shell-open-shell ()
   "Switch to the agent-shell buffer for the current heading's worktree."

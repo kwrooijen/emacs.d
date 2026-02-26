@@ -291,84 +291,22 @@ Requires :PROJECT: (inherited) and :BRANCH: properties."
        (goto-char marker)
        (let ((project (org-agent-shell--get-property "PROJECT"))
              (branch (org-entry-get nil "BRANCH"))
-             (worktree (org-entry-get nil "WORKTREE")))
+             (worktree (org-entry-get nil "WORKTREE"))
+             (body (org-agent-shell--heading-body))
+             (base (org-agent-shell--base-branch))
+             (org-file (buffer-file-name)))
          (unless project
            (error "No :PROJECT: property found on heading: %s" heading))
          (unless branch
            (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
-         (let* ((project-path (expand-file-name project))
-                (worktree-name
-                 (or worktree
-                     (let ((clean-branch
-                            (replace-regexp-in-string
-                             "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
-                             "" branch)))
-                       (concat (file-name-nondirectory
-                                (directory-file-name project-path))
-                               "_" clean-branch))))
-                (worktree-path
-                 (expand-file-name
-                  worktree-name
-                  (file-name-concat project-path
-                                    agent-shell-worktree--subdirectory)))
-                (body (org-agent-shell--heading-body))
-                (reuse (and worktree (file-directory-p worktree-path)))
-                (org-file (buffer-file-name)))
-           ;; Set WORKTREE property if not already set
+         (let ((result (org-agent-shell--launch
+                        :project project :branch branch :worktree worktree
+                        :body body :heading heading :file org-file
+                        :headless t :base base)))
+           ;; Set WORKTREE property if newly generated
            (unless worktree
-             (org-entry-put nil "WORKTREE" worktree-name)
+             (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
              (save-buffer))
-           ;; Create worktree if needed
-           (unless reuse
-             (make-directory (file-name-directory worktree-path) t)
-             (let ((default-directory project-path))
-               (let* ((branch-exists-p
-                       (= 0 (call-process "git" nil nil nil
-                                          "rev-parse" "--verify" branch)))
-                      (base (org-agent-shell--base-branch))
-                      (output (shell-command-to-string
-                               (if branch-exists-p
-                                   (format "git worktree add --force %s %s 2>&1"
-                                           (shell-quote-argument worktree-path)
-                                           (shell-quote-argument branch))
-                                 (format "git worktree add -b %s %s %s 2>&1"
-                                         (shell-quote-argument branch)
-                                         (shell-quote-argument worktree-path)
-                                         (shell-quote-argument base))))))
-                 (unless (file-exists-p worktree-path)
-                   (error "Failed to create worktree: %s" output)))))
-           ;; Write ticket.org in worktree
-           (when (and body (not (string-empty-p body)))
-             (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
-               (with-temp-file ticket-file
-                 (insert body))))
-           ;; Start agent-shell non-interactively
-           (let ((existing (org-agent-shell--find-shell-buffer worktree-path)))
-             (unless existing
-               (let ((default-directory worktree-path)
-                     (display-buffer-overriding-action '((display-buffer-no-window))))
-                 (agent-shell '(4)))
-               ;; Send initial prompt after delay
-               (when (and body (not (string-empty-p body)))
-                 (run-with-timer
-                  1.5 nil
-                  (lambda (wpath)
-                    (when-let* ((buf (org-agent-shell--find-shell-buffer wpath)))
-                      (agent-shell-insert :text "Read ticket.org and enter plan mode"
-                                          :submit t
-                                          :shell-buffer buf)))
-                  worktree-path)))
-             ;; Tag the shell buffer with ticket metadata
-             (when-let* ((buf (or existing
-                                  (org-agent-shell--find-shell-buffer worktree-path))))
-               (with-current-buffer buf
-                 (setq-local org-agent-shell--ticket-info
-                             `((file . ,org-file)
-                               (heading . ,heading)
-                               (project . ,project-path)
-                               (branch . ,branch)
-                               (worktree . ,worktree-name)
-                               (worktree_path . ,worktree-path))))))
            ;; Clock out OVERIGE for this client, clock in this ticket
            (kwrooijen/mcp--clock-out-overige org-file)
            (kwrooijen/mcp--clock-in-heading org-file heading)
@@ -376,11 +314,11 @@ Requires :PROJECT: (inherited) and :BRANCH: properties."
            (json-encode
             `((success . t)
               (heading . ,heading)
-              (project . ,project-path)
+              (project . ,(expand-file-name project))
               (branch . ,branch)
-              (worktree . ,worktree-name)
-              (worktree_path . ,worktree-path)
-              (reused . ,(if reuse t :json-false))))))))))
+              (worktree . ,(alist-get 'worktree_name result))
+              (worktree_path . ,(alist-get 'worktree_path result))
+              (reused . ,(if (alist-get 'reused result) t :json-false))))))))))
 
 (cl-defun kwrooijen/mcp-agent-list ()
   "List all ticket-managed agent-shell workspaces.
