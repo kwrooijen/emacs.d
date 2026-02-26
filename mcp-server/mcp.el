@@ -14,12 +14,20 @@
 ;;; Code:
 
 (require 'org)
+(require 'org-fold-core)
 (require 'cl-lib)
 (require 'json)
 (require 'org-agent-shell)
 (require 'org-clock-multi)
 
 ;;; Helpers
+
+(defmacro kwrooijen/mcp--with-ignore-folds (&rest body)
+  "Execute BODY with org-fold modifications suppressed.
+Prevents `org-fold-core-region' with missing SPEC errors when
+modifying org buffers programmatically via emacsclient."
+  `(let ((org-fold-core--ignore-modifications t))
+     ,@body))
 
 (defun kwrooijen/mcp--get-own-properties ()
   "Return an alist of the current heading's own properties.
@@ -158,27 +166,30 @@ Returns a string like \"feature/1234-short-slug\"."
   "Clock in the heading identified by FILE and HEADING using org-clock-multi."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (org-clock-multi-clock-in)))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (org-clock-multi-clock-in))))))
 
 (defun kwrooijen/mcp--clock-out-heading (file heading)
   "Clock out the heading identified by FILE and HEADING using org-clock-multi."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (org-clock-multi-clock-out)))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (org-clock-multi-clock-out))))))
 
 (defun kwrooijen/mcp--clock-out-overige (file)
   "Clock out the OVERIGE heading in FILE if it is clocked in."
   (condition-case nil
       (let ((marker (kwrooijen/mcp--find-heading-marker file "OVERIGE")))
         (with-current-buffer (marker-buffer marker)
-          (org-with-wide-buffer
-           (goto-char marker)
-           (when (org-clock-multi-clocking-p)
-             (org-clock-multi-clock-out)))))
+          (kwrooijen/mcp--with-ignore-folds
+           (org-with-wide-buffer
+            (goto-char marker)
+            (when (org-clock-multi-clocking-p)
+              (org-clock-multi-clock-out))))))
     (error nil)))
 
 (cl-defun kwrooijen/mcp-get-active-clocks ()
@@ -284,22 +295,23 @@ Includes task properties and parent heading properties."
 Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BODY."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (when state
-         (org-todo state))
-       (dolist (pair set-properties)
-         (org-set-property (car pair) (cdr pair)))
-       (dolist (prop delete-properties)
-         (org-delete-property prop))
-       (when body
-         (kwrooijen/mcp--replace-heading-body body))
-       (save-buffer)
-       (json-encode
-        `((success . t)
-          (heading . ,(org-get-heading t t t t))
-          (state . ,(org-get-todo-state))
-          (properties . ,(kwrooijen/mcp--get-own-properties))))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (when state
+          (org-todo state))
+        (dolist (pair set-properties)
+          (org-set-property (car pair) (cdr pair)))
+        (dolist (prop delete-properties)
+          (org-delete-property prop))
+        (when body
+          (kwrooijen/mcp--replace-heading-body body))
+        (save-buffer)
+        (json-encode
+         `((success . t)
+           (heading . ,(org-get-heading t t t t))
+           (state . ,(org-get-todo-state))
+           (properties . ,(kwrooijen/mcp--get-own-properties)))))))))
 
 (cl-defun kwrooijen/mcp-create-work-todo (file heading title &key state body)
   "Create a new TODO heading under the parent identified by FILE and HEADING.
@@ -307,26 +319,27 @@ TITLE is the heading text.  STATE defaults to \"TODO\".
 BODY is optional initial body text."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (let* ((parent-level (org-current-level))
-              (child-level (1+ parent-level))
-              (stars (make-string child-level ?*))
-              (todo-state (or state "TODO"))
-              (entry (concat stars " " todo-state " " title "\n"
-                             ":PROPERTIES:\n"
-                             ":END:\n"
-                             (when body (concat "\n" body "\n")))))
-         (org-end-of-subtree t t)
-         (skip-chars-backward " \t\n")
-         (end-of-line)
-         (insert "\n" entry)
-         (save-buffer)
-         (json-encode
-          `((success . t)
-            (heading . ,title)
-            (state . ,todo-state)
-            (file . ,(buffer-file-name)))))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (let* ((parent-level (org-current-level))
+               (child-level (1+ parent-level))
+               (stars (make-string child-level ?*))
+               (todo-state (or state "TODO"))
+               (entry (concat stars " " todo-state " " title "\n"
+                              ":PROPERTIES:\n"
+                              ":END:\n"
+                              (when body (concat "\n" body "\n")))))
+          (org-end-of-subtree t t)
+          (skip-chars-backward " \t\n")
+          (end-of-line)
+          (insert "\n" entry)
+          (save-buffer)
+          (json-encode
+           `((success . t)
+             (heading . ,title)
+             (state . ,todo-state)
+             (file . ,(buffer-file-name))))))))))
 
 (cl-defun kwrooijen/mcp-edit-work-todo-ticket-description (file heading body)
   "Set the #+BEGIN_QUOTE ticket block on the heading identified by FILE and HEADING.
@@ -334,38 +347,39 @@ If a ticket quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
-         (if (re-search-forward "^#\\+BEGIN_QUOTE ticket$" subtree-end t)
-             ;; Replace existing quote block
-             (let ((quote-start (line-beginning-position)))
-               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
-                   (let ((quote-end (line-end-position)))
-                     (delete-region quote-start quote-end)
-                     (goto-char quote-start)
-                     (insert "#+BEGIN_QUOTE ticket\n"
-                             body "\n"
-                             "#+END_QUOTE"))
-                 (error "Malformed quote block: missing #+END_QUOTE")))
-           ;; No quote block — append before child headings
-           (goto-char marker)
-           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
-                  (child-start (save-excursion
-                                 (goto-char content-start)
-                                 (if (re-search-forward org-heading-regexp subtree-end t)
-                                     (line-beginning-position)
-                                   subtree-end))))
-             (goto-char child-start)
-             (skip-chars-backward " \t\n")
-             (end-of-line)
-             (insert "\n\n#+BEGIN_QUOTE ticket\n"
-                     body "\n"
-                     "#+END_QUOTE\n"))))
-       (save-buffer)
-       (json-encode
-        `((success . t)
-          (heading . ,heading)))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+          (if (re-search-forward "^#\\+BEGIN_QUOTE ticket$" subtree-end t)
+              ;; Replace existing quote block
+              (let ((quote-start (line-beginning-position)))
+                (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                    (let ((quote-end (line-end-position)))
+                      (delete-region quote-start quote-end)
+                      (goto-char quote-start)
+                      (insert "#+BEGIN_QUOTE ticket\n"
+                              body "\n"
+                              "#+END_QUOTE"))
+                  (error "Malformed quote block: missing #+END_QUOTE")))
+            ;; No quote block — append before child headings
+            (goto-char marker)
+            (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                   (child-start (save-excursion
+                                  (goto-char content-start)
+                                  (if (re-search-forward org-heading-regexp subtree-end t)
+                                      (line-beginning-position)
+                                    subtree-end))))
+              (goto-char child-start)
+              (skip-chars-backward " \t\n")
+              (end-of-line)
+              (insert "\n\n#+BEGIN_QUOTE ticket\n"
+                      body "\n"
+                      "#+END_QUOTE\n"))))
+        (save-buffer)
+        (json-encode
+         `((success . t)
+           (heading . ,heading))))))))
 
 (cl-defun kwrooijen/mcp-edit-work-todo-implementation (file heading body)
   "Set the #+BEGIN_QUOTE implementation block on the heading identified by FILE and HEADING.
@@ -373,52 +387,54 @@ If an implementation quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
-         (if (re-search-forward "^#\\+BEGIN_QUOTE implementation$" subtree-end t)
-             ;; Replace existing quote block
-             (let ((quote-start (line-beginning-position)))
-               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
-                   (let ((quote-end (line-end-position)))
-                     (delete-region quote-start quote-end)
-                     (goto-char quote-start)
-                     (insert "#+BEGIN_QUOTE implementation\n"
-                             body "\n"
-                             "#+END_QUOTE"))
-                 (error "Malformed quote block: missing #+END_QUOTE")))
-           ;; No quote block — append before child headings
-           (goto-char marker)
-           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
-                  (child-start (save-excursion
-                                 (goto-char content-start)
-                                 (if (re-search-forward org-heading-regexp subtree-end t)
-                                     (line-beginning-position)
-                                   subtree-end))))
-             (goto-char child-start)
-             (skip-chars-backward " \t\n")
-             (end-of-line)
-             (insert "\n\n#+BEGIN_QUOTE implementation\n"
-                     body "\n"
-                     "#+END_QUOTE\n"))))
-       (save-buffer)
-       (json-encode
-        `((success . t)
-          (heading . ,heading)))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+          (if (re-search-forward "^#\\+BEGIN_QUOTE implementation$" subtree-end t)
+              ;; Replace existing quote block
+              (let ((quote-start (line-beginning-position)))
+                (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                    (let ((quote-end (line-end-position)))
+                      (delete-region quote-start quote-end)
+                      (goto-char quote-start)
+                      (insert "#+BEGIN_QUOTE implementation\n"
+                              body "\n"
+                              "#+END_QUOTE"))
+                  (error "Malformed quote block: missing #+END_QUOTE")))
+            ;; No quote block — append before child headings
+            (goto-char marker)
+            (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                   (child-start (save-excursion
+                                  (goto-char content-start)
+                                  (if (re-search-forward org-heading-regexp subtree-end t)
+                                      (line-beginning-position)
+                                    subtree-end))))
+              (goto-char child-start)
+              (skip-chars-backward " \t\n")
+              (end-of-line)
+              (insert "\n\n#+BEGIN_QUOTE implementation\n"
+                      body "\n"
+                      "#+END_QUOTE\n"))))
+        (save-buffer)
+        (json-encode
+         `((success . t)
+           (heading . ,heading))))))))
 
 (cl-defun kwrooijen/mcp-asana-push (file heading)
   "Push the heading identified by FILE and HEADING to Asana as a new task.
 Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (org-asana--push-heading)
-       (json-encode
-        `((success . t)
-          (heading . ,heading)
-          (asana_gid . ,(org-entry-get nil "ASANA"))
-          (asana_section . ,(org-entry-get nil "ASANA_SECTION"))))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (org-asana--push-heading)
+        (json-encode
+         `((success . t)
+           (heading . ,heading)
+           (asana_gid . ,(org-entry-get nil "ASANA"))
+           (asana_section . ,(org-entry-get nil "ASANA_SECTION")))))))))
 
 ;;; Agent Management
 
@@ -427,19 +443,20 @@ Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
 If BRANCH is nil or empty, auto-generate from heading text and ASANA id."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (let* ((asana-id (org-entry-get nil "ASANA"))
-              (effective-branch
-               (if (and branch (not (string-empty-p branch)))
-                   branch
-                 (kwrooijen/mcp--generate-branch-name heading asana-id))))
-         (org-entry-put nil "BRANCH" effective-branch)
-         (save-buffer)
-         (json-encode
-          `((success . t)
-            (heading . ,heading)
-            (branch . ,effective-branch))))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (let* ((asana-id (org-entry-get nil "ASANA"))
+               (effective-branch
+                (if (and branch (not (string-empty-p branch)))
+                    branch
+                  (kwrooijen/mcp--generate-branch-name heading asana-id))))
+          (org-entry-put nil "BRANCH" effective-branch)
+          (save-buffer)
+          (json-encode
+           `((success . t)
+             (heading . ,heading)
+             (branch . ,effective-branch)))))))))
 
 (cl-defun kwrooijen/mcp-agent-launch (file heading)
   "Launch an agent-shell workspace for the TODO identified by FILE and HEADING.
@@ -447,38 +464,39 @@ Creates a git worktree, writes ticket.org, and starts agent-shell.
 Requires :PROJECT: (inherited) and :BRANCH: properties."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (org-with-wide-buffer
-       (goto-char marker)
-       (let ((project (org-agent-shell--get-property "PROJECT"))
-             (branch (org-entry-get nil "BRANCH"))
-             (worktree (org-entry-get nil "WORKTREE"))
-             (body (org-agent-shell--heading-body))
-             (base (org-agent-shell--base-branch))
-             (org-file (buffer-file-name)))
-         (unless project
-           (error "No :PROJECT: property found on heading: %s" heading))
-         (unless branch
-           (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
-         (let ((result (org-agent-shell--launch
-                        :project project :branch branch :worktree worktree
-                        :body body :heading heading :file org-file
-                        :headless t :base base)))
-           ;; Set WORKTREE property if newly generated
-           (unless worktree
-             (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
-             (save-buffer))
-           ;; Clock out OVERIGE for this client, clock in this ticket
-           (kwrooijen/mcp--clock-out-overige org-file)
-           (kwrooijen/mcp--clock-in-heading org-file heading)
-           ;; Return result
-           (json-encode
-            `((success . t)
-              (heading . ,heading)
-              (project . ,(expand-file-name project))
-              (branch . ,branch)
-              (worktree . ,(alist-get 'worktree_name result))
-              (worktree_path . ,(alist-get 'worktree_path result))
-              (reused . ,(if (alist-get 'reused result) t :json-false))))))))))
+      (kwrooijen/mcp--with-ignore-folds
+       (org-with-wide-buffer
+        (goto-char marker)
+        (let ((project (org-agent-shell--get-property "PROJECT"))
+              (branch (org-entry-get nil "BRANCH"))
+              (worktree (org-entry-get nil "WORKTREE"))
+              (body (org-agent-shell--heading-body))
+              (base (org-agent-shell--base-branch))
+              (org-file (buffer-file-name)))
+          (unless project
+            (error "No :PROJECT: property found on heading: %s" heading))
+          (unless branch
+            (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
+          (let ((result (org-agent-shell--launch
+                         :project project :branch branch :worktree worktree
+                         :body body :heading heading :file org-file
+                         :headless t :base base)))
+            ;; Set WORKTREE property if newly generated
+            (unless worktree
+              (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
+              (save-buffer))
+            ;; Clock out OVERIGE for this client, clock in this ticket
+            (kwrooijen/mcp--clock-out-overige org-file)
+            (kwrooijen/mcp--clock-in-heading org-file heading)
+            ;; Return result
+            (json-encode
+             `((success . t)
+               (heading . ,heading)
+               (project . ,(expand-file-name project))
+               (branch . ,branch)
+               (worktree . ,(alist-get 'worktree_name result))
+               (worktree_path . ,(alist-get 'worktree_path result))
+               (reused . ,(if (alist-get 'reused result) t :json-false)))))))))))
 
 (cl-defun kwrooijen/mcp-agent-list ()
   "List all ticket-managed agent-shell workspaces.
