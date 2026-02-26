@@ -348,5 +348,42 @@
       },
       "required": ["file", "heading"]
     }
+  },
+  {
+    "name": "agent_notifications_list",
+    "description": "List all queued agent notifications without removing them. Returns a JSON array of notification objects with message, timestamp, new_status, heading, and file fields. Use this to peek at what's queued before deciding whether to pop.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "agent_notifications_pop",
+    "description": "Pop notification(s) from the queue. By default pops the oldest single notification. Set all=true to pop and return all notifications at once. Returns the popped notification(s) as JSON.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "all": {
+          "type": "boolean",
+          "description": "When true, pop all notifications at once. Default: false (pop one)."
+        }
+      }
+    }
+  },
+  {
+    "name": "agent_notifications_pause",
+    "description": "Pause the idle auto-polling of the notification queue. Use this when you're in the middle of a conversation and don't want to be prompted about queued notifications. Use agent_notifications_resume to re-enable polling.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "agent_notifications_resume",
+    "description": "Resume the idle auto-polling of the notification queue after it was paused. Polling will trigger when you've been idle for the configured threshold (default 30 seconds) and there are queued notifications.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
   }
 ]

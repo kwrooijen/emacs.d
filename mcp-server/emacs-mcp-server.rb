@@ -214,6 +214,22 @@ def handle_tool_call(name, arguments)
       "(kwrooijen/mcp-agent-resend #{elisp_string(file)} #{elisp_string(heading)})"
     )
 
+  when "agent_notifications_list"
+    emacsclient_eval("(kwrooijen/mcp-agent-notifications-list)")
+
+  when "agent_notifications_pop"
+    if arguments["all"]
+      emacsclient_eval("(kwrooijen/mcp-agent-notifications-pop t)")
+    else
+      emacsclient_eval("(kwrooijen/mcp-agent-notifications-pop)")
+    end
+
+  when "agent_notifications_pause"
+    emacsclient_eval("(kwrooijen/mcp-agent-notifications-pause)")
+
+  when "agent_notifications_resume"
+    emacsclient_eval("(kwrooijen/mcp-agent-notifications-resume)")
+
   else
     raise "Unknown tool: #{name}"
   end

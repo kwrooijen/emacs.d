@@ -61,7 +61,7 @@
 * Agent Shell Manager
 :PROPERTIES:
 :PACKAGE:  agent-shell-manager
-:STRAIGHT: (agent-shell-manager :host github :repo "jethrokuan/agent-shell-manager")
+:STRAIGHT: (agent-shell-manager :host github :repo "kwrooijen/agent-shell-manager" :branch "feature/status-change-hook")
 :END:
 
 ** Custom :custom:

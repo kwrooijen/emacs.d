@@ -671,5 +671,35 @@ For the TODO identified by FILE and HEADING."
             `((success . t)
               (heading . ,heading)))))))))
 
+;;; Notification Queue
+
+(cl-defun kwrooijen/mcp-agent-notifications-list ()
+  "Return all queued agent notifications as a JSON array.
+Does not remove items from the queue."
+  (json-encode (reverse assistent--notification-queue)))
+
+(cl-defun kwrooijen/mcp-agent-notifications-pop (&optional all)
+  "Pop notification(s) from the queue.
+When ALL is non-nil, pop and return all notifications.
+Otherwise pop and return the oldest single notification."
+  (if all
+      (let ((items (reverse assistent--notification-queue)))
+        (setq assistent--notification-queue nil)
+        (json-encode items))
+    (let ((item (car (last assistent--notification-queue))))
+      (setq assistent--notification-queue
+            (butlast assistent--notification-queue))
+      (json-encode item))))
+
+(cl-defun kwrooijen/mcp-agent-notifications-pause ()
+  "Pause idle auto-polling of notification queue."
+  (setq assistent--poll-paused t)
+  (json-encode '((success . t) (paused . t))))
+
+(cl-defun kwrooijen/mcp-agent-notifications-resume ()
+  "Resume idle auto-polling of notification queue."
+  (setq assistent--poll-paused nil)
+  (json-encode `((success . t) (paused . :json-false))))
+
 (provide 'mcp)
 ;;; mcp.el ends here
