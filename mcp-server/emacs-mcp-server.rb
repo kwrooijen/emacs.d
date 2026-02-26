@@ -86,6 +86,84 @@ TOOLS = [
     }
   },
   {
+    name: "create_work_todo",
+    description: "Create a new TODO heading under a parent heading (e.g. a client project). " \
+                 "The new heading inherits :ASANA_PROJECT:, :PROJECT:, and tags from the parent. " \
+                 "Identify the parent by its file path and heading text.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the parent heading"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the parent (e.g. the client/project heading)"
+        },
+        title: {
+          type: "string",
+          description: "Title for the new TODO heading"
+        },
+        state: {
+          type: "string",
+          description: "TODO state (default: TODO)",
+          enum: ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+        },
+        body: {
+          type: "string",
+          description: "Optional initial body text for the heading"
+        }
+      },
+      required: ["file", "heading", "title"]
+    }
+  },
+  {
+    name: "edit_work_todo_body",
+    description: "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. " \
+                 "Creates the block if it doesn't exist, or replaces its contents if it does. " \
+                 "This is the ticket description that will be pushed to Asana.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        body: {
+          type: "string",
+          description: "Content for the #+BEGIN_QUOTE ticket block"
+        }
+      },
+      required: ["file", "heading", "body"]
+    }
+  },
+  {
+    name: "asana_push",
+    description: "Push an org TODO heading to Asana as a new task. " \
+                 "The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. " \
+                 "Creates the task in Asana, adds it to the first board column, " \
+                 "and sets :ASANA: and :ASANA_SECTION: properties on the heading.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
     name: "agent_set_branch",
     description: "Set the :BRANCH: property on an org TODO heading for agent-shell. " \
                  "If no branch is provided, auto-generates a concise branch name from the heading text, " \
@@ -258,6 +336,46 @@ def handle_tool_call(name, arguments)
     end
 
     emacsclient_eval("(kwrooijen/mcp-edit-work-todo #{parts.join(' ')})")
+
+  when "create_work_todo"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    title = arguments["title"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    raise "Missing required parameter: title" unless title
+
+    parts = [elisp_string(file), elisp_string(heading), elisp_string(title)]
+
+    if arguments["state"]
+      parts << ":state #{elisp_string(arguments["state"])}"
+    end
+
+    if arguments["body"]
+      parts << ":body #{elisp_string(arguments["body"])}"
+    end
+
+    emacsclient_eval("(kwrooijen/mcp-create-work-todo #{parts.join(' ')})")
+
+  when "edit_work_todo_body"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    body = arguments["body"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    raise "Missing required parameter: body" unless body
+    emacsclient_eval(
+      "(kwrooijen/mcp-edit-work-todo-body #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(body)})"
+    )
+
+  when "asana_push"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-asana-push #{elisp_string(file)} #{elisp_string(heading)})"
+    )
 
   when "agent_set_branch"
     file = arguments["file"]

@@ -260,6 +260,86 @@ Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BO
           (state . ,(org-get-todo-state))
           (properties . ,(kwrooijen/mcp--get-own-properties))))))))
 
+(cl-defun kwrooijen/mcp-create-work-todo (file heading title &key state body)
+  "Create a new TODO heading under the parent identified by FILE and HEADING.
+TITLE is the heading text.  STATE defaults to \"TODO\".
+BODY is optional initial body text."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((parent-level (org-current-level))
+              (child-level (1+ parent-level))
+              (stars (make-string child-level ?*))
+              (todo-state (or state "TODO"))
+              (entry (concat stars " " todo-state " " title "\n"
+                             ":PROPERTIES:\n"
+                             ":END:\n"
+                             (when body (concat "\n" body "\n")))))
+         (org-end-of-subtree t t)
+         (skip-chars-backward " \t\n")
+         (end-of-line)
+         (insert "\n" entry)
+         (save-buffer)
+         (json-encode
+          `((success . t)
+            (heading . ,title)
+            (state . ,todo-state)
+            (file . ,(buffer-file-name)))))))))
+
+(cl-defun kwrooijen/mcp-edit-work-todo-body (file heading body)
+  "Set the #+BEGIN_QUOTE ticket block on the heading identified by FILE and HEADING.
+If a ticket quote block exists, replaces its contents.
+If none exists, appends one after the existing body."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+         (if (re-search-forward "^#\\+BEGIN_QUOTE ticket$" subtree-end t)
+             ;; Replace existing quote block
+             (let ((quote-start (line-beginning-position)))
+               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                   (let ((quote-end (line-end-position)))
+                     (delete-region quote-start quote-end)
+                     (goto-char quote-start)
+                     (insert "#+BEGIN_QUOTE ticket\n"
+                             body "\n"
+                             "#+END_QUOTE"))
+                 (error "Malformed quote block: missing #+END_QUOTE")))
+           ;; No quote block — append before child headings
+           (goto-char marker)
+           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                  (child-start (save-excursion
+                                 (goto-char content-start)
+                                 (if (re-search-forward org-heading-regexp subtree-end t)
+                                     (line-beginning-position)
+                                   subtree-end))))
+             (goto-char child-start)
+             (skip-chars-backward " \t\n")
+             (end-of-line)
+             (insert "\n\n#+BEGIN_QUOTE ticket\n"
+                     body "\n"
+                     "#+END_QUOTE\n"))))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)))))))
+
+(cl-defun kwrooijen/mcp-asana-push (file heading)
+  "Push the heading identified by FILE and HEADING to Asana as a new task.
+Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-asana--push-heading)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)
+          (asana_gid . ,(org-entry-get nil "ASANA"))
+          (asana_section . ,(org-entry-get nil "ASANA_SECTION"))))))))
+
 ;;; Agent Management
 
 (cl-defun kwrooijen/mcp-agent-set-branch (file heading &optional branch)
