@@ -46,3 +46,6 @@
 
 (add-to-list 'load-path (expand-file-name "~/.wisdom.d/org-asana"))
 (require 'org-asana)
+
+(require 'server)
+(server-start)

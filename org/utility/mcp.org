@@ -54,6 +54,27 @@ Returns nil if already at top level."
              (throw 'found (point-marker))))
          (error "Heading not found: %s in %s" heading file))))))
 
+(defun kwrooijen/mcp--get-logbook ()
+  "Return a list of clock entries from the current heading's LOGBOOK drawer.
+Each entry is an alist with `start', `end', and `duration' keys.
+Running clocks (no end time) have end and duration set to nil."
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((bound (save-excursion (org-end-of-subtree t t) (point)))
+          entries)
+      (when (re-search-forward ":LOGBOOK:" bound t)
+        (let ((drawer-end (save-excursion
+                            (re-search-forward ":END:" bound t)
+                            (point))))
+          (while (re-search-forward
+                  "CLOCK: \\[\\([0-9]+-[0-9]+-[0-9]+ [A-Za-z]+ [0-9]+:[0-9]+\\)\\]\\(?:--\\[\\([0-9]+-[0-9]+-[0-9]+ [A-Za-z]+ [0-9]+:[0-9]+\\)\\] =>  *\\([0-9]+:[0-9]+\\)\\)?"
+                  drawer-end t)
+            (push `((start . ,(match-string 1))
+                    (end . ,(match-string 2))
+                    (duration . ,(match-string 3)))
+                  entries))))
+      (nreverse entries))))
+
 (defun kwrooijen/mcp--get-heading-body ()
   "Return the body text of the current heading, excluding sub-headings.
 Skips the property drawer, logbook, and planning lines."
@@ -109,6 +130,7 @@ Skips the property drawer, logbook, and planning lines."
       (insert new-body "\n\n"))))
 #+END_SRC
 
+
 *** Entry Points
 
 #+BEGIN_SRC emacs-lisp
@@ -153,6 +175,7 @@ Includes task properties and parent heading properties."
               (tags (org-get-tags))
               (props (kwrooijen/mcp--get-own-properties))
               (parent-props (kwrooijen/mcp--get-parent-properties))
+              (logbook (kwrooijen/mcp--get-logbook))
               (body (kwrooijen/mcp--get-heading-body))
               (subtasks (kwrooijen/mcp--get-subtasks)))
          (json-encode
@@ -162,6 +185,7 @@ Includes task properties and parent heading properties."
             (file . ,file)
             (properties . ,props)
             (parent_properties . ,parent-props)
+            (logbook . ,(or logbook []))
             (body . ,body)
             (subtasks . ,subtasks))))))))
 

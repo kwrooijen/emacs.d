@@ -30,7 +30,7 @@ TOOLS = [
   {
     name: "get_work_todo",
     description: "Get full details of a single work TODO item including properties, " \
-                 "parent properties, body content, and subtasks. " \
+                 "parent properties, body content, subtasks, and logbook (clock entries with start, end, duration). " \
                  "Identify the todo by its file path and heading text.",
     inputSchema: {
       type: "object",
