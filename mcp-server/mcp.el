@@ -53,7 +53,7 @@ Returns nil if already at top level."
        (goto-char (point-min))
        (catch 'found
          (while (re-search-forward org-heading-regexp nil t)
-           (when (string= (org-get-heading t t t t) heading)
+           (when (string= (org-get-heading t t t nil) heading)
              (throw 'found (point-marker))))
          (error "Heading not found: %s in %s" heading file))))))
 
