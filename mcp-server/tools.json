@@ -168,6 +168,28 @@
     }
   },
   {
+    "name": "edit_work_todo_implementation",
+    "description": "Set or replace the #+BEGIN_QUOTE implementation block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. This block contains implementation details that are automatically sent to agent-shell LLMs via ticket.org, but are NOT pushed to Asana. Existing body content outside the quote block is preserved.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        "body": {
+          "type": "string",
+          "description": "Content for the #+BEGIN_QUOTE implementation block"
+        }
+      },
+      "required": ["file", "heading", "body"]
+    }
+  },
+  {
     "name": "asana_push",
     "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_ticket_description to set the ticket description before pushing.",
     "inputSchema": {

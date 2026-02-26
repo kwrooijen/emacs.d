@@ -119,6 +119,17 @@ def handle_tool_call(name, arguments)
       "(kwrooijen/mcp-edit-work-todo-ticket-description #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(body)})"
     )
 
+  when "edit_work_todo_implementation"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    body = arguments["body"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    raise "Missing required parameter: body" unless body
+    emacsclient_eval(
+      "(kwrooijen/mcp-edit-work-todo-implementation #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(body)})"
+    )
+
   when "asana_push"
     file = arguments["file"]
     heading = arguments["heading"]

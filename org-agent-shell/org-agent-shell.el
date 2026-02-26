@@ -80,28 +80,23 @@ Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
                                         agent-shell-worktree--subdirectory))))
 
 (defun org-agent-shell--heading-body ()
-  "Get the body of the current org heading, stripping drawers and logbook."
+  "Extract ticket and implementation quote blocks from the current org heading."
   (save-excursion
     (org-back-to-heading t)
-    (let ((content (org-get-entry)))
+    (let ((content (org-get-entry))
+          blocks)
       (with-temp-buffer
         (insert content)
         (goto-char (point-min))
-        ;; Remove property drawers
+        ;; Collect ticket and implementation quote blocks
         (while (re-search-forward
-                "^[ \t]*:PROPERTIES:\n\\(?:.*\n\\)*?[ \t]*:END:[ \t]*\n?" nil t)
-          (replace-match ""))
-        (goto-char (point-min))
-        ;; Remove logbook drawers
-        (while (re-search-forward
-                "^[ \t]*:LOGBOOK:\n\\(?:.*\n\\)*?[ \t]*:END:[ \t]*\n?" nil t)
-          (replace-match ""))
-        (goto-char (point-min))
-        ;; Remove CLOSED/DEADLINE/SCHEDULED lines
-        (while (re-search-forward
-                "^[ \t]*\\(CLOSED\\|DEADLINE\\|SCHEDULED\\):.*\n?" nil t)
-          (replace-match ""))
-        (string-trim (buffer-string))))))
+                "^#\\+BEGIN_QUOTE \\(ticket\\|implementation\\)$" nil t)
+          (let ((block-start (line-beginning-position)))
+            (when (re-search-forward "^#\\+END_QUOTE$" nil t)
+              (push (buffer-substring-no-properties
+                     block-start (line-end-position))
+                    blocks)))))
+      (string-trim (mapconcat #'identity (nreverse blocks) "\n\n")))))
 
 (defun org-agent-shell--find-shell-buffer (worktree-path)
   "Find the agent-shell buffer for WORKTREE-PATH."

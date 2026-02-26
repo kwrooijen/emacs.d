@@ -367,6 +367,45 @@ If none exists, appends one after the existing body."
         `((success . t)
           (heading . ,heading)))))))
 
+(cl-defun kwrooijen/mcp-edit-work-todo-implementation (file heading body)
+  "Set the #+BEGIN_QUOTE implementation block on the heading identified by FILE and HEADING.
+If an implementation quote block exists, replaces its contents.
+If none exists, appends one after the existing body."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+         (if (re-search-forward "^#\\+BEGIN_QUOTE implementation$" subtree-end t)
+             ;; Replace existing quote block
+             (let ((quote-start (line-beginning-position)))
+               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                   (let ((quote-end (line-end-position)))
+                     (delete-region quote-start quote-end)
+                     (goto-char quote-start)
+                     (insert "#+BEGIN_QUOTE implementation\n"
+                             body "\n"
+                             "#+END_QUOTE"))
+                 (error "Malformed quote block: missing #+END_QUOTE")))
+           ;; No quote block — append before child headings
+           (goto-char marker)
+           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                  (child-start (save-excursion
+                                 (goto-char content-start)
+                                 (if (re-search-forward org-heading-regexp subtree-end t)
+                                     (line-beginning-position)
+                                   subtree-end))))
+             (goto-char child-start)
+             (skip-chars-backward " \t\n")
+             (end-of-line)
+             (insert "\n\n#+BEGIN_QUOTE implementation\n"
+                     body "\n"
+                     "#+END_QUOTE\n"))))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)))))))
+
 (cl-defun kwrooijen/mcp-asana-push (file heading)
   "Push the heading identified by FILE and HEADING to Asana as a new task.
 Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."

@@ -130,6 +130,45 @@ MCP functions return elisp-printed JSON strings, so we unwrap the outer quotes."
     (should (re-search-forward "^#\\+BEGIN_QUOTE ticket$" nil t))
     (should (re-search-forward "Ticket desc" nil t))))
 
+;;; edit_work_todo_implementation tests
+
+(ert-deftest mcp-test-edit-work-todo-implementation-creates-quote ()
+  "Adds a #+BEGIN_QUOTE implementation block when none exists."
+  (mcp-test-with-temp-org
+      "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\n"
+    (kwrooijen/mcp-edit-work-todo-implementation --org-file-- "My ticket" "The implementation")
+    (goto-char (point-min))
+    (should (re-search-forward "^#\\+BEGIN_QUOTE implementation$" nil t))
+    (should (re-search-forward "The implementation" nil t))
+    (should (re-search-forward "^#\\+END_QUOTE$" nil t))))
+
+(ert-deftest mcp-test-edit-work-todo-implementation-replaces-quote ()
+  "Replaces an existing #+BEGIN_QUOTE implementation block."
+  (mcp-test-with-temp-org
+      (concat "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\n\n"
+              "#+BEGIN_QUOTE implementation\nOld content\n#+END_QUOTE\n")
+    (kwrooijen/mcp-edit-work-todo-implementation --org-file-- "My ticket" "New content")
+    (goto-char (point-min))
+    (should (re-search-forward "New content" nil t))
+    (goto-char (point-min))
+    (should-not (re-search-forward "Old content" nil t))))
+
+(ert-deftest mcp-test-edit-work-todo-implementation-preserves-other-content ()
+  "Preserves existing body text and ticket block when adding an implementation block."
+  (mcp-test-with-temp-org
+      (concat "* Project\n** TODO My ticket\n:PROPERTIES:\n:END:\n"
+              "My notes here\n\n"
+              "#+BEGIN_QUOTE ticket\nTicket desc\n#+END_QUOTE\n")
+    (kwrooijen/mcp-edit-work-todo-implementation --org-file-- "My ticket" "Impl details")
+    (goto-char (point-min))
+    (should (re-search-forward "My notes here" nil t))
+    (goto-char (point-min))
+    (should (re-search-forward "^#\\+BEGIN_QUOTE ticket$" nil t))
+    (should (re-search-forward "Ticket desc" nil t))
+    (goto-char (point-min))
+    (should (re-search-forward "^#\\+BEGIN_QUOTE implementation$" nil t))
+    (should (re-search-forward "Impl details" nil t))))
+
 ;;; asana_push tests
 
 (ert-deftest mcp-test-asana-push-errors-without-project ()
