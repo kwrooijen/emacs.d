@@ -286,5 +286,45 @@
       },
       "required": ["file", "heading"]
     }
+  },
+  {
+    "name": "agent_send_message",
+    "description": "Send a message to a running agent-shell session. The agent must be in Ready or Waiting state (not Working/Busy). Use agent_list first to check the agent's status. If the agent is busy, wait and retry later. The message is submitted as user input to the agent's conversation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        "message": {
+          "type": "string",
+          "description": "The message to send to the agent"
+        }
+      },
+      "required": ["file", "heading", "message"]
+    }
+  },
+  {
+    "name": "agent_resend",
+    "description": "Rewrite ticket.org from the org heading body and tell the agent to re-read it. Use this after updating the ticket description with edit_work_todo_body to sync changes to the running agent. The agent must be in Ready or Waiting state.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the org file containing the todo"
+        },
+        "heading": {
+          "type": "string",
+          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      "required": ["file", "heading"]
+    }
   }
 ]

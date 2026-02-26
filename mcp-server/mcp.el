@@ -570,5 +570,67 @@ transcript file in the worktree."
               (stat . ,stat)
               (diff . ,diff)))))))))
 
+(cl-defun kwrooijen/mcp-agent-send-message (file heading message)
+  "Send MESSAGE to the running agent-shell for the TODO identified by FILE and HEADING.
+The agent must be in Ready or Waiting state (not Working)."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE")))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (let* ((worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+           (unless shell-buf
+             (error "No running agent-shell found for %s" heading))
+           (agent-shell-insert :text message
+                               :submit t
+                               :shell-buffer shell-buf)
+           (json-encode
+            `((success . t)
+              (heading . ,heading)
+              (message . ,message)))))))))
+
+(cl-defun kwrooijen/mcp-agent-resend (file heading)
+  "Rewrite ticket.org from the org heading body and tell the agent to re-read it.
+For the TODO identified by FILE and HEADING."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((project (org-agent-shell--get-property "PROJECT"))
+              (worktree (org-entry-get nil "WORKTREE"))
+              (body (org-agent-shell--heading-body)))
+         (unless project
+           (error "No :PROJECT: property found"))
+         (unless worktree
+           (error "No :WORKTREE: property found"))
+         (let* ((worktree-path
+                 (expand-file-name
+                  worktree
+                  (file-name-concat (expand-file-name project)
+                                    agent-shell-worktree--subdirectory)))
+                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+           (unless shell-buf
+             (error "No running agent-shell found for %s" heading))
+           (when (and body (not (string-empty-p body)))
+             (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
+               (with-temp-file ticket-file
+                 (insert body))))
+           (agent-shell-insert :text "ticket.org has been updated. Read it again."
+                               :submit t
+                               :shell-buffer shell-buf)
+           (json-encode
+            `((success . t)
+              (heading . ,heading)))))))))
+
 (provide 'mcp)
 ;;; mcp.el ends here

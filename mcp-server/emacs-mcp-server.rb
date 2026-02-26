@@ -183,6 +183,26 @@ def handle_tool_call(name, arguments)
       "(kwrooijen/mcp-agent-get-diff #{elisp_string(file)} #{elisp_string(heading)})"
     )
 
+  when "agent_send_message"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    message = arguments["message"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    raise "Missing required parameter: message" unless message
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-send-message #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(message)})"
+    )
+
+  when "agent_resend"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-resend #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+
   else
     raise "Unknown tool: #{name}"
   end
