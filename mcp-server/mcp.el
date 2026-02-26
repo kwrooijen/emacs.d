@@ -22,13 +22,6 @@
 
 ;;; Helpers
 
-(defmacro kwrooijen/mcp--with-ignore-folds (&rest body)
-  "Execute BODY with org-fold modifications suppressed.
-Prevents `org-fold-core-region' with missing SPEC errors when
-modifying org buffers programmatically via emacsclient."
-  `(let ((org-fold-core--ignore-modifications t))
-     ,@body))
-
 (defun kwrooijen/mcp--get-own-properties ()
   "Return an alist of the current heading's own properties.
 Excludes computed org properties to reduce noise."
@@ -143,7 +136,7 @@ Skips the property drawer, logbook, and planning lines."
 (defun kwrooijen/mcp--generate-branch-name (heading &optional asana-id)
   "Generate a concise branch name from HEADING text.
 Strips common prefixes like [Feature], [Bug], etc.  Produces a short
-kebab-case slug (max ~50 chars).  Prepends ASANA-ID when non-nil.
+kebab-case slug (max ~20 chars).  Prepends ASANA-ID when non-nil.
 Returns a string like \"feature/1234-short-slug\"."
   (let* ((stripped (replace-regexp-in-string
                     "^\\[\\(?:Feature\\|Bug\\|Uitzoeken\\|Wijziging\\|Marketing\\|Uitbreiding\\)\\]\\s-*"
@@ -151,8 +144,8 @@ Returns a string like \"feature/1234-short-slug\"."
          (lower (downcase stripped))
          (kebab (replace-regexp-in-string "[^a-z0-9]+" "-" lower))
          (trimmed (replace-regexp-in-string "^-+\\|-+$" "" kebab))
-         (short (if (> (length trimmed) 50)
-                    (let ((cut (substring trimmed 0 50)))
+         (short (if (> (length trimmed) 20)
+                    (let ((cut (substring trimmed 0 20)))
                       (replace-regexp-in-string "-[^-]*$" "" cut))
                   trimmed))
          (slug (if (and asana-id (not (string-empty-p asana-id)))
@@ -166,30 +159,27 @@ Returns a string like \"feature/1234-short-slug\"."
   "Clock in the heading identified by FILE and HEADING using org-clock-multi."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (org-clock-multi-clock-in))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-clock-multi-clock-in)))))
 
 (defun kwrooijen/mcp--clock-out-heading (file heading)
   "Clock out the heading identified by FILE and HEADING using org-clock-multi."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (org-clock-multi-clock-out))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-clock-multi-clock-out)))))
 
 (defun kwrooijen/mcp--clock-out-overige (file)
   "Clock out the OVERIGE heading in FILE if it is clocked in."
   (condition-case nil
       (let ((marker (kwrooijen/mcp--find-heading-marker file "OVERIGE")))
         (with-current-buffer (marker-buffer marker)
-          (kwrooijen/mcp--with-ignore-folds
-           (org-with-wide-buffer
-            (goto-char marker)
-            (when (org-clock-multi-clocking-p)
-              (org-clock-multi-clock-out))))))
+          (org-with-wide-buffer
+           (goto-char marker)
+           (when (org-clock-multi-clocking-p)
+             (org-clock-multi-clock-out)))))
     (error nil)))
 
 (cl-defun kwrooijen/mcp-get-active-clocks ()
@@ -295,23 +285,22 @@ Includes task properties and parent heading properties."
 Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BODY."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (when state
-          (org-todo state))
-        (dolist (pair set-properties)
-          (org-set-property (car pair) (cdr pair)))
-        (dolist (prop delete-properties)
-          (org-delete-property prop))
-        (when body
-          (kwrooijen/mcp--replace-heading-body body))
-        (save-buffer)
-        (json-encode
-         `((success . t)
-           (heading . ,(org-get-heading t t t t))
-           (state . ,(org-get-todo-state))
-           (properties . ,(kwrooijen/mcp--get-own-properties)))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (when state
+         (org-todo state))
+       (dolist (pair set-properties)
+         (org-set-property (car pair) (cdr pair)))
+       (dolist (prop delete-properties)
+         (org-delete-property prop))
+       (when body
+         (kwrooijen/mcp--replace-heading-body body))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,(org-get-heading t t t t))
+          (state . ,(org-get-todo-state))
+          (properties . ,(kwrooijen/mcp--get-own-properties))))))))
 
 (cl-defun kwrooijen/mcp-create-work-todo (file heading title &key state body)
   "Create a new TODO heading under the parent identified by FILE and HEADING.
@@ -319,27 +308,26 @@ TITLE is the heading text.  STATE defaults to \"TODO\".
 BODY is optional initial body text."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (let* ((parent-level (org-current-level))
-               (child-level (1+ parent-level))
-               (stars (make-string child-level ?*))
-               (todo-state (or state "TODO"))
-               (entry (concat stars " " todo-state " " title "\n"
-                              ":PROPERTIES:\n"
-                              ":END:\n"
-                              (when body (concat "\n" body "\n")))))
-          (org-end-of-subtree t t)
-          (skip-chars-backward " \t\n")
-          (end-of-line)
-          (insert "\n" entry)
-          (save-buffer)
-          (json-encode
-           `((success . t)
-             (heading . ,title)
-             (state . ,todo-state)
-             (file . ,(buffer-file-name))))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((parent-level (org-current-level))
+              (child-level (1+ parent-level))
+              (stars (make-string child-level ?*))
+              (todo-state (or state "TODO"))
+              (entry (concat stars " " todo-state " " title "\n"
+                             ":PROPERTIES:\n"
+                             ":END:\n"
+                             (when body (concat "\n" body "\n")))))
+         (org-end-of-subtree t t)
+         (skip-chars-backward " \t\n")
+         (end-of-line)
+         (insert "\n" entry)
+         (save-buffer)
+         (json-encode
+          `((success . t)
+            (heading . ,title)
+            (state . ,todo-state)
+            (file . ,(buffer-file-name)))))))))
 
 (cl-defun kwrooijen/mcp-edit-work-todo-ticket-description (file heading body)
   "Set the #+BEGIN_QUOTE ticket block on the heading identified by FILE and HEADING.
@@ -347,39 +335,38 @@ If a ticket quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
-          (if (re-search-forward "^#\\+BEGIN_QUOTE ticket$" subtree-end t)
-              ;; Replace existing quote block
-              (let ((quote-start (line-beginning-position)))
-                (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
-                    (let ((quote-end (line-end-position)))
-                      (delete-region quote-start quote-end)
-                      (goto-char quote-start)
-                      (insert "#+BEGIN_QUOTE ticket\n"
-                              body "\n"
-                              "#+END_QUOTE"))
-                  (error "Malformed quote block: missing #+END_QUOTE")))
-            ;; No quote block — append before child headings
-            (goto-char marker)
-            (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
-                   (child-start (save-excursion
-                                  (goto-char content-start)
-                                  (if (re-search-forward org-heading-regexp subtree-end t)
-                                      (line-beginning-position)
-                                    subtree-end))))
-              (goto-char child-start)
-              (skip-chars-backward " \t\n")
-              (end-of-line)
-              (insert "\n\n#+BEGIN_QUOTE ticket\n"
-                      body "\n"
-                      "#+END_QUOTE\n"))))
-        (save-buffer)
-        (json-encode
-         `((success . t)
-           (heading . ,heading))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+         (if (re-search-forward "^#\\+BEGIN_QUOTE ticket$" subtree-end t)
+             ;; Replace existing quote block
+             (let ((quote-start (line-beginning-position)))
+               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                   (let ((quote-end (line-end-position)))
+                     (delete-region quote-start quote-end)
+                     (goto-char quote-start)
+                     (insert "#+BEGIN_QUOTE ticket\n"
+                             body "\n"
+                             "#+END_QUOTE"))
+                 (error "Malformed quote block: missing #+END_QUOTE")))
+           ;; No quote block — append before child headings
+           (goto-char marker)
+           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                  (child-start (save-excursion
+                                 (goto-char content-start)
+                                 (if (re-search-forward org-heading-regexp subtree-end t)
+                                     (line-beginning-position)
+                                   subtree-end))))
+             (goto-char child-start)
+             (skip-chars-backward " \t\n")
+             (end-of-line)
+             (insert "\n\n#+BEGIN_QUOTE ticket\n"
+                     body "\n"
+                     "#+END_QUOTE\n"))))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)))))))
 
 (cl-defun kwrooijen/mcp-edit-work-todo-implementation (file heading body)
   "Set the #+BEGIN_QUOTE implementation block on the heading identified by FILE and HEADING.
@@ -387,54 +374,52 @@ If an implementation quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
-          (if (re-search-forward "^#\\+BEGIN_QUOTE implementation$" subtree-end t)
-              ;; Replace existing quote block
-              (let ((quote-start (line-beginning-position)))
-                (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
-                    (let ((quote-end (line-end-position)))
-                      (delete-region quote-start quote-end)
-                      (goto-char quote-start)
-                      (insert "#+BEGIN_QUOTE implementation\n"
-                              body "\n"
-                              "#+END_QUOTE"))
-                  (error "Malformed quote block: missing #+END_QUOTE")))
-            ;; No quote block — append before child headings
-            (goto-char marker)
-            (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
-                   (child-start (save-excursion
-                                  (goto-char content-start)
-                                  (if (re-search-forward org-heading-regexp subtree-end t)
-                                      (line-beginning-position)
-                                    subtree-end))))
-              (goto-char child-start)
-              (skip-chars-backward " \t\n")
-              (end-of-line)
-              (insert "\n\n#+BEGIN_QUOTE implementation\n"
-                      body "\n"
-                      "#+END_QUOTE\n"))))
-        (save-buffer)
-        (json-encode
-         `((success . t)
-           (heading . ,heading))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((subtree-end (save-excursion (org-end-of-subtree t t) (point))))
+         (if (re-search-forward "^#\\+BEGIN_QUOTE implementation$" subtree-end t)
+             ;; Replace existing quote block
+             (let ((quote-start (line-beginning-position)))
+               (if (re-search-forward "^#\\+END_QUOTE$" subtree-end t)
+                   (let ((quote-end (line-end-position)))
+                     (delete-region quote-start quote-end)
+                     (goto-char quote-start)
+                     (insert "#+BEGIN_QUOTE implementation\n"
+                             body "\n"
+                             "#+END_QUOTE"))
+                 (error "Malformed quote block: missing #+END_QUOTE")))
+           ;; No quote block — append before child headings
+           (goto-char marker)
+           (let* ((content-start (save-excursion (org-end-of-meta-data t) (point)))
+                  (child-start (save-excursion
+                                 (goto-char content-start)
+                                 (if (re-search-forward org-heading-regexp subtree-end t)
+                                     (line-beginning-position)
+                                   subtree-end))))
+             (goto-char child-start)
+             (skip-chars-backward " \t\n")
+             (end-of-line)
+             (insert "\n\n#+BEGIN_QUOTE implementation\n"
+                     body "\n"
+                     "#+END_QUOTE\n"))))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)))))))
 
 (cl-defun kwrooijen/mcp-asana-push (file heading)
   "Push the heading identified by FILE and HEADING to Asana as a new task.
 Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (org-asana--push-heading)
-        (json-encode
-         `((success . t)
-           (heading . ,heading)
-           (asana_gid . ,(org-entry-get nil "ASANA"))
-           (asana_section . ,(org-entry-get nil "ASANA_SECTION")))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (org-asana--push-heading)
+       (json-encode
+        `((success . t)
+          (heading . ,heading)
+          (asana_gid . ,(org-entry-get nil "ASANA"))
+          (asana_section . ,(org-entry-get nil "ASANA_SECTION"))))))))
 
 ;;; Agent Management
 
@@ -443,20 +428,19 @@ Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
 If BRANCH is nil or empty, auto-generate from heading text and ASANA id."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (let* ((asana-id (org-entry-get nil "ASANA"))
-               (effective-branch
-                (if (and branch (not (string-empty-p branch)))
-                    branch
-                  (kwrooijen/mcp--generate-branch-name heading asana-id))))
-          (org-entry-put nil "BRANCH" effective-branch)
-          (save-buffer)
-          (json-encode
-           `((success . t)
-             (heading . ,heading)
-             (branch . ,effective-branch)))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((asana-id (org-entry-get nil "ASANA"))
+              (effective-branch
+               (if (and branch (not (string-empty-p branch)))
+                   branch
+                 (kwrooijen/mcp--generate-branch-name heading asana-id))))
+         (org-entry-put nil "BRANCH" effective-branch)
+         (save-buffer)
+         (json-encode
+          `((success . t)
+            (heading . ,heading)
+            (branch . ,effective-branch))))))))
 
 (cl-defun kwrooijen/mcp-agent-launch (file heading)
   "Launch an agent-shell workspace for the TODO identified by FILE and HEADING.
@@ -464,39 +448,33 @@ Creates a git worktree, writes ticket.org, and starts agent-shell.
 Requires :PROJECT: (inherited) and :BRANCH: properties."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
     (with-current-buffer (marker-buffer marker)
-      (kwrooijen/mcp--with-ignore-folds
-       (org-with-wide-buffer
-        (goto-char marker)
-        (let ((project (org-agent-shell--get-property "PROJECT"))
-              (branch (org-entry-get nil "BRANCH"))
-              (worktree (org-entry-get nil "WORKTREE"))
-              (body (org-agent-shell--heading-body))
-              (base (org-agent-shell--base-branch))
-              (org-file (buffer-file-name)))
-          (unless project
-            (error "No :PROJECT: property found on heading: %s" heading))
-          (unless branch
-            (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
-          (let ((result (org-agent-shell--launch
-                         :project project :branch branch :worktree worktree
-                         :body body :heading heading :file org-file
-                         :headless t :base base)))
-            ;; Set WORKTREE property if newly generated
-            (unless worktree
-              (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
-              (save-buffer))
-            ;; Clock out OVERIGE for this client, clock in this ticket
-            (kwrooijen/mcp--clock-out-overige org-file)
-            (kwrooijen/mcp--clock-in-heading org-file heading)
-            ;; Return result
-            (json-encode
-             `((success . t)
-               (heading . ,heading)
-               (project . ,(expand-file-name project))
-               (branch . ,branch)
-               (worktree . ,(alist-get 'worktree_name result))
-               (worktree_path . ,(alist-get 'worktree_path result))
-               (reused . ,(if (alist-get 'reused result) t :json-false)))))))))))
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let ((project (org-agent-shell--get-property "PROJECT"))
+             (branch (org-entry-get nil "BRANCH"))
+             (body (org-agent-shell--heading-body))
+             (base (org-agent-shell--base-branch))
+             (org-file (buffer-file-name)))
+         (unless project
+           (error "No :PROJECT: property found on heading: %s" heading))
+         (unless branch
+           (error "No :BRANCH: property found on heading: %s. Use agent_set_branch first" heading))
+         (let ((result (org-agent-shell--launch
+                        :project project :branch branch
+                        :body body :heading heading :file org-file
+                        :headless t :base base)))
+           ;; Clock out OVERIGE for this client, clock in this ticket
+           (kwrooijen/mcp--clock-out-overige org-file)
+           (kwrooijen/mcp--clock-in-heading org-file heading)
+           ;; Return result
+           (json-encode
+            `((success . t)
+              (heading . ,heading)
+              (project . ,(expand-file-name project))
+              (branch . ,branch)
+              (worktree . ,(alist-get 'worktree_name result))
+              (worktree_path . ,(alist-get 'worktree_path result))
+              (reused . ,(if (alist-get 'reused result) t :json-false))))))))))
 
 (cl-defun kwrooijen/mcp-agent-list ()
   "List all ticket-managed agent-shell workspaces.
@@ -527,26 +505,16 @@ and transcript file path."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE")))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (let* ((worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (ticket-file (expand-file-name "ticket.org" worktree-path)))
-           (unless (file-exists-p ticket-file)
-             (error "ticket.org not found at %s" ticket-file))
-           (json-encode
-            `((heading . ,heading)
-              (ticket_file . ,ticket-file)
-              (content . ,(with-temp-buffer
-                            (insert-file-contents ticket-file)
-                            (buffer-string)))))))))))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
+              (ticket-file (expand-file-name "ticket.org" worktree-path)))
+         (unless (file-exists-p ticket-file)
+           (error "ticket.org not found at %s" ticket-file))
+         (json-encode
+          `((heading . ,heading)
+            (ticket_file . ,ticket-file)
+            (content . ,(with-temp-buffer
+                          (insert-file-contents ticket-file)
+                          (buffer-string))))))))))
 
 (cl-defun kwrooijen/mcp-agent-get-transcript (file heading)
   "Read the transcript for the agent identified by FILE and HEADING.
@@ -556,41 +524,31 @@ transcript file in the worktree."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE")))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (let* ((worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (shell-buf (org-agent-shell--find-shell-buffer worktree-path))
-                (transcript-file
-                 (or
-                  ;; Try the buffer-local variable first
-                  (when shell-buf
-                    (buffer-local-value 'agent-shell--transcript-file shell-buf))
-                  ;; Fallback: most recent transcript file on disk
-                  (let* ((transcripts-dir
-                          (expand-file-name ".agent-shell/transcripts"
-                                            worktree-path))
-                         (files (and (file-directory-p transcripts-dir)
-                                     (directory-files transcripts-dir t "\\.md$"))))
-                    (when files
-                      (car (sort files #'string>)))))))
-           (unless transcript-file
-             (error "No transcript found for this agent"))
-           (unless (file-exists-p transcript-file)
-             (error "Transcript file does not exist: %s" transcript-file))
-           (json-encode
-            `((heading . ,heading)
-              (transcript_file . ,transcript-file)
-              (content . ,(with-temp-buffer
-                            (insert-file-contents transcript-file)
-                            (buffer-string)))))))))))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
+              (shell-buf (org-agent-shell--find-shell-buffer worktree-path))
+              (transcript-file
+               (or
+                ;; Try the buffer-local variable first
+                (when shell-buf
+                  (buffer-local-value 'agent-shell--transcript-file shell-buf))
+                ;; Fallback: most recent transcript file on disk
+                (let* ((transcripts-dir
+                        (expand-file-name ".agent-shell/transcripts"
+                                          worktree-path))
+                       (files (and (file-directory-p transcripts-dir)
+                                   (directory-files transcripts-dir t "\\.md$"))))
+                  (when files
+                    (car (sort files #'string>)))))))
+         (unless transcript-file
+           (error "No transcript found for this agent"))
+         (unless (file-exists-p transcript-file)
+           (error "Transcript file does not exist: %s" transcript-file))
+         (json-encode
+          `((heading . ,heading)
+            (transcript_file . ,transcript-file)
+            (content . ,(with-temp-buffer
+                          (insert-file-contents transcript-file)
+                          (buffer-string))))))))))
 
 (cl-defun kwrooijen/mcp-agent-get-diff (file heading)
   "Get the git diff for the agent's worktree identified by FILE and HEADING."
@@ -598,34 +556,22 @@ transcript file in the worktree."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE"))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
               (branch (org-entry-get nil "BRANCH"))
-              (base (org-agent-shell--base-branch)))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (unless branch
-           (error "No :BRANCH: property found"))
-         (let* ((worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (default-directory worktree-path)
-                (range (format "%s...%s" base branch))
-                (stat (shell-command-to-string
-                       (format "git diff --stat %s" range)))
-                (diff (shell-command-to-string
-                       (format "git diff %s" range))))
-           (json-encode
-            `((heading . ,heading)
-              (base . ,base)
-              (branch . ,branch)
-              (worktree_path . ,worktree-path)
-              (stat . ,stat)
-              (diff . ,diff)))))))))
+              (base (org-agent-shell--base-branch))
+              (default-directory worktree-path)
+              (range (format "%s...%s" base branch))
+              (stat (shell-command-to-string
+                     (format "git diff --stat %s" range)))
+              (diff (shell-command-to-string
+                     (format "git diff %s" range))))
+         (json-encode
+          `((heading . ,heading)
+            (base . ,base)
+            (branch . ,branch)
+            (worktree_path . ,worktree-path)
+            (stat . ,stat)
+            (diff . ,diff))))))))
 
 (cl-defun kwrooijen/mcp-agent-send-message (file heading message)
   "Send MESSAGE to the running agent-shell for the TODO identified by FILE and HEADING.
@@ -634,27 +580,17 @@ The agent must be in Ready or Waiting state (not Working)."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE")))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (let* ((worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
-           (unless shell-buf
-             (error "No running agent-shell found for %s" heading))
-           (agent-shell-insert :text message
-                               :submit t
-                               :shell-buffer shell-buf)
-           (json-encode
-            `((success . t)
-              (heading . ,heading)
-              (message . ,message)))))))))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
+              (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+         (unless shell-buf
+           (error "No running agent-shell found for %s" heading))
+         (agent-shell-insert :text message
+                             :submit t
+                             :shell-buffer shell-buf)
+         (json-encode
+          `((success . t)
+            (heading . ,heading)
+            (message . ,message))))))))
 
 (cl-defun kwrooijen/mcp-agent-resend (file heading)
   "Rewrite ticket.org from the org heading body and tell the agent to re-read it.
@@ -663,31 +599,21 @@ For the TODO identified by FILE and HEADING."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE"))
-              (body (org-agent-shell--heading-body)))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (let* ((worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
-           (unless shell-buf
-             (error "No running agent-shell found for %s" heading))
-           (when (and body (not (string-empty-p body)))
-             (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
-               (with-temp-file ticket-file
-                 (insert body))))
-           (agent-shell-insert :text "ticket.org has been updated. Read it again."
-                               :submit t
-                               :shell-buffer shell-buf)
-           (json-encode
-            `((success . t)
-              (heading . ,heading)))))))))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
+              (body (org-agent-shell--heading-body))
+              (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+         (unless shell-buf
+           (error "No running agent-shell found for %s" heading))
+         (when (and body (not (string-empty-p body)))
+           (let ((ticket-file (expand-file-name "ticket.org" worktree-path)))
+             (with-temp-file ticket-file
+               (insert body))))
+         (agent-shell-insert :text "ticket.org has been updated. Read it again."
+                             :submit t
+                             :shell-buffer shell-buf)
+         (json-encode
+          `((success . t)
+            (heading . ,heading))))))))
 
 (cl-defun kwrooijen/mcp-agent-get-tail (file heading &optional n)
   "Return the last N lines from the agent-shell buffer for the TODO at FILE/HEADING.
@@ -696,34 +622,24 @@ N defaults to 80.  Returns the buffer tail and current status."
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
-       (let* ((project (org-agent-shell--get-property "PROJECT"))
-              (worktree (org-entry-get nil "WORKTREE")))
-         (unless project
-           (error "No :PROJECT: property found"))
-         (unless worktree
-           (error "No :WORKTREE: property found"))
-         (let* ((lines (or n 80))
-                (worktree-path
-                 (expand-file-name
-                  worktree
-                  (file-name-concat (expand-file-name project)
-                                    agent-shell-worktree--subdirectory)))
-                (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
-           (unless shell-buf
-             (error "No running agent-shell found for %s" heading))
-           (let* ((status (substring-no-properties
-                           (agent-shell-manager--get-combined-status shell-buf)))
-                  (content (with-current-buffer shell-buf
-                             (let* ((text (buffer-substring-no-properties
-                                           (point-min) (point-max)))
-                                    (all-lines (split-string text "\n"))
-                                    (tail (last all-lines lines)))
-                               (string-join tail "\n")))))
-             (json-encode
-              `((heading . ,heading)
-                (status . ,status)
-                (lines . ,lines)
-                (content . ,content))))))))))
+       (let* ((worktree-path (org-agent-shell--worktree-path))
+              (lines (or n 80))
+              (shell-buf (org-agent-shell--find-shell-buffer worktree-path)))
+         (unless shell-buf
+           (error "No running agent-shell found for %s" heading))
+         (let* ((status (substring-no-properties
+                         (agent-shell-manager--get-combined-status shell-buf)))
+                (content (with-current-buffer shell-buf
+                           (let* ((text (buffer-substring-no-properties
+                                         (point-min) (point-max)))
+                                  (all-lines (split-string text "\n"))
+                                  (tail (last all-lines lines)))
+                             (string-join tail "\n")))))
+           (json-encode
+            `((heading . ,heading)
+              (status . ,status)
+              (lines . ,lines)
+              (content . ,content)))))))))
 
 ;;; Notification Queue
 

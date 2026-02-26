@@ -229,11 +229,11 @@ Press C-t to change the TODO state of the selected entry."
                         (paused (and id (not clocked) (member id org-clock-multi-paused) t))
                         (marker (point-marker))
                         (project (org-entry-get nil "PROJECT" t))
-                        (worktree (org-entry-get nil "WORKTREE"))
+                        (branch (org-entry-get nil "BRANCH"))
                         (agent-status
-                         (if (and project worktree)
+                         (if (and project branch)
                              (let* ((wt-path (expand-file-name
-                                              worktree
+                                              (org-agent-shell--derive-worktree-name project branch)
                                               (file-name-concat (expand-file-name project)
                                                                 agent-shell-worktree--subdirectory)))
                                     (shell-buf (org-agent-shell--find-shell-buffer wt-path)))

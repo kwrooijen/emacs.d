@@ -11,8 +11,7 @@
 ;;
 ;; Each org heading can have:
 ;;   :PROJECT:  - path to git repo root (inherited from parent)
-;;   :BRANCH:   - feature branch name
-;;   :WORKTREE: - auto-populated worktree name on first launch
+;;   :BRANCH:   - feature branch name (worktree name derived from this)
 ;;
 ;; Commands:
 ;;   org-agent-shell-launch     - Create worktree + start agent-shell + send plan
@@ -67,15 +66,26 @@ Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
   (or (org-agent-shell--get-property "BASE")
       org-agent-shell-base-branch))
 
+(defun org-agent-shell--derive-worktree-name (project branch)
+  "Derive worktree directory name from PROJECT path and BRANCH name.
+Strips common git branch prefixes and concatenates with the project basename."
+  (let ((clean-branch
+         (replace-regexp-in-string
+          "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
+          "" branch)))
+    (concat (file-name-nondirectory (directory-file-name (expand-file-name project)))
+            "_" clean-branch)))
+
 (defun org-agent-shell--worktree-path ()
-  "Compute the worktree path for the current heading."
+  "Compute the worktree path for the current heading.
+Derives the worktree name from :PROJECT: and :BRANCH: properties."
   (let ((project (org-agent-shell--get-property "PROJECT"))
-        (worktree (org-entry-get nil "WORKTREE")))
+        (branch (org-entry-get nil "BRANCH")))
     (unless project
       (user-error "No :PROJECT: property found"))
-    (unless worktree
-      (user-error "No :WORKTREE: property found"))
-    (expand-file-name worktree
+    (unless branch
+      (user-error "No :BRANCH: property found"))
+    (expand-file-name (org-agent-shell--derive-worktree-name project branch)
                       (file-name-concat (expand-file-name project)
                                         agent-shell-worktree--subdirectory))))
 
@@ -110,33 +120,24 @@ Uses the :BASE: property if set, otherwise `org-agent-shell-base-branch'."
 
 ;;; Core Launch
 
-(cl-defun org-agent-shell--launch (&key project branch worktree body heading file headless base)
+(cl-defun org-agent-shell--launch (&key project branch body heading file headless base)
   "Create a git worktree and start an agent-shell workspace.
 Returns an alist with worktree_name, worktree_path, and reused keys.
 
 PROJECT is the git repo root path.  BRANCH is the feature branch name.
-WORKTREE is an existing worktree name or nil to auto-generate.
 BODY is the ticket content to write as ticket.org.
 HEADING and FILE are metadata to tag the shell buffer with.
 When HEADLESS is non-nil, the shell buffer is not displayed.
 BASE is the base branch (defaults to `org-agent-shell-base-branch')."
   (let* ((project-path (expand-file-name project))
          (base-branch (or base org-agent-shell-base-branch))
-         (worktree-name
-          (or worktree
-              (let ((clean-branch
-                     (replace-regexp-in-string
-                      "^\\(?:feature\\|bugfix\\|hotfix\\|fix\\|chore\\|release\\|support\\)/"
-                      "" branch)))
-                (concat (file-name-nondirectory
-                         (directory-file-name project-path))
-                        "_" clean-branch))))
+         (worktree-name (org-agent-shell--derive-worktree-name project branch))
          (worktree-path
           (expand-file-name
            worktree-name
            (file-name-concat project-path
                              agent-shell-worktree--subdirectory)))
-         (reuse (and worktree (file-directory-p worktree-path))))
+         (reuse (file-directory-p worktree-path)))
     ;; Create worktree if needed
     (unless reuse
       (make-directory (file-name-directory worktree-path) t)
@@ -203,7 +204,6 @@ Creates a git worktree and starts agent-shell with the heading body as input."
   (org-back-to-heading t)
   (let* ((project (org-agent-shell--get-property "PROJECT"))
          (branch (org-entry-get nil "BRANCH"))
-         (worktree (org-entry-get nil "WORKTREE"))
          (body (org-agent-shell--heading-body))
          (heading-text (org-get-heading t t t t))
          (org-file (buffer-file-name))
@@ -213,13 +213,9 @@ Creates a git worktree and starts agent-shell with the heading body as input."
     (unless branch
       (user-error "No :BRANCH: property found"))
     (let ((result (org-agent-shell--launch
-                   :project project :branch branch :worktree worktree
+                   :project project :branch branch
                    :body body :heading heading-text :file org-file
                    :base base)))
-      ;; Set WORKTREE property if newly generated
-      (unless worktree
-        (org-entry-put nil "WORKTREE" (alist-get 'worktree_name result))
-        (save-buffer))
       ;; Show the shell buffer
       (when-let* ((buf (org-agent-shell--find-shell-buffer
                         (alist-get 'worktree_path result))))
