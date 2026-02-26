@@ -14,10 +14,114 @@
 #+END_SRC
 
 ** Config :config:
+
+*** Helpers
+
 #+BEGIN_SRC emacs-lisp
+(defun kwrooijen/mcp--get-own-properties ()
+  "Return an alist of the current heading's own properties.
+Excludes computed org properties to reduce noise."
+  (let ((excluded '("CATEGORY" "ALLTAGS" "BLOCKED" "ITEM"
+                     "PRIORITY" "FILE" "CLOCKSUM" "CLOCKSUM_T"
+                     "TIMESTAMP" "TIMESTAMP_IA" "CLOSED"
+                     "DEADLINE" "SCHEDULED"))
+        result)
+    (dolist (pair (org-entry-properties nil 'standard))
+      (unless (member (car pair) excluded)
+        (when (cdr pair)
+          (push pair result))))
+    (nreverse result)))
+
+(defun kwrooijen/mcp--get-parent-properties ()
+  "Return an alist of the parent heading's own properties.
+Returns nil if already at top level."
+  (save-excursion
+    (condition-case nil
+        (progn
+          (outline-up-heading 1 t)
+          (kwrooijen/mcp--get-own-properties))
+      (error nil))))
+
+(defun kwrooijen/mcp--find-heading-marker (file heading)
+  "In FILE, return a marker at the heading matching HEADING text."
+  (let ((buf (find-file-noselect (expand-file-name file))))
+    (with-current-buffer buf
+      (org-with-wide-buffer
+       (goto-char (point-min))
+       (catch 'found
+         (while (re-search-forward org-heading-regexp nil t)
+           (when (string= (org-get-heading t t t t) heading)
+             (throw 'found (point-marker))))
+         (error "Heading not found: %s in %s" heading file))))))
+
+(defun kwrooijen/mcp--get-heading-body ()
+  "Return the body text of the current heading, excluding sub-headings.
+Skips the property drawer, logbook, and planning lines."
+  (save-excursion
+    (org-back-to-heading t)
+    (let* ((content-start (save-excursion
+                            (org-end-of-meta-data t)
+                            (point)))
+           (subtree-end (save-excursion
+                          (org-end-of-subtree t t)
+                          (point)))
+           (child-start (save-excursion
+                          (goto-char content-start)
+                          (if (re-search-forward org-heading-regexp subtree-end t)
+                              (line-beginning-position)
+                            subtree-end)))
+           (body (buffer-substring-no-properties content-start child-start)))
+      (string-trim body))))
+
+(defun kwrooijen/mcp--get-subtasks ()
+  "Return a list of alists for immediate child headings of current heading."
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((level (org-current-level))
+          subtasks)
+      (org-end-of-meta-data t)
+      (while (re-search-forward org-heading-regexp
+                                (save-excursion (org-end-of-subtree t t) (point))
+                                t)
+        (when (= (org-current-level) (1+ level))
+          (push `((heading . ,(org-get-heading t t t t))
+                  (state . ,(org-get-todo-state)))
+                subtasks)))
+      (nreverse subtasks))))
+
+(defun kwrooijen/mcp--replace-heading-body (new-body)
+  "Replace the body of the current heading with NEW-BODY."
+  (save-excursion
+    (org-back-to-heading t)
+    (let* ((content-start (save-excursion
+                            (org-end-of-meta-data t)
+                            (point)))
+           (subtree-end (save-excursion
+                          (org-end-of-subtree t t)
+                          (point)))
+           (child-start (save-excursion
+                          (goto-char content-start)
+                          (if (re-search-forward org-heading-regexp subtree-end t)
+                              (line-beginning-position)
+                            subtree-end))))
+      (delete-region content-start child-start)
+      (goto-char content-start)
+      (insert new-body "\n\n"))))
+#+END_SRC
+
+*** Entry Points
+
+#+BEGIN_SRC emacs-lisp
+(cl-defun kwrooijen/mcp-get-work-todo-files ()
+  "Return a JSON array of org file paths in the client todos directory."
+  (let* ((dir (expand-file-name "~/Documents/org/todos/client"))
+         (files (directory-files dir t "\\.org$")))
+    (json-encode files)))
+
 (cl-defun kwrooijen/mcp-get-work-todos ()
   "Return a JSON string of org TODO items tagged :work:.
-Queries agenda files for entries in TODO, IN PROGRESS, or WAITING state."
+Queries agenda files for entries in TODO, IN PROGRESS, or WAITING state.
+Includes task properties and parent heading properties."
   (let ((states '("TODO" "IN PROGRESS" "WAITING"))
         (tag "work")
         entries)
@@ -28,10 +132,58 @@ Queries agenda files for entries in TODO, IN PROGRESS, or WAITING state."
          (while (re-search-forward org-heading-regexp nil t)
            (when (and (member (org-get-todo-state) states)
                       (member tag (org-get-tags)))
-             (push `((heading . ,(org-get-heading t t t t))
-                     (state . ,(org-get-todo-state))
-                     (tags . ,(org-get-tags))
-                     (file . ,(buffer-file-name)))
-                   entries))))))
+             (let ((props (kwrooijen/mcp--get-own-properties))
+                   (parent-props (kwrooijen/mcp--get-parent-properties)))
+               (push `((heading . ,(org-get-heading t t t t))
+                       (state . ,(org-get-todo-state))
+                       (tags . ,(org-get-tags))
+                       (file . ,(buffer-file-name))
+                       (properties . ,props)
+                       (parent_properties . ,parent-props))
+                     entries)))))))
     (json-encode (nreverse entries))))
+
+(cl-defun kwrooijen/mcp-get-work-todo (file heading)
+  "Return JSON with full details of a single TODO identified by FILE and HEADING."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (let* ((state (org-get-todo-state))
+              (tags (org-get-tags))
+              (props (kwrooijen/mcp--get-own-properties))
+              (parent-props (kwrooijen/mcp--get-parent-properties))
+              (body (kwrooijen/mcp--get-heading-body))
+              (subtasks (kwrooijen/mcp--get-subtasks)))
+         (json-encode
+          `((heading . ,heading)
+            (state . ,state)
+            (tags . ,tags)
+            (file . ,file)
+            (properties . ,props)
+            (parent_properties . ,parent-props)
+            (body . ,body)
+            (subtasks . ,subtasks))))))))
+
+(cl-defun kwrooijen/mcp-edit-work-todo (file heading &key state set-properties delete-properties body)
+  "Edit a TODO identified by FILE and HEADING.
+Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BODY."
+  (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (with-current-buffer (marker-buffer marker)
+      (org-with-wide-buffer
+       (goto-char marker)
+       (when state
+         (org-todo state))
+       (dolist (pair set-properties)
+         (org-set-property (car pair) (cdr pair)))
+       (dolist (prop delete-properties)
+         (org-delete-property prop))
+       (when body
+         (kwrooijen/mcp--replace-heading-body body))
+       (save-buffer)
+       (json-encode
+        `((success . t)
+          (heading . ,(org-get-heading t t t t))
+          (state . ,(org-get-todo-state))
+          (properties . ,(kwrooijen/mcp--get-own-properties))))))))
 #+END_SRC

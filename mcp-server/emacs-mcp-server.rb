@@ -10,30 +10,87 @@ require "open3"
 
 TOOLS = [
   {
-    name: "emacs_eval",
-    description: "Evaluate an Emacs Lisp expression and return the result. " \
-                 "Use this to query or manipulate Emacs state.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        expression: {
-          type: "string",
-          description: "Emacs Lisp expression to evaluate"
-        }
-      },
-      required: ["expression"]
-    }
-  },
-  {
     name: "get_work_todos",
     description: "Get all org-mode TODO items tagged :work: with states TODO, IN PROGRESS, or WAITING. " \
-                 "Returns a JSON array of objects with heading, state, tags, and file fields.",
+                 "Returns a JSON array of objects with heading, state, tags, file, properties, and parent_properties fields.",
     inputSchema: {
       type: "object",
       properties: {}
     }
+  },
+  {
+    name: "get_work_todo_files",
+    description: "List org files in the client todos directory. " \
+                 "Returns a JSON array of absolute file paths.",
+    inputSchema: {
+      type: "object",
+      properties: {}
+    }
+  },
+  {
+    name: "get_work_todo",
+    description: "Get full details of a single work TODO item including properties, " \
+                 "parent properties, body content, and subtasks. " \
+                 "Identify the todo by its file path and heading text.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        }
+      },
+      required: ["file", "heading"]
+    }
+  },
+  {
+    name: "edit_work_todo",
+    description: "Edit a work TODO item. Can change state, set/delete properties, or replace body content. " \
+                 "Identify the todo by its file path and heading text.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          description: "Absolute path to the org file containing the todo"
+        },
+        heading: {
+          type: "string",
+          description: "Exact heading text of the todo (without TODO state prefix or tags)"
+        },
+        state: {
+          type: "string",
+          description: "New TODO state",
+          enum: ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+        },
+        set_properties: {
+          type: "object",
+          description: "Key-value pairs of properties to set or update",
+          additionalProperties: { type: "string" }
+        },
+        delete_properties: {
+          type: "array",
+          description: "Property names to remove",
+          items: { type: "string" }
+        },
+        body: {
+          type: "string",
+          description: "New body content to replace existing body (text between properties and sub-headings)"
+        }
+      },
+      required: ["file", "heading"]
+    }
   }
 ].freeze
+
+def elisp_string(str)
+  escaped = str.gsub('\\', '\\\\\\\\').gsub('"', '\\"').gsub("\n", "\\n")
+  "\"#{escaped}\""
+end
 
 def emacsclient_eval(expression)
   stdout, stderr, status = Open3.capture3("emacsclient", "--eval", expression)
@@ -45,12 +102,47 @@ end
 
 def handle_tool_call(name, arguments)
   case name
-  when "emacs_eval"
-    expression = arguments["expression"]
-    raise "Missing required parameter: expression" unless expression
-    emacsclient_eval(expression)
   when "get_work_todos"
     emacsclient_eval("(kwrooijen/mcp-get-work-todos)")
+  when "get_work_todo_files"
+    emacsclient_eval("(kwrooijen/mcp-get-work-todo-files)")
+  when "get_work_todo"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+    emacsclient_eval(
+      "(kwrooijen/mcp-get-work-todo #{elisp_string(file)} #{elisp_string(heading)})"
+    )
+  when "edit_work_todo"
+    file = arguments["file"]
+    heading = arguments["heading"]
+    raise "Missing required parameter: file" unless file
+    raise "Missing required parameter: heading" unless heading
+
+    parts = [elisp_string(file), elisp_string(heading)]
+
+    if arguments["state"]
+      parts << ":state #{elisp_string(arguments["state"])}"
+    end
+
+    if arguments["set_properties"]
+      pairs = arguments["set_properties"].map do |k, v|
+        "(#{elisp_string(k)} . #{elisp_string(v.to_s)})"
+      end
+      parts << ":set-properties '(#{pairs.join(' ')})"
+    end
+
+    if arguments["delete_properties"]
+      props = arguments["delete_properties"].map { |p| elisp_string(p) }
+      parts << ":delete-properties '(#{props.join(' ')})"
+    end
+
+    if arguments["body"]
+      parts << ":body #{elisp_string(arguments["body"])}"
+    end
+
+    emacsclient_eval("(kwrooijen/mcp-edit-work-todo #{parts.join(' ')})")
   else
     raise "Unknown tool: #{name}"
   end
