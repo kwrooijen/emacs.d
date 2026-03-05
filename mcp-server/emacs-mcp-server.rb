@@ -142,18 +142,13 @@ def handle_tool_call(name, arguments)
   when "agent_set_branch"
     file = arguments["file"]
     heading = arguments["heading"]
+    branch = arguments["branch"]
     raise "Missing required parameter: file" unless file
     raise "Missing required parameter: heading" unless heading
-
-    if arguments["branch"]
-      emacsclient_eval(
-        "(kwrooijen/mcp-agent-set-branch #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(arguments["branch"])})"
-      )
-    else
-      emacsclient_eval(
-        "(kwrooijen/mcp-agent-set-branch #{elisp_string(file)} #{elisp_string(heading)})"
-      )
-    end
+    raise "Missing required parameter: branch" unless branch
+    emacsclient_eval(
+      "(kwrooijen/mcp-agent-set-branch #{elisp_string(file)} #{elisp_string(heading)} #{elisp_string(branch)})"
+    )
 
   when "agent_launch"
     file = arguments["file"]

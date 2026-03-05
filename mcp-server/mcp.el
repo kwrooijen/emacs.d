@@ -114,6 +114,20 @@ Skips the property drawer, logbook, and planning lines."
                 subtasks)))
       (nreverse subtasks))))
 
+(defun kwrooijen/mcp--close-edit-indirect (marker)
+  "Close any edit-indirect buffer covering MARKER's position.
+If the edit-indirect buffer has unsaved changes, signal an error.
+Otherwise silently abort it so the base buffer becomes writable."
+  (with-current-buffer (marker-buffer marker)
+    (when-let* ((ov (edit-indirect--search-for-edit-indirect
+                     (marker-position marker) (1+ (marker-position marker))))
+                (buf (overlay-get ov 'edit-indirect-buffer)))
+      (when (buffer-live-p buf)
+        (when (buffer-modified-p buf)
+          (error "Edit-indirect buffer has unsaved changes — save or abort it first"))
+        (with-current-buffer buf
+          (edit-indirect-abort))))))
+
 (defun kwrooijen/mcp--replace-heading-body (new-body)
   "Replace the body of the current heading with NEW-BODY."
   (save-excursion
@@ -132,26 +146,6 @@ Skips the property drawer, logbook, and planning lines."
       (delete-region content-start child-start)
       (goto-char content-start)
       (insert new-body "\n\n"))))
-
-(defun kwrooijen/mcp--generate-branch-name (heading &optional asana-id)
-  "Generate a concise branch name from HEADING text.
-Strips common prefixes like [Feature], [Bug], etc.  Produces a short
-kebab-case slug (max ~20 chars).  Prepends ASANA-ID when non-nil.
-Returns a string like \"feature/1234-short-slug\"."
-  (let* ((stripped (replace-regexp-in-string
-                    "^\\[\\(?:Feature\\|Bug\\|Uitzoeken\\|Wijziging\\|Marketing\\|Uitbreiding\\)\\]\\s-*"
-                    "" heading))
-         (lower (downcase stripped))
-         (kebab (replace-regexp-in-string "[^a-z0-9]+" "-" lower))
-         (trimmed (replace-regexp-in-string "^-+\\|-+$" "" kebab))
-         (short (if (> (length trimmed) 20)
-                    (let ((cut (substring trimmed 0 20)))
-                      (replace-regexp-in-string "-[^-]*$" "" cut))
-                  trimmed))
-         (slug (if (and asana-id (not (string-empty-p asana-id)))
-                   (concat asana-id "-" short)
-                 short)))
-    (concat "feature/" slug)))
 
 ;;; Clock Management
 
@@ -284,6 +278,7 @@ Includes task properties and parent heading properties."
   "Edit a TODO identified by FILE and HEADING.
 Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BODY."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
@@ -307,6 +302,7 @@ Optionally change STATE, SET-PROPERTIES (alist), DELETE-PROPERTIES (list), or BO
 TITLE is the heading text.  STATE defaults to \"TODO\".
 BODY is optional initial body text."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
@@ -334,6 +330,7 @@ BODY is optional initial body text."
 If a ticket quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
@@ -373,6 +370,7 @@ If none exists, appends one after the existing body."
 If an implementation quote block exists, replaces its contents.
 If none exists, appends one after the existing body."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
@@ -411,6 +409,7 @@ If none exists, appends one after the existing body."
   "Push the heading identified by FILE and HEADING to Asana as a new task.
 Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
@@ -423,18 +422,21 @@ Wraps `org-asana--push-heading'.  Returns the new Asana GID and section."
 
 ;;; Agent Management
 
-(cl-defun kwrooijen/mcp-agent-set-branch (file heading &optional branch)
+(cl-defun kwrooijen/mcp-agent-set-branch (file heading branch)
   "Set :BRANCH: property on the TODO identified by FILE and HEADING.
-If BRANCH is nil or empty, auto-generate from heading text and ASANA id."
+BRANCH is a concise kebab-case slug (max ~20 chars) provided by the caller.
+It is prefixed with the Asana ticket ID when available, e.g.
+\"feature/1213416506379504-sentry-errors\"."
   (let ((marker (kwrooijen/mcp--find-heading-marker file heading)))
+    (kwrooijen/mcp--close-edit-indirect marker)
     (with-current-buffer (marker-buffer marker)
       (org-with-wide-buffer
        (goto-char marker)
        (let* ((asana-id (org-entry-get nil "ASANA"))
               (effective-branch
-               (if (and branch (not (string-empty-p branch)))
-                   branch
-                 (kwrooijen/mcp--generate-branch-name heading asana-id))))
+               (if (and asana-id (not (string-empty-p asana-id)))
+                   (concat "feature/" asana-id "-" branch)
+                 (concat "feature/" branch))))
          (org-entry-put nil "BRANCH" effective-branch)
          (save-buffer)
          (json-encode

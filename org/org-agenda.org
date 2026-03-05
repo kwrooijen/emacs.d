@@ -198,6 +198,7 @@ Signals an error if the edit-indirect buffer has unsaved changes."
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
     (define-key map (kbd "C-s") #'kwrooijen/org-todo-find--open-shell)
+    (define-key map (kbd "C-l") #'kwrooijen/org-todo-find--open-shell)
     (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
