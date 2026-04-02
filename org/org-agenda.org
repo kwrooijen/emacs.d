@@ -236,7 +236,7 @@ Press C-t to change the TODO state of the selected entry."
                              (let* ((wt-path (expand-file-name
                                               (org-agent-shell--derive-worktree-name project branch)
                                               (file-name-concat (expand-file-name project)
-                                                                agent-shell-worktree--subdirectory)))
+                                                                ".agent-shell" "worktrees")))
                                     (shell-buf (org-agent-shell--find-shell-buffer wt-path)))
                                (if shell-buf
                                    (agent-shell-manager--get-combined-status shell-buf)

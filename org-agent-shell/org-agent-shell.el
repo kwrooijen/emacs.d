@@ -87,7 +87,7 @@ Derives the worktree name from :PROJECT: and :BRANCH: properties."
       (user-error "No :BRANCH: property found"))
     (expand-file-name (org-agent-shell--derive-worktree-name project branch)
                       (file-name-concat (expand-file-name project)
-                                        agent-shell-worktree--subdirectory))))
+                                        ".agent-shell" "worktrees"))))
 
 (defun org-agent-shell--heading-body ()
   "Extract ticket and implementation quote blocks from the current org heading."
@@ -136,7 +136,7 @@ BASE is the base branch (defaults to `org-agent-shell-base-branch')."
           (expand-file-name
            worktree-name
            (file-name-concat project-path
-                             agent-shell-worktree--subdirectory)))
+                             ".agent-shell" "worktrees")))
          (reuse (file-directory-p worktree-path)))
     ;; Create worktree if needed
     (unless reuse

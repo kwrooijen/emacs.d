@@ -82,12 +82,6 @@ Remap ruby-mode to ruby-ts-mode to make use of Treesitter.
     (async-shell-command (concat "rails routes | grep " search-string))))
 #+END_SRC
 
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "c r c" 'kwrooijen/rails-create-stimulus-controller)
-#+END_SRC
-
 
 * Inferior Ruby
 :PROPERTIES:

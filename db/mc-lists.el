@@ -89,6 +89,7 @@
         lispyville-substitute
         lispyville-yank
         lispyville-yank-line
+        markdown-cycle
         markdown-outdent-or-delete
         nxml-electric-slash
         org-cycle

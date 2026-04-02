@@ -141,6 +141,27 @@
          (buf-name (format "make:%s:%s" (kwrooijen/project-name) target)))
     (pop-to-buffer (make-comint-in-buffer buf-name nil "make" nil target))))
 
+(defun kwrooijen/rake--targets (rakefile)
+  "Parse RAKEFILE and return a list of task names."
+  (when (file-exists-p rakefile)
+    (let (targets)
+      (with-temp-buffer
+        (call-process "rake" nil t nil "-f" rakefile "-T")
+        (goto-char (point-min))
+        (while (re-search-forward "^rake \\([^ ]+\\)" nil t)
+          (push (match-string 1) targets)))
+      (nreverse targets))))
+
+(defun kwrooijen/rake ()
+  "Select a Rakefile task via completing-read and run it in a unique buffer."
+  (interactive)
+  (let* ((default-directory (or (kwrooijen/project-root) default-directory))
+         (rakefile (expand-file-name "Rakefile" default-directory))
+         (targets (kwrooijen/rake--targets rakefile))
+         (target (completing-read "Rake: " targets nil t))
+         (buf-name (format "rake:%s:%s" (kwrooijen/project-name) target)))
+    (pop-to-buffer (make-comint-in-buffer buf-name nil "rake" nil target))))
+
 (defmacro comment (&rest _))
 #+END_SRC
 
@@ -171,4 +192,23 @@
       (goto-char start)
       (while (re-search-forward "^[[:space:]]*\n" end t)
         (replace-match "")))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun bw-unlock ()
+  "Unlock Bitwarden and set BW_SESSION in Emacs process environment."
+  (interactive)
+  (let* ((password (read-passwd "Bitwarden Master Password: "))
+         (session (string-trim
+                   (with-temp-buffer
+                     (let ((process-environment
+                            (cons (concat "BW_MASTER_PASS=" password)
+                                  process-environment)))
+                       (call-process "bw" nil t nil
+                                     "unlock" "--raw"
+                                     "--passwordenv" "BW_MASTER_PASS"))
+                     (buffer-string)))))
+    (setenv "BW_SESSION" session)
+    (message "BW_SESSION set")))
+
 #+END_SRC

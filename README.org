@@ -1,14 +1,3 @@
-* Kwrooijen Emacs Configuration
-
-My personal Emacs configuration. This README is compiled using the
-[[https://github.com/kwrooijen/wisdom][Wisdom Emacs configuration framework]]. You can find all the separate
-org files in the org/ directory. Visuals inspired by [[https://github.com/doomemacs/doomemacs][Doom Emacs]] and
-[[https://github.com/rougier/nano-emacs][Nano Emacs]].
-
-[[https://raw.githubusercontent.com/kwrooijen/emacs.d/refs/heads/master/emacs.png]]
-
-* Emacs Configuration Aggregation
-
 #+STARTUP: showeverything
 #+PRIORITY: 0
 
@@ -237,6 +226,18 @@ suppress their messages. Restart is required for this to take effect.
   :group 'kwrooijen)
 #+END_SRC
 
+** Disable Scroll Wheel
+
+#+BEGIN_SRC emacs-lisp
+(global-unset-key [wheel-up])
+(global-unset-key [wheel-down])
+(global-unset-key [double-wheel-up])
+(global-unset-key [double-wheel-down])
+(global-unset-key [triple-wheel-up])
+(global-unset-key [triple-wheel-down])
+(mouse-wheel-mode -1)
+#+END_SRC
+
 ** Disable F-keys
 #+BEGIN_SRC emacs-lisp
 (dotimes (i 12)
@@ -339,7 +340,8 @@ modes. These keys are configurable through the variables
   "t" '(:ignore t :which-key "Toggle"))
 
 (kwrooijen/leader
-  "c m" '(kwrooijen/make :which-key "Make"))
+  "c m" '(kwrooijen/make :which-key "Make")
+  "c r" '(kwrooijen/rake :which-key "Rake"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
@@ -690,6 +692,27 @@ type (by default) `xs`. Configurable through
          (buf-name (format "make:%s:%s" (kwrooijen/project-name) target)))
     (pop-to-buffer (make-comint-in-buffer buf-name nil "make" nil target))))
 
+(defun kwrooijen/rake--targets (rakefile)
+  "Parse RAKEFILE and return a list of task names."
+  (when (file-exists-p rakefile)
+    (let (targets)
+      (with-temp-buffer
+        (call-process "rake" nil t nil "-f" rakefile "-T")
+        (goto-char (point-min))
+        (while (re-search-forward "^rake \\([^ ]+\\)" nil t)
+          (push (match-string 1) targets)))
+      (nreverse targets))))
+
+(defun kwrooijen/rake ()
+  "Select a Rakefile task via completing-read and run it in a unique buffer."
+  (interactive)
+  (let* ((default-directory (or (kwrooijen/project-root) default-directory))
+         (rakefile (expand-file-name "Rakefile" default-directory))
+         (targets (kwrooijen/rake--targets rakefile))
+         (target (completing-read "Rake: " targets nil t))
+         (buf-name (format "rake:%s:%s" (kwrooijen/project-name) target)))
+    (pop-to-buffer (make-comint-in-buffer buf-name nil "rake" nil target))))
+
 (defmacro comment (&rest _))
 #+END_SRC
 
@@ -720,6 +743,25 @@ type (by default) `xs`. Configurable through
       (goto-char start)
       (while (re-search-forward "^[[:space:]]*\n" end t)
         (replace-match "")))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun bw-unlock ()
+  "Unlock Bitwarden and set BW_SESSION in Emacs process environment."
+  (interactive)
+  (let* ((password (read-passwd "Bitwarden Master Password: "))
+         (session (string-trim
+                   (with-temp-buffer
+                     (let ((process-environment
+                            (cons (concat "BW_MASTER_PASS=" password)
+                                  process-environment)))
+                       (call-process "bw" nil t nil
+                                     "unlock" "--raw"
+                                     "--passwordenv" "BW_MASTER_PASS"))
+                     (buffer-string)))))
+    (setenv "BW_SESSION" session)
+    (message "BW_SESSION set")))
+
 #+END_SRC
 
 #+PRIORITY: 3
@@ -3173,12 +3215,6 @@ Remap ruby-mode to ruby-ts-mode to make use of Treesitter.
     (async-shell-command (concat "rails routes | grep " search-string))))
 #+END_SRC
 
-** Bindings :general:
-#+BEGIN_SRC emacs-lisp
-(kwrooijen/leader
-  "c r c" 'kwrooijen/rails-create-stimulus-controller)
-#+END_SRC
-
 
 * Inferior Ruby
 :PROPERTIES:
@@ -3728,7 +3764,7 @@ If not a file buffer, return the buffer name."
 * Agent Shell Manager
 :PROPERTIES:
 :PACKAGE:  agent-shell-manager
-:STRAIGHT: (agent-shell-manager :host github :repo "jethrokuan/agent-shell-manager")
+:STRAIGHT: (agent-shell-manager :host github :repo "kwrooijen/agent-shell-manager" :branch "feature/status-change-hook")
 :END:
 
 ** Custom :custom:
@@ -3854,7 +3890,7 @@ Prepends ! when any agent is waiting for permission."
              (selected (completing-read "Switch to agent: " collection nil t))
              (buffer (cdr (assoc selected candidates))))
         (when buffer
-          (pop-to-buffer buffer))))))
+          (switch-to-buffer buffer))))))
 #+END_SRC
 
 ** General :general:
@@ -4267,6 +4303,21 @@ Enter Evil Insert Mode automatically when starting a Git commit.
 "gu" '(smerge-keep-upper :which-key "Merge keep upper")
 "gl" '(smerge-keep-lower :which-key "Merge keep lower")
 "ga" '(smerge-keep-all :which-key "Merge keep all"))
+#+END_SRC
+
+* Agent Shell
+:PROPERTIES:
+:PACKAGE:  agent-shell
+:STRAIGHT: t
+:END:
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(agent-shell-mcp-servers
+ '(((name . "emacs")
+    (command . "ruby")
+    (args . ("/Users/kwrooijen/.wisdom.d/mcp-server/emacs-mcp-server.rb"))
+    (env . ()))))
 #+END_SRC
 
 * Anzu
@@ -4917,6 +4968,7 @@ Signals an error if the edit-indirect buffer has unsaved changes."
     (define-key map (kbd "C-o") #'kwrooijen/org-todo-find--clock-out)
     (define-key map (kbd "C-p") #'kwrooijen/org-todo-find--clock-pause)
     (define-key map (kbd "C-s") #'kwrooijen/org-todo-find--open-shell)
+    (define-key map (kbd "C-l") #'kwrooijen/org-todo-find--open-shell)
     (define-key map (kbd "<tab>") #'kwrooijen/org-todo-find--preview)
     map)
   "Keymap active during `kwrooijen/org-todo-find-and-edit'.")
@@ -4948,13 +5000,13 @@ Press C-t to change the TODO state of the selected entry."
                         (paused (and id (not clocked) (member id org-clock-multi-paused) t))
                         (marker (point-marker))
                         (project (org-entry-get nil "PROJECT" t))
-                        (worktree (org-entry-get nil "WORKTREE"))
+                        (branch (org-entry-get nil "BRANCH"))
                         (agent-status
-                         (if (and project worktree)
+                         (if (and project branch)
                              (let* ((wt-path (expand-file-name
-                                              worktree
+                                              (org-agent-shell--derive-worktree-name project branch)
                                               (file-name-concat (expand-file-name project)
-                                                                agent-shell-worktree--subdirectory)))
+                                                                ".agent-shell" "worktrees")))
                                     (shell-buf (org-agent-shell--find-shell-buffer wt-path)))
                                (if shell-buf
                                    (agent-shell-manager--get-combined-status shell-buf)
@@ -6276,6 +6328,23 @@ No delays
  kwrooijen/consult-ripgrep-symbol-at-point
  consult-notes-search-in-all-notes
  :preview-key "TAB")
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/consult-buffer-pair-modified (buffer)
+  "Like `consult--buffer-pair' but propertize modified file buffers with the error face."
+  (let ((name (buffer-name buffer)))
+    (cons (if (and (buffer-modified-p buffer)
+                   (buffer-file-name buffer))
+              (propertize name 'face 'embellish-theme-error-fg-face)
+            name)
+          buffer)))
+
+(setq consult-source-buffer
+      (plist-put consult-source-buffer :items
+                 (lambda ()
+                   (consult--buffer-query :sort 'visibility
+                                          :as #'kwrooijen/consult-buffer-pair-modified))))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp

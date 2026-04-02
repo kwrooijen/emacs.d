@@ -187,7 +187,7 @@ Prepends ! when any agent is waiting for permission."
              (selected (completing-read "Switch to agent: " collection nil t))
              (buffer (cdr (assoc selected candidates))))
         (when buffer
-          (pop-to-buffer buffer))))))
+          (switch-to-buffer buffer))))))
 #+END_SRC
 
 ** General :general:

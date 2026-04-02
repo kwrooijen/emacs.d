@@ -21,6 +21,18 @@
   :group 'kwrooijen)
 #+END_SRC
 
+** Disable Scroll Wheel
+
+#+BEGIN_SRC emacs-lisp
+(global-unset-key [wheel-up])
+(global-unset-key [wheel-down])
+(global-unset-key [double-wheel-up])
+(global-unset-key [double-wheel-down])
+(global-unset-key [triple-wheel-up])
+(global-unset-key [triple-wheel-down])
+(mouse-wheel-mode -1)
+#+END_SRC
+
 ** Disable F-keys
 #+BEGIN_SRC emacs-lisp
 (dotimes (i 12)
@@ -123,7 +135,8 @@ modes. These keys are configurable through the variables
   "t" '(:ignore t :which-key "Toggle"))
 
 (kwrooijen/leader
-  "c m" '(kwrooijen/make :which-key "Make"))
+  "c m" '(kwrooijen/make :which-key "Make")
+  "c r" '(kwrooijen/rake :which-key "Rake"))
 
 (general-create-definer kwrooijen/local-leader
   :keymaps kwrooijen/system-leader-keymaps
