@@ -29,8 +29,7 @@
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/tab ()
   (interactive)
-  (or (copilot-accept-completion)
-      (indent-for-tab-command)))
+  (indent-for-tab-command))
 #+END_SRC
 
 #+BEGIN_SRC emacs-lisp
@@ -211,4 +210,27 @@
     (setenv "BW_SESSION" session)
     (message "BW_SESSION set")))
 
+#+END_SRC
+
+
+#+BEGIN_SRC emacs-lisp
+(defun eval-math-line ()
+  "Evaluate the expression before the first '=' on the current line."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (let* ((bol (point))
+           (eol (line-end-position))
+           (line (buffer-substring-no-properties bol eol))
+           (expr (string-trim (car (split-string line "="))))
+           (result
+            (string-trim
+             (with-temp-buffer
+               (call-process "python3" nil t nil
+                             "-c"
+                             (format "print(%s)" expr))
+               (buffer-string)))))
+      (delete-region (+ bol (length expr)) eol)
+      (goto-char (+ bol (length expr)))
+      (insert " = " result))))
 #+END_SRC
