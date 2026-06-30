@@ -1,411 +1,411 @@
 [
-  {
-    "name": "get_work_todos",
-    "description": "Get all org-mode TODO items tagged :work: with states TODO, IN PROGRESS, or WAITING. Returns a JSON array of objects with heading, state, tags, file, properties, and parent_properties fields. Use this to get an overview of all active work tickets across all client files. Parent properties include CLIENT and ASANA_PROJECT which identify which client/project a ticket belongs to.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "get_work_todo_files",
-    "description": "List org files in the ~/Documents/org/todos/client/ directory. Returns a JSON array of absolute file paths. Each file represents a client and contains project headings with TODO tickets underneath.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "get_active_clocks",
-    "description": "Get all currently running org-clock-multi clocks. Returns a JSON array of objects with clock_id, heading, file, elapsed_minutes, properties, and parent_properties (including CLIENT). Use this to check what is currently being tracked and detect conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "clock_in",
-    "description": "Clock in a heading using org-clock-multi. Adds to the list of active clocks without affecting other running clocks. Multiple clocks can run simultaneously. Use get_active_clocks first to check for conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the heading"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "clock_out",
-    "description": "Clock out a heading using org-clock-multi. Writes a LOGBOOK clock entry (with start time, end time, and duration) and removes from active clocks. The heading must currently be clocked in.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the heading"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "get_work_todo",
-    "description": "Get full details of a single work TODO item. Returns JSON with: heading, state, tags, file, properties (own :PROPERTIES: drawer), parent_properties (from parent heading, includes CLIENT/ASANA_PROJECT/PROJECT), body (text content including #+BEGIN_QUOTE ticket block), subtasks (child headings with state), and logbook (clock entries with start, end, duration). Identify the todo by its file path and heading text.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "edit_work_todo",
-    "description": "Edit a work TODO item. Can change state (TODO, IN PROGRESS, WAITING, DONE, CANCELLED), set or delete org properties, or replace the full body content. All optional parameters can be combined in a single call. Identify the todo by its file path and heading text.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "state": {
-          "type": "string",
-          "description": "New TODO state. Changes the org-mode TODO keyword on the heading",
-          "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
-        },
-        "set_properties": {
-          "type": "object",
-          "description": "Key-value pairs of org properties to set or update in the :PROPERTIES: drawer (e.g. {\"ASANA_SECTION\": \"In Progress\"})",
-          "additionalProperties": { "type": "string" }
-        },
-        "delete_properties": {
-          "type": "array",
-          "description": "Names of org properties to remove from the :PROPERTIES: drawer",
-          "items": { "type": "string" }
-        },
-        "body": {
-          "type": "string",
-          "description": "New body content to replace the entire body (text between properties drawer and sub-headings). Use edit_work_todo_ticket_description instead to only update the ticket quote block"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "create_work_todo",
-    "description": "Create a new TODO heading under a parent heading (e.g. a client project). The new heading is inserted as a child (one level deeper) at the end of the parent's subtree. It inherits :ASANA_PROJECT:, :PROJECT:, and tags from the parent via org inheritance. State defaults to TODO if not specified. Identify the parent by its file path and heading text.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the parent heading"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the parent (e.g. the client/project heading)"
-        },
-        "title": {
-          "type": "string",
-          "description": "Title for the new TODO heading"
-        },
-        "state": {
-          "type": "string",
-          "description": "TODO state (default: TODO)",
-          "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
-        },
-        "body": {
-          "type": "string",
-          "description": "Optional initial body text for the heading"
-        }
-      },
-      "required": ["file", "heading", "title"]
-    }
-  },
-  {
-    "name": "edit_work_todo_ticket_description",
-    "description": "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. The ticket block serves two purposes: it reflects the Asana task description (pushed via asana_push), and it is automatically sent to agent-shell LLMs as the task description when launching agents. Existing body content outside the quote block is preserved.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "body": {
-          "type": "string",
-          "description": "Content for the #+BEGIN_QUOTE ticket block"
-        }
-      },
-      "required": ["file", "heading", "body"]
-    }
-  },
-  {
-    "name": "edit_work_todo_implementation",
-    "description": "Set or replace the #+BEGIN_QUOTE implementation block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. This block contains implementation details that are automatically sent to agent-shell LLMs via ticket.org, but are NOT pushed to Asana. Existing body content outside the quote block is preserved.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "body": {
-          "type": "string",
-          "description": "Content for the #+BEGIN_QUOTE implementation block"
-        }
-      },
-      "required": ["file", "heading", "body"]
-    }
-  },
-  {
-    "name": "asana_push",
-    "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_ticket_description to set the ticket description before pushing.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_set_branch",
-    "description": "Set the :BRANCH: property on an org TODO heading for agent-shell. You must provide a concise, logical kebab-case branch slug (max 20 chars) that captures the essence of the task. The Asana ticket ID is automatically prefixed when available (e.g. branch 'sentry-errors' becomes 'feature/1213416506379504-sentry-errors').",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "branch": {
-          "type": "string",
-          "description": "A concise, logical kebab-case slug (max 20 chars) that captures the essence of the task (e.g. 'sentry-errors', 'fix-login-flow'). The Asana ID and 'feature/' prefix are added automatically."
-        }
-      },
-      "required": ["file", "heading", "branch"]
-    }
-  },
-  {
-    "name": "agent_launch",
-    "description": "Launch an agent-shell workspace for a specific org TODO ticket. Creates a git worktree, writes ticket.org from the heading body, and starts an agent-shell (Claude Code). Requires :PROJECT: (inherited) and :BRANCH: properties. Use agent_set_branch first if :BRANCH: is not set.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_list",
-    "description": "List all ticket-managed agent-shell workspaces. Returns only agents started from org TODO tickets (not manually started ones). Each entry includes heading, file, project, branch, worktree, status (Ready/Working/Waiting/Killed/Starting.../No Session), and transcript file path.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "agent_get_prompt",
-    "description": "Read the ticket.org prompt file for an agent workspace. Returns the content that was sent to the agent when it was launched.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_get_transcript",
-    "description": "Read the transcript of an agent-shell session. Returns the markdown transcript including messages and tool calls. Falls back to most recent transcript file on disk if the shell is no longer running.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_get_tail",
-    "description": "Get the last N lines from a running agent-shell buffer. Useful for quickly checking what the agent is doing or what permission it's waiting for, without reading the full transcript. Returns the buffer tail and current agent status. Defaults to 80 lines.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "n": {
-          "type": "integer",
-          "description": "Number of lines to return from the end of the buffer. Default: 80."
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_get_diff",
-    "description": "Get the git diff for an agent's worktree branch compared to its base branch. Returns both a stat summary and the full diff output.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_send_message",
-    "description": "Send a message to a running agent-shell session. The agent must be in Ready or Waiting state (not Working/Busy). Use agent_list first to check the agent's status. If the agent is busy, wait and retry later. The message is submitted as user input to the agent's conversation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        },
-        "message": {
-          "type": "string",
-          "description": "The message to send to the agent"
-        }
-      },
-      "required": ["file", "heading", "message"]
-    }
-  },
-  {
-    "name": "agent_resend",
-    "description": "Rewrite ticket.org from the org heading body and tell the agent to re-read it. Use this after updating the ticket description with edit_work_todo_ticket_description to sync changes to the running agent. The agent must be in Ready or Waiting state.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the org file containing the todo"
-        },
-        "heading": {
-          "type": "string",
-          "description": "Exact heading text of the todo (without TODO state prefix or tags)"
-        }
-      },
-      "required": ["file", "heading"]
-    }
-  },
-  {
-    "name": "agent_notifications_list",
-    "description": "List all queued agent notifications without removing them. Returns a JSON array of notification objects with message, timestamp, new_status, heading, and file fields. Use this to peek at what's queued before deciding whether to pop.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "agent_notifications_pop",
-    "description": "Pop notification(s) from the queue. By default pops the oldest single notification. Set all=true to pop and return all notifications at once. Returns the popped notification(s) as JSON.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "all": {
-          "type": "boolean",
-          "description": "When true, pop all notifications at once. Default: false (pop one)."
-        }
-      }
-    }
-  },
-  {
-    "name": "agent_notifications_pause",
-    "description": "Pause the idle auto-polling of the notification queue. Use this when you're in the middle of a conversation and don't want to be prompted about queued notifications. Use agent_notifications_resume to re-enable polling.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "agent_notifications_resume",
-    "description": "Resume the idle auto-polling of the notification queue after it was paused. Polling will trigger when you've been idle for the configured threshold (default 30 seconds) and there are queued notifications.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {}
-    }
-  }
+  // {
+  //   "name": "get_work_todos",
+  //   "description": "Get all org-mode TODO items tagged :work: with states TODO, IN PROGRESS, or WAITING. Returns a JSON array of objects with heading, state, tags, file, properties, and parent_properties fields. Use this to get an overview of all active work tickets across all client files. Parent properties include CLIENT and ASANA_PROJECT which identify which client/project a ticket belongs to.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "get_work_todo_files",
+  //   "description": "List org files in the ~/Documents/org/todos/client/ directory. Returns a JSON array of absolute file paths. Each file represents a client and contains project headings with TODO tickets underneath.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "get_active_clocks",
+  //   "description": "Get all currently running org-clock-multi clocks. Returns a JSON array of objects with clock_id, heading, file, elapsed_minutes, properties, and parent_properties (including CLIENT). Use this to check what is currently being tracked and detect conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "clock_in",
+  //   "description": "Clock in a heading using org-clock-multi. Adds to the list of active clocks without affecting other running clocks. Multiple clocks can run simultaneously. Use get_active_clocks first to check for conflicts (e.g. OVERIGE and a task for the same client should not run simultaneously).",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the heading"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "clock_out",
+  //   "description": "Clock out a heading using org-clock-multi. Writes a LOGBOOK clock entry (with start time, end time, and duration) and removes from active clocks. The heading must currently be clocked in.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the heading"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "get_work_todo",
+  //   "description": "Get full details of a single work TODO item. Returns JSON with: heading, state, tags, file, properties (own :PROPERTIES: drawer), parent_properties (from parent heading, includes CLIENT/ASANA_PROJECT/PROJECT), body (text content including #+BEGIN_QUOTE ticket block), subtasks (child headings with state), and logbook (clock entries with start, end, duration). Identify the todo by its file path and heading text.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "edit_work_todo",
+  //   "description": "Edit a work TODO item. Can change state (TODO, IN PROGRESS, WAITING, DONE, CANCELLED), set or delete org properties, or replace the full body content. All optional parameters can be combined in a single call. Identify the todo by its file path and heading text.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "state": {
+  //         "type": "string",
+  //         "description": "New TODO state. Changes the org-mode TODO keyword on the heading",
+  //         "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+  //       },
+  //       "set_properties": {
+  //         "type": "object",
+  //         "description": "Key-value pairs of org properties to set or update in the :PROPERTIES: drawer (e.g. {\"ASANA_SECTION\": \"In Progress\"})",
+  //         "additionalProperties": { "type": "string" }
+  //       },
+  //       "delete_properties": {
+  //         "type": "array",
+  //         "description": "Names of org properties to remove from the :PROPERTIES: drawer",
+  //         "items": { "type": "string" }
+  //       },
+  //       "body": {
+  //         "type": "string",
+  //         "description": "New body content to replace the entire body (text between properties drawer and sub-headings). Use edit_work_todo_ticket_description instead to only update the ticket quote block"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "create_work_todo",
+  //   "description": "Create a new TODO heading under a parent heading (e.g. a client project). The new heading is inserted as a child (one level deeper) at the end of the parent's subtree. It inherits :ASANA_PROJECT:, :PROJECT:, and tags from the parent via org inheritance. State defaults to TODO if not specified. Identify the parent by its file path and heading text.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the parent heading"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the parent (e.g. the client/project heading)"
+  //       },
+  //       "title": {
+  //         "type": "string",
+  //         "description": "Title for the new TODO heading"
+  //       },
+  //       "state": {
+  //         "type": "string",
+  //         "description": "TODO state (default: TODO)",
+  //         "enum": ["TODO", "IN PROGRESS", "WAITING", "DONE", "CANCELLED"]
+  //       },
+  //       "body": {
+  //         "type": "string",
+  //         "description": "Optional initial body text for the heading"
+  //       }
+  //     },
+  //     "required": ["file", "heading", "title"]
+  //   }
+  // },
+  // {
+  //   "name": "edit_work_todo_ticket_description",
+  //   "description": "Set or replace the #+BEGIN_QUOTE ticket block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. The ticket block serves two purposes: it reflects the Asana task description (pushed via asana_push), and it is automatically sent to agent-shell LLMs as the task description when launching agents. Existing body content outside the quote block is preserved.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "body": {
+  //         "type": "string",
+  //         "description": "Content for the #+BEGIN_QUOTE ticket block"
+  //       }
+  //     },
+  //     "required": ["file", "heading", "body"]
+  //   }
+  // },
+  // {
+  //   "name": "edit_work_todo_implementation",
+  //   "description": "Set or replace the #+BEGIN_QUOTE implementation block on a TODO heading. Creates the block if it doesn't exist, or replaces its contents if it does. This block contains implementation details that are automatically sent to agent-shell LLMs via ticket.org, but are NOT pushed to Asana. Existing body content outside the quote block is preserved.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "body": {
+  //         "type": "string",
+  //         "description": "Content for the #+BEGIN_QUOTE implementation block"
+  //       }
+  //     },
+  //     "required": ["file", "heading", "body"]
+  //   }
+  // },
+  // {
+  //   "name": "asana_push",
+  //   "description": "Push an org TODO heading to Asana as a new task. The heading must have an inherited :ASANA_PROJECT: property and must NOT already have an :ASANA: property. Uses the heading title as the Asana task name and the #+BEGIN_QUOTE ticket block as the task description. Creates the task in Asana, adds it to the first board column (typically Backlog), and sets :ASANA: (task GID) and :ASANA_SECTION: properties on the heading. Use edit_work_todo_ticket_description to set the ticket description before pushing.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_set_branch",
+  //   "description": "Set the :BRANCH: property on an org TODO heading for agent-shell. You must provide a concise, logical kebab-case branch slug (max 20 chars) that captures the essence of the task. The Asana ticket ID is automatically prefixed when available (e.g. branch 'sentry-errors' becomes 'feature/1213416506379504-sentry-errors').",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "branch": {
+  //         "type": "string",
+  //         "description": "A concise, logical kebab-case slug (max 20 chars) that captures the essence of the task (e.g. 'sentry-errors', 'fix-login-flow'). The Asana ID and 'feature/' prefix are added automatically."
+  //       }
+  //     },
+  //     "required": ["file", "heading", "branch"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_launch",
+  //   "description": "Launch an agent-shell workspace for a specific org TODO ticket. Creates a git worktree, writes ticket.org from the heading body, and starts an agent-shell (Claude Code). Requires :PROJECT: (inherited) and :BRANCH: properties. Use agent_set_branch first if :BRANCH: is not set.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_list",
+  //   "description": "List all ticket-managed agent-shell workspaces. Returns only agents started from org TODO tickets (not manually started ones). Each entry includes heading, file, project, branch, worktree, status (Ready/Working/Waiting/Killed/Starting.../No Session), and transcript file path.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "agent_get_prompt",
+  //   "description": "Read the ticket.org prompt file for an agent workspace. Returns the content that was sent to the agent when it was launched.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_get_transcript",
+  //   "description": "Read the transcript of an agent-shell session. Returns the markdown transcript including messages and tool calls. Falls back to most recent transcript file on disk if the shell is no longer running.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_get_tail",
+  //   "description": "Get the last N lines from a running agent-shell buffer. Useful for quickly checking what the agent is doing or what permission it's waiting for, without reading the full transcript. Returns the buffer tail and current agent status. Defaults to 80 lines.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "n": {
+  //         "type": "integer",
+  //         "description": "Number of lines to return from the end of the buffer. Default: 80."
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_get_diff",
+  //   "description": "Get the git diff for an agent's worktree branch compared to its base branch. Returns both a stat summary and the full diff output.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_send_message",
+  //   "description": "Send a message to a running agent-shell session. The agent must be in Ready or Waiting state (not Working/Busy). Use agent_list first to check the agent's status. If the agent is busy, wait and retry later. The message is submitted as user input to the agent's conversation.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       },
+  //       "message": {
+  //         "type": "string",
+  //         "description": "The message to send to the agent"
+  //       }
+  //     },
+  //     "required": ["file", "heading", "message"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_resend",
+  //   "description": "Rewrite ticket.org from the org heading body and tell the agent to re-read it. Use this after updating the ticket description with edit_work_todo_ticket_description to sync changes to the running agent. The agent must be in Ready or Waiting state.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "file": {
+  //         "type": "string",
+  //         "description": "Absolute path to the org file containing the todo"
+  //       },
+  //       "heading": {
+  //         "type": "string",
+  //         "description": "Exact heading text of the todo (without TODO state prefix or tags)"
+  //       }
+  //     },
+  //     "required": ["file", "heading"]
+  //   }
+  // },
+  // {
+  //   "name": "agent_notifications_list",
+  //   "description": "List all queued agent notifications without removing them. Returns a JSON array of notification objects with message, timestamp, new_status, heading, and file fields. Use this to peek at what's queued before deciding whether to pop.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "agent_notifications_pop",
+  //   "description": "Pop notification(s) from the queue. By default pops the oldest single notification. Set all=true to pop and return all notifications at once. Returns the popped notification(s) as JSON.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {
+  //       "all": {
+  //         "type": "boolean",
+  //         "description": "When true, pop all notifications at once. Default: false (pop one)."
+  //       }
+  //     }
+  //   }
+  // },
+  // {
+  //   "name": "agent_notifications_pause",
+  //   "description": "Pause the idle auto-polling of the notification queue. Use this when you're in the middle of a conversation and don't want to be prompted about queued notifications. Use agent_notifications_resume to re-enable polling.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // },
+  // {
+  //   "name": "agent_notifications_resume",
+  //   "description": "Resume the idle auto-polling of the notification queue after it was paused. Polling will trigger when you've been idle for the configured threshold (default 30 seconds) and there are queued notifications.",
+  //   "inputSchema": {
+  //     "type": "object",
+  //     "properties": {}
+  //   }
+  // }
 ]

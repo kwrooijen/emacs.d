@@ -231,6 +231,7 @@
 (setq mc/cmds-to-run-once
       '(
         agent-shell-previous-item
+        agent-shell-quote-region
         beginning-of-buffer
         copilot-mode
         evil-record-macro

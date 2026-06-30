@@ -60,8 +60,10 @@ enabled, and continuously as new buffers become visible."
 (defvar-local embellish-subwindow--needs-style nil
   "Buffer-local flag indicating this buffer needs subwindow styling.")
 
-(defvar-local embellish-subwindow--styled nil
-  "Buffer-local flag indicating subwindow styling has been applied.")
+(defvar-local embellish-subwindow--faces-applied nil
+  "Buffer-local flag indicating face remaps have been applied.
+Face remaps are buffer-local and only need to be done once.
+Window fringes are always re-applied since they are per-window.")
 
 (defun embellish-subwindow--bg ()
   "Return the background color for subwindow styling, or nil.
@@ -71,23 +73,25 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
       bg)))
 
 (defun embellish-subwindow--style (win)
-  "Apply subwindow styling to window WIN."
+  "Apply subwindow styling to window WIN.
+Fringes are always set (they are per-window and lost on window
+recreation).  Face remaps are buffer-local and applied only once."
   (when-let* ((bg (and embellish-subwindow--needs-style
-                       (not embellish-subwindow--styled)
                        (embellish-subwindow--bg))))
     (set-window-fringes win
                         embellish-subwindow-fringe-width
                         embellish-subwindow-fringe-width)
-    (setq header-line-format " ")
-    (face-remap-add-relative 'fringe
-                              :foreground bg
-                              :background bg)
-    (face-remap-add-relative 'header-line
-                              :background bg
-                              :height embellish-subwindow-header-height)
-    (face-remap-add-relative 'default
-                              :background bg)
-    (setq embellish-subwindow--styled t)))
+    (unless embellish-subwindow--faces-applied
+      (setq header-line-format " ")
+      (face-remap-add-relative 'fringe
+                                :foreground bg
+                                :background bg)
+      (face-remap-add-relative 'header-line
+                                :background bg
+                                :height embellish-subwindow-header-height)
+      (face-remap-add-relative 'default
+                                :background bg)
+      (setq embellish-subwindow--faces-applied t))))
 
 (defun embellish-subwindow--setup ()
   "Mark the current buffer as needing subwindow styling."
@@ -113,6 +117,21 @@ Reads from the `:background' attribute of `embellish-subwindow-face'."
                  (embellish-subwindow--buffer-match-p (buffer-name)))
         (setq embellish-subwindow--needs-style t))
       (embellish-subwindow--style win))))
+
+;;;###autoload
+(defun embellish-subwindow-refresh ()
+  "Force re-apply subwindow styling on all visible windows.
+Resets face remaps and re-applies everything from scratch.
+Use this to fix windows that missed their initial styling."
+  (interactive)
+  (dolist (win (window-list))
+    (with-current-buffer (window-buffer win)
+      (when (or embellish-subwindow--needs-style
+                embellish-subwindow--faces-applied
+                (embellish-subwindow--buffer-match-p (buffer-name)))
+        (setq embellish-subwindow--needs-style t)
+        (setq embellish-subwindow--faces-applied nil)
+        (embellish-subwindow--style win)))))
 
 (defun embellish-subwindow--minibuffer-hook ()
   "Apply subwindow styling to the minibuffer."

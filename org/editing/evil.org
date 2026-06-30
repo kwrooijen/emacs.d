@@ -17,17 +17,16 @@
 
 #+BEGIN_SRC emacs-lisp
 (evil-mode 1)
+;; Depth -90 ensures this runs before other minibuffer-setup-hook
+;; entries (dimmer, hl-line, embellish) so an error in a later hook
+;; can't prevent evil-insert-state from executing.
+;; (add-hook 'minibuffer-setup-hook #'evil-insert-state -90)
 #+END_SRC
 
 Recenter screen when searching forward / backwards
 #+BEGIN_SRC emacs-lisp
 (advice-add 'evil-search-next :after #'kwrooijen/recenter)
 (advice-add 'evil-search-previous :after #'kwrooijen/recenter)
-#+END_SRC
-
-** Hook :hook:
-#+BEGIN_SRC emacs-lisp
-(minibuffer-setup . #'evil-insert-state)
 #+END_SRC
 
 ** Bindings :general:
