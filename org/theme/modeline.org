@@ -126,11 +126,63 @@
       (kwrooijen/modeline-r num-str face))))
 #+END_SRC
 
+The Git branch is cached per buffer. =magit-get-current-branch= runs a
+=git= process, which took 5-15 ms. Running it on every redraw of the
+modeline made every keystroke slower. An idle timer looks the branch up
+again when the cache is older than 10 seconds, and a Magit refresh
+expires all caches. The first lookup in a buffer happens in the segment
+itself.
+
+#+BEGIN_SRC emacs-lisp
+(defvar-local kwrooijen/modeline--git-branch 'unset
+  "Cached Git branch of this buffer, or `unset' before the first lookup.")
+
+(defvar-local kwrooijen/modeline--git-branch-updated 0
+  "The `float-time' of the last lookup of `kwrooijen/modeline--git-branch'.")
+
+(defvar kwrooijen/modeline--git-branch-timer nil
+  "Idle timer that refreshes the cached Git branches.")
+
+(defun kwrooijen/modeline--update-git-branch ()
+  "Look up the Git branch of the current buffer and cache it.
+Return non-nil if the branch changed."
+  (let ((branch (and (fboundp 'magit-get-current-branch)
+                     (not (file-remote-p default-directory))
+                     (ignore-errors (magit-get-current-branch)))))
+    (setq kwrooijen/modeline--git-branch-updated (float-time))
+    (unless (equal branch kwrooijen/modeline--git-branch)
+      (setq kwrooijen/modeline--git-branch branch)
+      t)))
+
+(defun kwrooijen/modeline--refresh-git-branches ()
+  "Look up the Git branch of the visible buffers when their cache is stale."
+  (dolist (buffer (delete-dups (mapcar #'window-buffer (window-list nil 'no-mini))))
+    (with-current-buffer buffer
+      (when (and (> (- (float-time) kwrooijen/modeline--git-branch-updated) 10)
+                 (kwrooijen/modeline--update-git-branch))
+        (force-mode-line-update)))))
+
+(defun kwrooijen/modeline--expire-git-branches (&rest _)
+  "Look up the Git branch of every buffer again when Emacs is idle."
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (local-variable-p 'kwrooijen/modeline--git-branch-updated)
+        (setq kwrooijen/modeline--git-branch-updated 0)))))
+
+(add-hook 'magit-post-refresh-hook #'kwrooijen/modeline--expire-git-branches)
+
+(when (timerp kwrooijen/modeline--git-branch-timer)
+  (cancel-timer kwrooijen/modeline--git-branch-timer))
+(setq kwrooijen/modeline--git-branch-timer
+      (run-with-idle-timer 1 t #'kwrooijen/modeline--refresh-git-branches))
+#+END_SRC
+
 #+BEGIN_SRC emacs-lisp
 (defun kwrooijen/modeline-git-branch ()
   ""
-  (when-let ((branch (and (fboundp 'magit-get-current-branch)
-                          (magit-get-current-branch))))
+  (when (eq kwrooijen/modeline--git-branch 'unset)
+    (kwrooijen/modeline--update-git-branch))
+  (when-let ((branch kwrooijen/modeline--git-branch))
     (kwrooijen/modeline-r
      (format "   %s" branch)
      'kwrooijen/modeline-git-branch)))
@@ -170,7 +222,7 @@
     (<= 1 day-of-week 5)))
 
 (defun kwrooijen/clocked-today ()
-  (let ((clocked-today (kwrooijen/org-clock-clocked-today)))
+  (let ((clocked-today (kwrooijen/org-clock-clocked-today-cached)))
     (format "%d:%02d"
             (/ (floor clocked-today) 60)
             (% (floor clocked-today) 60))))
@@ -179,7 +231,7 @@
   (format "%d％"
           (round
            (* 100.0
-              (/ (float (kwrooijen/org-clock-clocked-today))
+              (/ (float (kwrooijen/org-clock-clocked-today-cached))
                  480.0)))))
 
 

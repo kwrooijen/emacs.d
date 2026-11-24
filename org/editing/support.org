@@ -129,6 +129,22 @@ strings?). Making it safe to enable in programming modes.
             (add-hook 'corfu-popup-close-hook #'kwrooijen/copilot-maybe-enable nil t)))
 #+END_SRC
 
+No automatic completion popup in Org (and modes derived from it, like
+essay-mode). While writing prose it pops up whenever you pause mid-word.
+Completion is still available on demand with =M-e= or =C-M-i=.
+
+=corfu-mode= reads =corfu-auto= once, when it is enabled.
+=global-corfu-mode= enables it after the major mode hooks have run, so a
+buffer-local value set in =org-mode-hook= is in time.
+
+#+BEGIN_SRC emacs-lisp
+(defun kwrooijen/corfu-disable-auto ()
+  "Don't show the completion popup automatically in this buffer."
+  (setq-local corfu-auto nil))
+
+(add-hook 'org-mode-hook #'kwrooijen/corfu-disable-auto)
+#+END_SRC
+
 
 ** Custom :custom:
 #+BEGIN_SRC emacs-lisp

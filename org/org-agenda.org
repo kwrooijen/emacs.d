@@ -848,19 +848,93 @@ Note: Clock start times are stored in minutes since epoch."
                                      (max clock-start day-start)))))))))
     (when (> total 0) total)))
 
+(defun kwrooijen/org-clock--closed-clocked-today ()
+  "Return minutes of finished clock entries today across `org-agenda-files'.
+This sums every agenda file, which is too slow to do on every redisplay.
+The modeline uses `kwrooijen/org-clock-clocked-today-cached' instead."
+  (let* ((start (float-time (kwrooijen/org-clock--today-start)))
+         (end   (+ start 86400))
+         (minutes 0))
+    (dolist (file (org-agenda-files) minutes)
+      (with-current-buffer (find-file-noselect file)
+        (setq minutes (+ minutes (org-clock-sum start end)))))))
+
 (defun kwrooijen/org-clock-clocked-today (&optional as-duration)
   "Return total time clocked today across `org-agenda-files`.
 If AS-DURATION is non-nil, return an Org duration string."
-  (let* ((start (float-time (kwrooijen/org-clock--today-start)))
-         (end   (+ start 86400))
-         (minutes (or (kwrooijen/org-clock--open-clocked-today) 0)))
-    (dolist (file (org-agenda-files))
-      (with-current-buffer (find-file-noselect file)
-        (setq minutes
-              (+ minutes (org-clock-sum start end)))))
+  (let ((minutes (+ (or (kwrooijen/org-clock--open-clocked-today) 0)
+                    (kwrooijen/org-clock--closed-clocked-today))))
     (if as-duration
         (org-duration-from-minutes minutes)
       minutes)))
+#+END_SRC
+
+The modeline shows the time clocked today. The modeline is redrawn on
+nearly every keystroke, and summing the agenda files took about 20 ms
+per call. The modeline made four calls per redraw, which cost about
+75 ms and 3 MB of garbage per window on every keystroke.
+
+So the modeline uses a cached total. Running clocks are still counted
+live, because that is cheap. Only the finished clock entries are cached.
+An idle timer refreshes them when Emacs is idle: after a clock changes,
+after an Org file is saved, and at least once a minute.
+
+#+BEGIN_SRC emacs-lisp
+(defvar kwrooijen/org-clock--closed-today-cache nil
+  "Cached (DAY . MINUTES) of the finished clock entries of today.
+DAY is the value of `kwrooijen/org-clock--today-start' when it was
+computed, so a cache from yesterday is not used.")
+
+(defvar kwrooijen/org-clock--closed-today-updated 0
+  "The `float-time' of the last refresh of the clocked time cache.")
+
+(defvar kwrooijen/org-clock--closed-today-dirty t
+  "Non-nil when the clocked time cache must be refreshed.")
+
+(defvar kwrooijen/org-clock--closed-today-timer nil
+  "Idle timer that refreshes the clocked time cache.")
+
+(defun kwrooijen/org-clock-clocked-today-cached ()
+  "Return the minutes clocked today, cheap enough for the modeline.
+Like `kwrooijen/org-clock-clocked-today', but the finished clock entries
+come from a cache that `kwrooijen/org-clock--refresh-closed-today'
+fills when Emacs is idle."
+  (let ((cache kwrooijen/org-clock--closed-today-cache))
+    (+ (or (kwrooijen/org-clock--open-clocked-today) 0)
+       (if (equal (car cache) (kwrooijen/org-clock--today-start))
+           (cdr cache)
+         0))))
+
+(defun kwrooijen/org-clock--mark-closed-today-dirty (&rest _)
+  "Refresh the clocked time cache the next time Emacs is idle."
+  (setq kwrooijen/org-clock--closed-today-dirty t))
+
+(defun kwrooijen/org-clock--mark-closed-today-dirty-after-save ()
+  "Refresh the clocked time cache after an Org file is saved."
+  (when (derived-mode-p 'org-mode)
+    (kwrooijen/org-clock--mark-closed-today-dirty)))
+
+(defun kwrooijen/org-clock--refresh-closed-today ()
+  "Refresh the clocked time cache when it is stale."
+  (let ((day (kwrooijen/org-clock--today-start)))
+    (when (or kwrooijen/org-clock--closed-today-dirty
+              (not (equal (car kwrooijen/org-clock--closed-today-cache) day))
+              (> (- (float-time) kwrooijen/org-clock--closed-today-updated) 60))
+      (setq kwrooijen/org-clock--closed-today-dirty nil
+            kwrooijen/org-clock--closed-today-updated (float-time))
+      (with-demoted-errors "Clocked time: %S"
+        (let ((new (cons day (kwrooijen/org-clock--closed-clocked-today))))
+          (unless (equal new kwrooijen/org-clock--closed-today-cache)
+            (setq kwrooijen/org-clock--closed-today-cache new)
+            (force-mode-line-update t)))))))
+
+(add-hook 'after-save-hook #'kwrooijen/org-clock--mark-closed-today-dirty-after-save)
+(advice-add 'org-clock-multi-save-state :after #'kwrooijen/org-clock--mark-closed-today-dirty)
+
+(when (timerp kwrooijen/org-clock--closed-today-timer)
+  (cancel-timer kwrooijen/org-clock--closed-today-timer))
+(setq kwrooijen/org-clock--closed-today-timer
+      (run-with-idle-timer 1 t #'kwrooijen/org-clock--refresh-closed-today))
 #+END_SRC
 
 * Org Clock Data
