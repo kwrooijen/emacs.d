@@ -384,7 +384,6 @@ Org agenda files. All TODOs go in here.
 ((org-mode . kwrooijen/org-mode-setup)
  (org-mode . org-margin-mode)
  (org-babel-after-execute . org-redisplay-inline-images)
- (org-babel-after-execute . kwrooijen/jupyter-color-fix)
  (org-src-mode . evil-normal-state))
 #+END_SRC
 
