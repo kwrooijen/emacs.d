@@ -155,16 +155,12 @@
 (defun kwrooijen/special-lispy-down ()
   "lispy down is broken with copilot, so we need to override it."
   (interactive)
-  (if (copilot--overlay-visible)
-      (insert "j")
-    (special-lispy-down)))
+  (special-lispy-down))
 
 (defun kwrooijen/special-lispy-up ()
   "lispy up is broken with copilot, so we need to override it."
   (interactive)
-  (if (copilot--overlay-visible)
-      (insert "k")
-    (special-lispy-up)))
+  (special-lispy-up))
 
 (defun kwrooijen/recenter (&rest x)
   (evil-scroll-line-to-center (line-number-at-pos)))

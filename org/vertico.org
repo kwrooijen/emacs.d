@@ -67,6 +67,23 @@ Allow nested minibuffers
 ('minibuffer-setup #'vertico-repeat-save)
 #+END_SRC
 
+* Vertico Multiform
+:PROPERTIES:
+:PACKAGE:  vertico-multiform
+:AFTER:    vertico
+:END:
+
+** Config :config:
+#+BEGIN_SRC emacs-lisp
+(vertico-multiform-mode 1)
+#+END_SRC
+
+** Custom :custom:
+#+BEGIN_SRC emacs-lisp
+(vertico-multiform-commands
+      '((find-file (vertico-sort-function . vertico-sort-alpha))))
+#+END_SRC
+
 * Consult
 :PROPERTIES:
 :PACKAGE:  consult

@@ -170,6 +170,37 @@ Returns an alist of (HOUR . (:minutes M :earnings E)) sorted by hour."
       (maphash (lambda (k v) (push (cons k v) result)) table)
       (sort result (lambda (a b) (< (car a) (car b)))))))
 
+(defun org-clock-data--entry-client (entry)
+  "Return the client name for ENTRY.
+The client is the tag matching a configured rate in
+`org-clock-data-hourly-rates', else the first non-\"work\" tag, else
+\"other\"."
+  (let ((tags (plist-get entry :tags)))
+    (or (seq-find (lambda (tag) (assoc tag org-clock-data-hourly-rates)) tags)
+        (seq-find (lambda (tag) (not (string= tag "work"))) tags)
+        "other")))
+
+(defun org-clock-data-aggregate-by-client (entries)
+  "Aggregate ENTRIES by client, summing total minutes and earnings.
+Returns an alist of (CLIENT . (:minutes M :earnings E)) sorted by
+earnings descending.  Client is determined by `org-clock-data--entry-client'."
+  (let ((table (make-hash-table :test 'equal)))
+    (dolist (entry entries)
+      (let* ((client (org-clock-data--entry-client entry))
+             (mins (+ (* (plist-get entry :hours) 60)
+                      (plist-get entry :minutes)))
+             (rate (org-clock-data--entry-rate entry))
+             (earned (* (/ mins 60.0) rate))
+             (existing (gethash client table (list :minutes 0 :earnings 0.0))))
+        (puthash client
+                 (list :minutes (+ (plist-get existing :minutes) mins)
+                       :earnings (+ (plist-get existing :earnings) earned))
+                 table)))
+    (let (result)
+      (maphash (lambda (k v) (push (cons k v) result)) table)
+      (sort result (lambda (a b) (> (plist-get (cdr a) :earnings)
+                                    (plist-get (cdr b) :earnings)))))))
+
 ;;; Bar Chart
 
 (defcustom org-clock-data-hourly-rates nil

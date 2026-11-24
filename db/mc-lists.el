@@ -51,6 +51,7 @@
         helm-buffers-list
         indent-for-tab-command
         indent-region
+        inf-ruby
         insert-parentheses
         isearch-exit
         kill-sexp

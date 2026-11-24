@@ -1,3 +1,4 @@
 .agent-shell/
 vendor/
 local-vars.el
+.DS_Store
