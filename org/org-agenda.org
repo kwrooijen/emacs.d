@@ -12,7 +12,7 @@ Automatically save any org buffers when making changes in org agenda.
   (when (equal major-mode 'org-agenda-mode)
     (let ((inhibit-message t))
       (org-save-all-org-buffers)))
-  (when (equal major-mode 'org-mode)
+  (when (derived-mode-p 'org-mode)
     (let ((inhibit-message t))
       (save-buffer))))
 

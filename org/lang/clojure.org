@@ -10,7 +10,6 @@
 
 #+BEGIN_SRC emacs-lisp
 ((clojure-mode . cider-mode)
- (clojure-mode . lispy-mode)
  (clojure-mode . clj-refactor-mode)
  (clojure-mode . flymake-mode))
 #+END_SRC

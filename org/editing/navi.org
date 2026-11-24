@@ -32,7 +32,7 @@
 
 (defun navi-get-major-mode ()
   (interactive)
-  (if (and (eq major-mode 'org-mode)
+  (if (and (derived-mode-p 'org-mode)
            (equal 'src-block (car (org-element-context))))
       (intern (format "%s-mode" (org-element-property :language (org-element-context))))
     major-mode))
